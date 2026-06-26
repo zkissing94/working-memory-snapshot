@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct WorkingMemorySnapshotApp: App {
     @StateObject private var projectsViewModel: ProjectsViewModel
+    @StateObject private var sessionViewModel: SessionViewModel
     @StateObject private var settingsViewModel: SettingsViewModel
 
     init() {
@@ -18,6 +19,12 @@ struct WorkingMemorySnapshotApp: App {
             wrappedValue: ProjectsViewModel(
                 repository: environment.projectRepository,
                 migrator: environment.databaseMigrator
+            )
+        )
+        _sessionViewModel = StateObject(
+            wrappedValue: SessionViewModel(
+                sessionRepository: environment.sessionRepository,
+                projectRepository: environment.projectRepository
             )
         )
         _settingsViewModel = StateObject(
@@ -33,6 +40,7 @@ struct WorkingMemorySnapshotApp: App {
         WindowGroup {
             ContentView(
                 projectsViewModel: projectsViewModel,
+                sessionViewModel: sessionViewModel,
                 settingsViewModel: settingsViewModel
             )
         }

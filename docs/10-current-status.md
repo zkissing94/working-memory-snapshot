@@ -5,7 +5,7 @@
 Current handoff branch:
 
 ```text
-feature/m2-lm-studio-settings
+feature/m3-session-lifecycle
 ```
 
 Completed milestones:
@@ -13,6 +13,7 @@ Completed milestones:
 - M0 - Repository seed and Codex workflow
 - M1 - App shell, build foundation, and project persistence
 - M2 - LM Studio settings and model discovery
+- M3 - Session lifecycle
 
 Current implementation state:
 
@@ -28,32 +29,38 @@ Current implementation state:
 - Settings UI supports base URL, synthesizer model, optional token, connection testing, model refresh, and non-loopback warning.
 - `LMStudioClient` lists models through `GET /v1/models` with optional bearer authentication.
 - Automated M2 tests cover URL normalization, loopback warning logic, settings persistence, token privacy, bearer headers, and distinct connection states.
+- Session persistence works through the `sessions` table.
+- A partial unique SQLite index enforces one active session globally.
+- Project detail UI supports required mission entry, active-session display, elapsed count-up timer, completion, cancellation, and end-session brain dump.
+- Starting a session checks that the selected project folder is still accessible.
+- Active-session recovery is shown on app launch with resume, end, and cancel choices.
+- Automated M3 tests cover mission validation, complete/cancel transitions, brain dump persistence, active-session uniqueness, project-access failure, and recovery state.
 - LM Studio is not required to compile or launch the app.
 
 ## Next milestone
 
-Next task after merging M2 to `main`:
+Next task after merging M3 to `main`:
 
 ```text
-M3 - Session lifecycle
+M4 - Placeholder snapshot vertical slice
 ```
 
 Use:
 
 ```text
-prompts/03-m3-session-lifecycle.md
+prompts/04-m4-placeholder-snapshot.md
 ```
 
 Expected branch:
 
 ```text
-feature/m3-session-lifecycle
+feature/m4-placeholder-snapshot
 ```
 
 Expected commit message:
 
 ```text
-feat: implement project session lifecycle
+feat: add placeholder snapshot vertical slice
 ```
 
 ## Fresh chat startup
@@ -64,7 +71,7 @@ In a fresh Codex chat, start by opening this repository root and reading:
 - `docs/10-current-status.md`
 - `docs/05-mvp-roadmap.md`
 - `docs/07-macos-build-compile.md`
-- `prompts/03-m3-session-lifecycle.md`
+- `prompts/04-m4-placeholder-snapshot.md`
 
 Then run:
 
@@ -74,7 +81,7 @@ git branch --show-current
 ./scripts/check.sh
 ```
 
-Do not start M3 unless M2 has been merged to `main`, `main` is clean, and `./scripts/check.sh` passes.
+Do not start M4 unless M3 has been merged to `main`, `main` is clean, and `./scripts/check.sh` passes.
 
 ## M2 completion summary
 
@@ -110,20 +117,49 @@ Validation:
 ./scripts/check.sh - passed
 ```
 
-## M3 scope reminder
+## M3 completion summary
 
-M3 owns session lifecycle only:
+M3 added project session lifecycle only:
 
-- sessions migration and repository
-- one-active-session invariant
-- required mission form
-- active-session screen
-- elapsed count-up timer
+- `WorkSession` and `SessionStatus` models
+- version 3 sessions migration
+- `SessionRepository` backed by SQLite
+- one-active-session partial unique index
+- required mission validation
+- project-folder access check on session start
+- project detail start-session form
+- active-session screen with elapsed count-up timer
 - complete and cancel flows
-- end-session brain-dump form
-- active-session recovery on relaunch
+- end-session brain-dump form with persisted text
+- active-session recovery sheet on app launch
+- sidebar active-session indicator
+- repository and view-model tests for M3 acceptance criteria
 
 M3 must not add observation, events, snapshots, LM Studio generation, Pomodoro intervals, or notifications.
+
+Branch:
+
+```text
+feature/m3-session-lifecycle
+```
+
+Validation:
+
+```text
+./scripts/check.sh - passed
+```
+
+## M4 scope reminder
+
+M4 owns the placeholder snapshot vertical slice only:
+
+- snapshots migration and repository
+- deterministic placeholder generator using only mission and brain dump
+- snapshot detail view
+- latest Resume Brief and next action on project detail
+- retry-safe save/replace behavior
+
+M4 must not add observation, Git service, file watcher, active-app service, or LM Studio chat completion.
 
 ## Persistent build constraints
 

@@ -60,6 +60,38 @@ struct DatabaseMigrator {
                 )
             }
         }
+
+        if !appliedVersions.contains(3) {
+            try await applyMigration(version: 3) {
+                try await database.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    project_id TEXT NOT NULL,
+                    mission TEXT NOT NULL,
+                    brain_dump TEXT,
+                    started_at TEXT NOT NULL,
+                    ended_at TEXT,
+                    status TEXT NOT NULL CHECK (
+                        status IN ('active', 'completed', 'cancelled')
+                    ),
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
+                )
+                """)
+
+                try await database.execute("""
+                CREATE INDEX IF NOT EXISTS sessions_project_started_index
+                ON sessions(project_id, started_at DESC)
+                """)
+
+                try await database.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS sessions_single_active_index
+                ON sessions(status)
+                WHERE status = 'active'
+                """)
+            }
+        }
     }
 
     private func applyMigration(version: Int, body: () async throws -> Void) async throws {

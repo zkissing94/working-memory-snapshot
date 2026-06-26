@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProjectSidebarView: View {
     @ObservedObject var viewModel: ProjectsViewModel
+    let activeProjectID: Project.ID?
 
     var body: some View {
         List(selection: $viewModel.selectedItem) {
@@ -14,7 +15,10 @@ struct ProjectSidebarView: View {
                     )
                 } else {
                     ForEach(viewModel.projects) { project in
-                        ProjectRow(project: project)
+                        ProjectRow(
+                            project: project,
+                            isActive: project.id == activeProjectID
+                        )
                             .tag(SidebarSelection.project(project.id))
                     }
                 }
@@ -44,12 +48,21 @@ struct ProjectSidebarView: View {
 
 private struct ProjectRow: View {
     let project: Project
+    let isActive: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(project.name)
-                .font(.body)
-                .lineLimit(1)
+            HStack(spacing: 6) {
+                Text(project.name)
+                    .font(.body)
+                    .lineLimit(1)
+                if isActive {
+                    Image(systemName: "timer")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .help("Session active")
+                }
+            }
             Text(project.rootPath)
                 .font(.caption)
                 .foregroundStyle(.secondary)

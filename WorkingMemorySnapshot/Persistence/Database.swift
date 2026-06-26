@@ -33,6 +33,30 @@ actor Database {
         }
     }
 
+    func executeReturningChanges(_ sql: String, bind: ((OpaquePointer) throws -> Void)? = nil) throws -> Int {
+        let statement = try prepare(sql)
+        defer {
+            sqlite3_finalize(statement)
+        }
+
+        try bind?(statement)
+
+        var result = sqlite3_step(statement)
+        while result == SQLITE_ROW {
+            result = sqlite3_step(statement)
+        }
+
+        guard result == SQLITE_DONE else {
+            throw makeError(prefix: "SQLite execute failed")
+        }
+
+        guard let connection else {
+            throw SQLiteError(code: SQLITE_ERROR, message: "SQLite changes failed: database is not open")
+        }
+
+        return Int(sqlite3_changes(connection))
+    }
+
     func query<Value>(
         _ sql: String,
         bind: ((OpaquePointer) throws -> Void)? = nil,
@@ -143,12 +167,26 @@ enum SQLiteValue {
         }
     }
 
+    static func bindNull(to statement: OpaquePointer, at index: Int32) throws {
+        guard sqlite3_bind_null(statement, index) == SQLITE_OK else {
+            throw SQLiteError(code: SQLITE_MISUSE, message: "Could not bind null at index \(index).")
+        }
+    }
+
     static func text(_ statement: OpaquePointer, at index: Int32) -> String {
         guard let value = sqlite3_column_text(statement, index) else {
             return ""
         }
 
         return String(cString: value)
+    }
+
+    static func optionalText(_ statement: OpaquePointer, at index: Int32) -> String? {
+        guard sqlite3_column_type(statement, index) != SQLITE_NULL else {
+            return nil
+        }
+
+        return text(statement, at: index)
     }
 
     static func integer(_ statement: OpaquePointer, at index: Int32) -> Int {

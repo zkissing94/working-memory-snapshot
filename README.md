@@ -4,7 +4,7 @@ A local-first macOS app that helps founder/coders return to deep work in under 6
 
 This repository is a **Codex-ready project seed**. It contains the product requirements, architecture, UI and data specifications, local-model contract, implementation roadmap, engineering workflow, task prompts, validation scripts, Git hooks, and a repository-scoped Codex skill.
 
-It now contains the first native macOS scaffold, build foundation, project persistence, and LM Studio settings.
+It now contains the first native macOS scaffold, build foundation, project persistence, LM Studio settings, and project session lifecycle.
 
 ## Product loop
 
@@ -57,6 +57,6 @@ Read [`CODEX_START_HERE.md`](CODEX_START_HERE.md).
 
 ## Current milestone
 
-**M3 — Session lifecycle.**
+**M4 — Placeholder snapshot vertical slice.**
 
 Fresh chats should read [`docs/10-current-status.md`](docs/10-current-status.md) before starting implementation.

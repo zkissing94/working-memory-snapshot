@@ -83,4 +83,8 @@ final class ProjectsViewModel: ObservableObject {
     func clearError() {
         errorMessage = nil
     }
+
+    func selectProject(id: Project.ID) {
+        selectedItem = .project(id)
+    }
 }

@@ -3,6 +3,7 @@ import Foundation
 struct AppEnvironment {
     let databaseMigrator: DatabaseMigrator
     let projectRepository: ProjectRepository
+    let sessionRepository: SessionRepository
     let settingsRepository: SettingsRepository
     let tokenStore: any LMStudioTokenStore
     let lmStudioHTTPTransport: any LMStudioHTTPTransport
@@ -13,6 +14,7 @@ struct AppEnvironment {
         return AppEnvironment(
             databaseMigrator: DatabaseMigrator(database: database),
             projectRepository: ProjectRepository(database: database),
+            sessionRepository: SessionRepository(database: database),
             settingsRepository: SettingsRepository(database: database),
             tokenStore: KeychainStore(),
             lmStudioHTTPTransport: URLSessionLMStudioHTTPTransport()
