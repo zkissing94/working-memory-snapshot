@@ -36,7 +36,6 @@ CREATE TABLE projects (
     id TEXT PRIMARY KEY NOT NULL,
     name TEXT NOT NULL,
     root_path TEXT NOT NULL,
-    bookmark_data BLOB NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -45,7 +44,7 @@ CREATE UNIQUE INDEX projects_root_path_unique
 ON projects(root_path);
 ```
 
-`root_path` is for display and diagnostics. Persistent authorization comes from `bookmark_data`.
+`root_path` is the MVP project boundary. Security-scoped bookmark data is deferred until the App Sandbox migration milestone.
 
 ## 5. Sessions
 
@@ -175,7 +174,6 @@ struct Project: Identifiable, Equatable, Sendable {
     let id: UUID
     var name: String
     var rootPath: String
-    var bookmarkData: Data
     var createdAt: Date
     var updatedAt: Date
 }
@@ -246,7 +244,6 @@ struct Snapshot: Identifiable, Equatable, Sendable {
 - create project
 - list projects
 - get project
-- update bookmark
 - delete project
 
 ### SessionRepository

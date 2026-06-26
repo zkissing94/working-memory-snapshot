@@ -153,40 +153,35 @@ Views and view models do not issue SQL. Repositories translate between SQLite ro
 
 Use transactions for:
 
-- project creation plus bookmark persistence
+- project creation plus path persistence
 - ending a session plus saving the brain dump and end event
 - replacing or saving a generated snapshot
 - deleting a project and cascading related local records
 
 ## 7. Project-folder access
 
-A stored filesystem path is insufficient for a sandboxed macOS app.
-
-Project creation flow:
+MVP project creation flow:
 
 1. Present `NSOpenPanel` configured for a single directory.
 2. Receive the system-provided URL.
-3. Create app-scoped security-scoped bookmark data immediately.
-4. Persist both the display path and bookmark data.
-5. Resolve the bookmark through `ProjectAccessService` whenever access is needed.
-6. Call `startAccessingSecurityScopedResource()`.
-7. Keep an owning `SecurityScopedResource` value alive for the entire operation.
-8. Call `stopAccessingSecurityScopedResource()` when the operation ends.
-9. Refresh stale bookmark data transactionally.
+3. Persist the display path locally.
+4. Use the path only for the selected project boundary.
 
-The app should never silently fall back to broad filesystem access.
+The MVP runs with App Sandbox off to avoid security-scoped bookmark and entitlement complexity before the core product loop is proven.
 
 ## 8. App Sandbox and entitlements
 
-Design for App Sandbox from the beginning.
+App Sandbox migration is deferred to a dedicated milestone.
 
-Expected capabilities:
+When sandboxing is enabled later, add:
 
-- user-selected files: read/write
-- outgoing network client access for LM Studio
+- user-selected file read/write entitlement
+- outgoing network client entitlement for LM Studio
 - app-scoped security-scoped bookmarks
+- stale bookmark refresh
+- Git subprocess validation while security-scoped project access is active
 
-Validate Git subprocess behavior while the security-scoped project URL is active. If App Sandbox prevents the chosen Git approach, record the finding and decision; do not silently disable the sandbox.
+Do not enable App Sandbox during MVP feature work unless explicitly requested.
 
 ## 9. Session lifecycle
 
@@ -398,7 +393,7 @@ No view should construct HTTP payloads or prompts.
 Use a small typed `AppError` surface with user-facing descriptions for:
 
 - database initialization or migration
-- stale or invalid project bookmark
+- inaccessible or moved project folder
 - inaccessible project folder
 - Git unavailable or command failure
 - LM Studio unreachable

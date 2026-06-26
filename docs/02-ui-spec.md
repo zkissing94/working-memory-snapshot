@@ -59,7 +59,6 @@ After selection:
 Errors:
 
 - folder no longer accessible
-- bookmark could not be created
 - project already exists
 
 Do not ask for project metadata beyond the folder and default name in M1.

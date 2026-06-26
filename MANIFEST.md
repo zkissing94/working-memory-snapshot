@@ -16,6 +16,7 @@
 - `docs/04-local-ai-spec.md`
 - `docs/05-mvp-roadmap.md`
 - `docs/06-codex-workflow.md`
+- `docs/07-macos-build-compile.md`
 - `docs/07-testing-strategy.md`
 - `docs/08-decision-log.md`
 - `docs/09-risk-register.md`
@@ -43,4 +44,5 @@
 - `scripts/bootstrap_repo.sh`
 - `scripts/install_hooks.sh`
 - `scripts/check.sh`
+- `scripts/doctor.sh`
 - `.github/pull_request_template.md`

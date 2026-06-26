@@ -15,7 +15,7 @@ Cover:
 - ISO-8601 encoding and decoding
 - SQLite migrations
 - repository CRUD and constraints
-- security-scoped bookmark wrapper behavior where testable
+- project path normalization and persistence
 - project-path filtering
 - event deduplication
 - evidence compaction bounds
@@ -55,9 +55,9 @@ Do not make the entire test suite depend on UI automation.
 Required for OS and local-runtime boundaries:
 
 - real `NSOpenPanel`
-- bookmark access after relaunch
-- App Sandbox access to selected project
-- `/usr/bin/git` under sandbox
+- path persistence after relaunch
+- App Sandbox access to selected project after the sandbox migration milestone
+- `/usr/bin/git` under sandbox after the sandbox migration milestone
 - FSEvents in a real project
 - `NSWorkspace` activation events
 - live LM Studio connection
@@ -71,7 +71,7 @@ Required for OS and local-runtime boundaries:
 - migration idempotence
 - project repository
 - duplicate root handling
-- bookmark persistence and stale-refresh path
+- path persistence after relaunch
 - launch/relaunch manual test
 
 ### M2

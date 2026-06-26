@@ -20,6 +20,7 @@ Before any implementation task, read:
 - `docs/01-system-architecture.md`
 - `docs/05-mvp-roadmap.md`
 - `docs/06-codex-workflow.md`
+- `docs/07-macos-build-compile.md`
 
 Then read the task-relevant documents:
 
@@ -50,7 +51,7 @@ Do not claim to have read a file you did not inspect.
 1. Use native Swift and SwiftUI for macOS.
 2. Use AppKit bridges only where macOS APIs require them.
 3. Use local SQLite behind repositories.
-4. Persist project access using security-scoped bookmark data.
+4. For MVP, App Sandbox is off and selected project paths are persisted locally.
 5. Store an optional LM Studio API token in Keychain, never SQLite or source control.
 6. Use LM Studio's local OpenAI-compatible API.
 7. Keep observed activity in a generic `Event` model; do not add tool-specific Cursor, Codex, Claude, or VS Code tables.
@@ -60,7 +61,29 @@ Do not claim to have read a file you did not inspect.
 11. Keep views thin; screen state belongs in `@MainActor` view models.
 12. Serialize mutable persistence and observation state through actors or another explicit concurrency boundary.
 13. Do not add production dependencies without recording the rationale in `docs/08-decision-log.md`.
-14. Do not silently disable App Sandbox or privacy controls to make a feature pass.
+14. Do not enable App Sandbox, change signing, or change build settings unless the task explicitly requires it.
+
+## macOS Build & Compile Rules
+
+Before changing build configuration, read:
+
+- `docs/07-macos-build-compile.md`
+
+Preserve these defaults unless explicitly instructed otherwise:
+
+```text
+Project: WorkingMemorySnapshot.xcodeproj
+Scheme: WorkingMemorySnapshot
+Bundle ID: com.broceps.WorkingMemorySnapshot
+Minimum macOS target: 14.0
+Swift language mode: Swift 5
+Persistence: SQLite through system SQLite3
+Runtime AI: LM Studio local server
+App Sandbox: off for MVP
+LM Studio required for compile: no
+```
+
+Do not modify `project.pbxproj` unless required to add files/resources to the target, link required config/library settings, or explicitly requested. Prefer `.xcconfig`, source files, docs, and scripts.
 
 ## Scope discipline
 

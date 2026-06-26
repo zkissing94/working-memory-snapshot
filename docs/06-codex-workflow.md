@@ -19,6 +19,8 @@ read context
 → report
 ```
 
+Build-specific rules live in `docs/07-macos-build-compile.md`. Read that file before changing Xcode project settings, signing, sandboxing, Swift mode, deployment target, plist values, or validation scripts.
+
 ## 2. Repository guidance
 
 Codex automatically reads `AGENTS.md`. Implementation prompts should also invoke:
@@ -141,7 +143,7 @@ Preferred messages:
 ```text
 feat: persist user-selected projects
 feat: add LM Studio model discovery
-fix: refresh stale project bookmarks
+fix: handle inaccessible project folders
 test: cover snapshot response decoding
 docs: record sandbox decision
 ```
@@ -187,6 +189,12 @@ The canonical command is:
 
 ```bash
 ./scripts/check.sh
+```
+
+For local environment diagnostics that must not affect compile success:
+
+```bash
+./scripts/doctor.sh
 ```
 
 Use targeted commands in addition, for example:

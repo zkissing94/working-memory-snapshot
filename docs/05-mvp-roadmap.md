@@ -6,7 +6,7 @@ Build one end-to-end vertical slice before parallelizing leaf services.
 
 ```text
 M0 repository seed
-→ M1 project persistence
+→ M1 app shell + build foundation + project persistence
 → M2 LM Studio settings
 → M3 session lifecycle
 → M4 placeholder snapshot vertical slice
@@ -38,20 +38,25 @@ Create a clean Git baseline with product context and Codex operating rules.
 - seed files are committed
 - worktree is clean
 
-## M1 — App shell and project persistence
+## M1 — App shell, build foundation, and project persistence
 
 ### Goal
 
-Launch a native SwiftUI macOS app and persist user-selected projects correctly.
+Launch a native SwiftUI macOS app with a reproducible build path and persisted user-selected projects.
 
 ### Deliverables
 
 - Xcode macOS app scaffold
+- shared `WorkingMemorySnapshot` scheme
+- `.xcconfig` build configuration
+- explicit `Info.plist`
+- `scripts/check.sh`
+- `scripts/doctor.sh`
 - `NavigationSplitView`
 - SQLite database and migration runner
 - project repository
 - `NSOpenPanel` project selection
-- security-scoped bookmark creation and resolution
+- path-based project persistence with App Sandbox off for MVP
 - project list and empty state
 - project persistence across launches
 - unit tests for migrations and repository behavior
@@ -59,7 +64,7 @@ Launch a native SwiftUI macOS app and persist user-selected projects correctly.
 ### Branch
 
 ```text
-feature/m1-app-shell-projects
+feature/m1-app-shell-build-sqlite
 ```
 
 ### Exit criteria
@@ -68,7 +73,7 @@ feature/m1-app-shell-projects
 - user can select a folder
 - project appears
 - project remains after relaunch
-- bookmark access resolves after relaunch
+- `./scripts/check.sh` passes
 - no session, observation, or model code exists yet
 
 ## M2 — LM Studio settings

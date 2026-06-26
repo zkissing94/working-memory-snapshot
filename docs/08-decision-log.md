@@ -32,7 +32,7 @@ Use local SQLite behind repository interfaces.
 ## ADR-004 — Persistent project access through bookmarks
 
 **Date:** 2026-06-25
-**Status:** Accepted
+**Status:** Superseded by ADR-013
 
 Persist security-scoped bookmark data, not only a path.
 
@@ -109,6 +109,15 @@ Use `NSWorkspace` activation transitions. Do not use accessibility APIs to inspe
 Build through the placeholder vertical slice serially. Parallelize only isolated leaf services in worktrees.
 
 **Reasoning:** Parallel architecture changes create incompatible patterns and integration churn. Leaf services have clearer ownership.
+
+## ADR-013 — MVP build foundation with sandbox deferred
+
+**Date:** 2026-06-26
+**Status:** Accepted
+
+For the MVP, run with App Sandbox off, persist selected project paths, use explicit `.xcconfig` and `Info.plist` files, and validate compilation through `./scripts/check.sh` with signing disabled.
+
+**Reasoning:** The first milestone needs a boring compile path and a working product loop before adding security-scoped bookmark and entitlement complexity. Sandbox migration remains required before public distribution.
 
 ## Open decision template
 

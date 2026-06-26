@@ -22,6 +22,7 @@ required=(
   docs/04-local-ai-spec.md
   docs/05-mvp-roadmap.md
   docs/06-codex-workflow.md
+  docs/07-macos-build-compile.md
   docs/07-testing-strategy.md
   docs/08-decision-log.md
   docs/09-risk-register.md
@@ -42,7 +43,7 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   git diff --check
   git diff --cached --check
 
-  blocked_regex='(^|/)(DerivedData|xcuserdata)(/|$)|\.(sqlite|sqlite3|db|pem|key)$|(^|/)\.env($|\.)'
+  blocked_regex='(^|/)(DerivedData|\.derivedData|xcuserdata)(/|$)|\.(sqlite|sqlite3|db|pem|key)$|(^|/)\.env($|\.)'
   staged="$(git diff --cached --name-only --diff-filter=ACMR || true)"
   if [[ -n "$staged" ]] && printf '%s\n' "$staged" | grep -E "$blocked_regex" >/dev/null; then
     echo "Blocked generated, local-data, or secret-like files are staged:" >&2
@@ -56,14 +57,28 @@ if [[ "$MODE" == "quick" ]]; then
   exit 0
 fi
 
+if ! command -v xcodebuild >/dev/null 2>&1; then
+  echo "error: xcodebuild not found. Install Xcode and select it with xcode-select." >&2
+  exit 1
+fi
+
 workspace="${XCODE_WORKSPACE:-}"
 project="${XCODE_PROJECT:-}"
 
-if [[ -z "$workspace" ]]; then
-  workspace="$(find . -maxdepth 3 -name '*.xcworkspace' -not -path '*/xcuserdata/*' | head -n 1 || true)"
+if [[ -z "$workspace" && -z "$project" && -d "WorkingMemorySnapshot.xcodeproj" ]]; then
+  project="WorkingMemorySnapshot.xcodeproj"
 fi
 
-if [[ -z "$project" ]]; then
+if [[ -z "$workspace" && -z "$project" ]]; then
+  workspace="$(find . -maxdepth 2 -name '*.xcworkspace' -not -path '*/xcuserdata/*' | head -n 1 || true)"
+fi
+
+if [[ -n "$project" && ! -d "$project" ]]; then
+  echo "error: XCODE_PROJECT was set to '$project', but that directory does not exist." >&2
+  exit 1
+fi
+
+if [[ -z "$workspace" && -z "$project" ]]; then
   project="$(find . -maxdepth 3 -name '*.xcodeproj' | head -n 1 || true)"
 fi
 
@@ -83,14 +98,16 @@ scheme="${SCHEME:-}"
 if [[ -z "$scheme" ]]; then
   scheme="$(
     xcodebuild "${container_args[@]}" -list -json 2>/dev/null |
-      python3 -c '
+    python3 -c '
 import json, sys
 data = json.load(sys.stdin)
+schemes = []
 for key in ("workspace", "project"):
-    schemes = data.get(key, {}).get("schemes", [])
-    if schemes:
-        print(schemes[0])
-        break
+    schemes.extend(data.get(key, {}).get("schemes", []))
+if "WorkingMemorySnapshot" in schemes:
+    print("WorkingMemorySnapshot")
+elif schemes:
+    print(schemes[0])
 ' || true
   )"
 fi
@@ -101,8 +118,14 @@ if [[ -z "$scheme" ]]; then
 fi
 
 configuration="${CONFIGURATION:-Debug}"
-derived_data="${DERIVED_DATA_PATH:-.build/DerivedData}"
+derived_data="${DERIVED_DATA_PATH:-.derivedData}"
 
+echo "Using Xcode:"
+xcodebuild -version
+echo ""
+echo "Available schemes:"
+xcodebuild "${container_args[@]}" -list
+echo ""
 echo "Building scheme: $scheme"
 xcodebuild \
   "${container_args[@]}" \
