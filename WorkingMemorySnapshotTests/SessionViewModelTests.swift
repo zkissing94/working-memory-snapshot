@@ -30,7 +30,10 @@ final class SessionViewModelTests: XCTestCase {
         await viewModel.startSession(for: project)
 
         XCTAssertNil(viewModel.activeSession)
-        XCTAssertEqual(viewModel.errorMessage, "This project folder is no longer accessible.")
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            "This project folder is no longer accessible. Choose the folder again to restore access."
+        )
         let activeSession = try await harness.sessionRepository.activeSession()
         XCTAssertNil(activeSession)
     }
@@ -96,10 +99,42 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.activeSession, session)
         XCTAssertEqual(viewModel.recoveryContext?.session, session)
         XCTAssertEqual(viewModel.recoveryContext?.project, project)
+        XCTAssertEqual(viewModel.recoveryContext?.isProjectFolderAccessible, true)
 
         viewModel.resumeRecoveredSession()
         XCTAssertNil(viewModel.recoveryContext)
         XCTAssertEqual(viewModel.activeSession, session)
+    }
+
+    func testLoadActiveSessionMarksMissingFolderInRecoveryContext() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let projectFolder = try makeTemporaryDirectory(named: "MissingRecoveryProject")
+        let project = try await harness.projectRepository.createProject(at: projectFolder)
+        let session = try await harness.sessionRepository.createActiveSession(
+            projectID: project.id,
+            mission: "Recover only after folder access is restored"
+        )
+        try FileManager.default.removeItem(at: projectFolder)
+        let viewModel = SessionViewModel(
+            sessionRepository: harness.sessionRepository,
+            projectRepository: harness.projectRepository,
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: RecordingSessionObservationCoordinator()
+        )
+
+        await viewModel.loadActiveSessionForRecovery()
+
+        XCTAssertEqual(viewModel.activeSession, session)
+        XCTAssertEqual(viewModel.recoveryContext?.isProjectFolderAccessible, false)
+
+        viewModel.resumeRecoveredSession()
+
+        XCTAssertNotNil(viewModel.recoveryContext)
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            "This project folder is no longer accessible. Choose the folder again to restore access."
+        )
     }
 
     private func makeHarness() throws -> (

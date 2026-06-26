@@ -80,6 +80,27 @@ final class ProjectsViewModel: ObservableObject {
         }
     }
 
+    func restoreProjectAccessFromPicker(for project: Project) async -> Project? {
+        guard let url = ProjectFolderPicker.pickFolder(prompt: "Restore Access") else {
+            return nil
+        }
+
+        return await restoreProjectAccess(for: project, to: url)
+    }
+
+    func restoreProjectAccess(for project: Project, to url: URL) async -> Project? {
+        do {
+            let restoredProject = try await repository.updateProjectRoot(id: project.id, to: url)
+            projects = try await repository.listProjects()
+            selectedItem = .project(project.id)
+            return restoredProject
+        } catch {
+            errorMessage = error.localizedDescription
+            projects = (try? await repository.listProjects()) ?? projects
+            return nil
+        }
+    }
+
     func clearError() {
         errorMessage = nil
     }

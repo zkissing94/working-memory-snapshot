@@ -9,6 +9,7 @@ enum SessionFlow: Equatable {
 struct SessionRecoveryContext: Equatable {
     let session: WorkSession
     let project: Project
+    let isProjectFolderAccessible: Bool
 }
 
 struct GeneratedSnapshotContext: Equatable {
@@ -86,7 +87,8 @@ final class SessionViewModel: ObservableObject {
             if let project = try await projectRepository.project(for: session.projectID) {
                 recoveryContext = SessionRecoveryContext(
                     session: session,
-                    project: project
+                    project: project,
+                    isProjectFolderAccessible: isReadableDirectory(at: project.rootPath)
                 )
             }
         } catch {
@@ -101,6 +103,7 @@ final class SessionViewModel: ObservableObject {
         }
 
         mission = ""
+        brainDump = ""
         flow = .starting(project.id)
     }
 
@@ -213,6 +216,11 @@ final class SessionViewModel: ObservableObject {
             return
         }
 
+        guard recoveryContext.isProjectFolderAccessible else {
+            errorMessage = SessionViewModelError.projectFolderInaccessible.localizedDescription
+            return
+        }
+
         activeSession = recoveryContext.session
         self.recoveryContext = nil
         flow = .idle
@@ -231,6 +239,18 @@ final class SessionViewModel: ObservableObject {
 
         activeSession = recoveryContext.session
         await cancelActiveSession()
+    }
+
+    func updateRecoveredProject(_ project: Project) {
+        guard let recoveryContext, recoveryContext.project.id == project.id else {
+            return
+        }
+
+        self.recoveryContext = SessionRecoveryContext(
+            session: recoveryContext.session,
+            project: project,
+            isProjectFolderAccessible: isReadableDirectory(at: project.rootPath)
+        )
     }
 
     func isStartingSession(for project: Project) -> Bool {
@@ -282,13 +302,16 @@ final class SessionViewModel: ObservableObject {
     }
 
     private func validateAccess(to project: Project) throws {
-        var isDirectory: ObjCBool = false
-        guard fileManager.fileExists(atPath: project.rootPath, isDirectory: &isDirectory),
-              isDirectory.boolValue,
-              fileManager.isReadableFile(atPath: project.rootPath)
-        else {
+        guard isReadableDirectory(at: project.rootPath) else {
             throw SessionViewModelError.projectFolderInaccessible
         }
+    }
+
+    private func isReadableDirectory(at path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        return fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
+            && isDirectory.boolValue
+            && fileManager.isReadableFile(atPath: path)
     }
 }
 
@@ -299,7 +322,7 @@ enum SessionViewModelError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .projectFolderInaccessible:
-            "This project folder is no longer accessible."
+            "This project folder is no longer accessible. Choose the folder again to restore access."
         case .projectMissing:
             "The project for this session could not be found."
         }

@@ -1,23 +1,38 @@
 import SwiftUI
 
+enum ProjectAccessState: Equatable {
+    case unknown
+    case checking
+    case accessible
+    case inaccessible
+
+    var isInaccessible: Bool {
+        self == .inaccessible
+    }
+}
+
 @MainActor
 final class ProjectDetailViewModel: ObservableObject {
     @Published private(set) var latestSnapshot: Snapshot?
     @Published private(set) var latestSnapshotSession: WorkSession?
     @Published private(set) var presentedSnapshot: Snapshot?
+    @Published private(set) var projectAccessState: ProjectAccessState = .unknown
     @Published private(set) var errorMessage: String?
     @Published private(set) var isLoadingSnapshot = false
 
     private let snapshotRepository: SnapshotRepository
     private let sessionRepository: SessionRepository
+    private let fileManager: FileManager
     private var requestedProjectID: Project.ID?
 
     init(
         snapshotRepository: SnapshotRepository,
-        sessionRepository: SessionRepository
+        sessionRepository: SessionRepository,
+        fileManager: FileManager = .default
     ) {
         self.snapshotRepository = snapshotRepository
         self.sessionRepository = sessionRepository
+        self.fileManager = fileManager
     }
 
     var isShowingError: Binding<Bool> {
@@ -57,6 +72,11 @@ final class ProjectDetailViewModel: ObservableObject {
         }
     }
 
+    func checkProjectAccess(for project: Project) async {
+        projectAccessState = .checking
+        projectAccessState = isReadableDirectory(at: project.rootPath) ? .accessible : .inaccessible
+    }
+
     func presentLatestSnapshot() {
         presentedSnapshot = latestSnapshot
     }
@@ -72,5 +92,12 @@ final class ProjectDetailViewModel: ObservableObject {
 
     func clearError() {
         errorMessage = nil
+    }
+
+    private func isReadableDirectory(at path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        return fileManager.fileExists(atPath: path, isDirectory: &isDirectory)
+            && isDirectory.boolValue
+            && fileManager.isReadableFile(atPath: path)
     }
 }

@@ -77,6 +77,13 @@ final class SettingsViewModelTests: XCTestCase {
         }
     }
 
+    func testConnectionStateIncludesRecoverySuggestionForEmptyModelList() {
+        XCTAssertEqual(
+            LMStudioConnectionState.noModels.recoverySuggestion,
+            "Load an instruct model in LM Studio, then refresh models."
+        )
+    }
+
     private func makeHarness() throws -> (
         database: Database,
         migrator: DatabaseMigrator,

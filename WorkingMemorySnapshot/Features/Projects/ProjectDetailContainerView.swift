@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProjectDetailContainerView: View {
     let project: Project?
+    @ObservedObject var projectsViewModel: ProjectsViewModel
     @ObservedObject var sessionViewModel: SessionViewModel
     @ObservedObject var projectDetailViewModel: ProjectDetailViewModel
 
@@ -9,6 +10,7 @@ struct ProjectDetailContainerView: View {
         if let project {
             ProjectSessionRouteView(
                 project: project,
+                projectsViewModel: projectsViewModel,
                 sessionViewModel: sessionViewModel,
                 projectDetailViewModel: projectDetailViewModel
             )
@@ -16,6 +18,9 @@ struct ProjectDetailContainerView: View {
                 projectDetailViewModel.dismissPresentedSnapshot()
                 await projectDetailViewModel.loadLatestSnapshot(for: project.id)
                 presentGeneratedSnapshotIfNeeded(for: project)
+            }
+            .task(id: project.rootPath) {
+                await projectDetailViewModel.checkProjectAccess(for: project)
             }
             .onChange(of: sessionViewModel.generatedSnapshotContext) { _, _ in
                 presentGeneratedSnapshotIfNeeded(for: project)
@@ -46,6 +51,7 @@ struct ProjectDetailContainerView: View {
 
 private struct ProjectSessionRouteView: View {
     let project: Project
+    @ObservedObject var projectsViewModel: ProjectsViewModel
     @ObservedObject var sessionViewModel: SessionViewModel
     @ObservedObject var projectDetailViewModel: ProjectDetailViewModel
 
@@ -86,13 +92,24 @@ private struct ProjectSessionRouteView: View {
                 project: project,
                 latestSnapshot: projectDetailViewModel.latestSnapshot,
                 latestSnapshotSession: projectDetailViewModel.latestSnapshotSession,
+                projectAccessState: projectDetailViewModel.projectAccessState,
                 canStartSession: sessionViewModel.canStartSession,
-                hasSnapshotGenerationFailure: sessionViewModel.failedSnapshotSession?.projectID == project.id,
+                failedSnapshotSession: sessionViewModel.failedSnapshotSession?.projectID == project.id
+                    ? sessionViewModel.failedSnapshotSession
+                    : nil,
                 onStartSession: {
                     sessionViewModel.beginStartSession(for: project)
                 },
                 onViewSnapshot: {
                     projectDetailViewModel.presentLatestSnapshot()
+                },
+                onRestoreProjectAccess: {
+                    Task {
+                        if let restoredProject = await projectsViewModel.restoreProjectAccessFromPicker(for: project) {
+                            await projectDetailViewModel.checkProjectAccess(for: restoredProject)
+                            sessionViewModel.updateRecoveredProject(restoredProject)
+                        }
+                    }
                 },
                 onRetrySnapshot: {
                     Task {
@@ -108,29 +125,22 @@ private struct ProjectDetailView: View {
     let project: Project
     let latestSnapshot: Snapshot?
     let latestSnapshotSession: WorkSession?
+    let projectAccessState: ProjectAccessState
     let canStartSession: Bool
-    let hasSnapshotGenerationFailure: Bool
+    let failedSnapshotSession: WorkSession?
     let onStartSession: () -> Void
     let onViewSnapshot: () -> Void
+    let onRestoreProjectAccess: () -> Void
     let onRetrySnapshot: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(project.name)
-                    .font(.largeTitle)
-                    .fontWeight(.semibold)
-                    .textSelection(.enabled)
-
-                Text(project.rootPath)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-            }
-
             if let latestSnapshot {
                 latestSnapshotSection(latestSnapshot)
+                projectIdentitySection
             } else {
+                projectIdentitySection
+
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 10) {
                     GridRow {
                         Text("Created")
@@ -146,14 +156,24 @@ private struct ProjectDetailView: View {
                 .font(.body)
             }
 
+            if projectAccessState.isInaccessible {
+                projectAccessRecoverySection
+            }
+
             VStack(alignment: .leading, spacing: 10) {
                 Button(action: onStartSession) {
                     Label("Start Session", systemImage: "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!canStartSession)
+                .disabled(!canStartSession || projectAccessState.isInaccessible)
+                .accessibilityLabel("Start Session")
+                .accessibilityHint("Start a new working-memory session for \(project.name).")
 
-                if !canStartSession {
+                if projectAccessState.isInaccessible {
+                    Text("Restore folder access before starting a session.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else if !canStartSession {
                     Text("End or cancel the active session before starting another.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
@@ -168,26 +188,53 @@ private struct ProjectDetailView: View {
                         Label("View Snapshot", systemImage: "doc.text.magnifyingglass")
                     }
                     .disabled(latestSnapshot == nil)
+                    .accessibilityHint("Open the full Working Memory Snapshot.")
                 }
             }
 
-            if hasSnapshotGenerationFailure {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Snapshot generation did not finish.")
-                        .font(.headline)
-                    Text("The session and brain dump are saved. Start LM Studio, check Settings, and retry local generation.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                    Button(action: onRetrySnapshot) {
-                        Label("Retry Snapshot", systemImage: "arrow.clockwise")
-                    }
-                }
+            if let failedSnapshotSession {
+                snapshotFailureSection(failedSnapshotSession)
             }
 
             Spacer()
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var projectIdentitySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(project.name)
+                .font(latestSnapshot == nil ? .largeTitle : .title3)
+                .fontWeight(.semibold)
+                .textSelection(.enabled)
+
+            Text(project.rootPath)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+        }
+    }
+
+    private var projectAccessRecoverySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(
+                "This project folder is no longer accessible.",
+                systemImage: "folder.badge.questionmark"
+            )
+            .font(.headline)
+
+            Text("Choose the folder again to restore access.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            Button(action: onRestoreProjectAccess) {
+                Label("Choose Folder Again", systemImage: "folder")
+            }
+            .accessibilityHint("Open a folder picker and update the stored path for this project.")
+        }
     }
 
     private func latestSnapshotSection(_ snapshot: Snapshot) -> some View {
@@ -200,20 +247,49 @@ private struct ProjectDetailView: View {
                     .font(.body)
                     .textSelection(.enabled)
             }
+            .accessibilityElement(children: .combine)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Start here")
                     .font(.headline)
                 Text(snapshot.nextAction)
-                    .font(.title3)
+                    .font(.title2)
+                    .fontWeight(.semibold)
                     .textSelection(.enabled)
             }
+            .accessibilityElement(children: .combine)
 
             if let endedAt = latestSnapshotSession?.endedAt {
                 Text("Latest session ended \(endedAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private func snapshotFailureSection(_ session: WorkSession) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Snapshot generation needs attention.")
+                .font(.headline)
+            Text("The session and brain dump are saved. Start LM Studio, check Settings, and retry local generation.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            if let brainDump = session.brainDump,
+               !brainDump.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("Saved brain dump")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                Text(brainDump)
+                    .font(.callout)
+                    .lineLimit(4)
+                    .textSelection(.enabled)
+            }
+
+            Button(action: onRetrySnapshot) {
+                Label("Retry Snapshot", systemImage: "arrow.clockwise")
+            }
+            .accessibilityHint("Try local snapshot generation again for the saved session.")
         }
     }
 }

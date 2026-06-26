@@ -54,5 +54,40 @@ struct WorkingMemorySnapshotApp: App {
                 settingsViewModel: settingsViewModel
             )
         }
+        .commands {
+            CommandGroup(replacing: .newItem) {
+                Button("New Project or Session") {
+                    handleNewCommand()
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .disabled(isNewCommandDisabled)
+            }
+
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings") {
+                    projectsViewModel.selectedItem = .settings
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
+    }
+
+    @MainActor
+    private func handleNewCommand() {
+        if let project = projectsViewModel.selectedProject,
+           sessionViewModel.canStartSession {
+            sessionViewModel.beginStartSession(for: project)
+        } else {
+            Task {
+                await projectsViewModel.addProjectFromPicker()
+            }
+        }
+    }
+
+    @MainActor
+    private var isNewCommandDisabled: Bool {
+        projectsViewModel.isLoading
+            || sessionViewModel.isWorking
+            || (projectsViewModel.selectedProject != nil && !sessionViewModel.canStartSession)
     }
 }

@@ -185,6 +185,27 @@ enum LMStudioConnectionState: Equatable {
         }
     }
 
+    var recoverySuggestion: String? {
+        switch self {
+        case .idle, .testing, .saved, .success:
+            nil
+        case .invalidBaseURL:
+            "Use a URL like http://localhost:1234/v1."
+        case .serverUnreachable:
+            "Start the local server, confirm the address in Settings, and try again."
+        case .unauthorized:
+            "Check the optional API token or disable authentication in LM Studio."
+        case .noModels:
+            "Load an instruct model in LM Studio, then refresh models."
+        case .selectedModelUnavailable:
+            "Refresh the model list or choose another synthesizer model."
+        case .invalidResponse:
+            "Confirm the server exposes LM Studio's OpenAI-compatible /v1/models endpoint."
+        case .serverError:
+            "Check LM Studio, then try the connection again."
+        }
+    }
+
     var systemImageName: String {
         switch self {
         case .idle:

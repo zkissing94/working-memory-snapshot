@@ -31,11 +31,14 @@ struct StartSessionView: View {
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(viewModel.isWorking)
+                .accessibilityLabel("Start Session")
+                .accessibilityHint("Start observing this project for the current mission.")
 
                 Button("Cancel") {
                     viewModel.dismissStartSession()
                 }
                 .disabled(viewModel.isWorking)
+                .accessibilityHint("Return to the project without starting a session.")
             }
 
             Spacer()
@@ -95,6 +98,8 @@ struct ActiveSessionView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
+                .accessibilityLabel("End Session")
+                .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
 
                 Button(role: .destructive) {
                     Task {
@@ -104,6 +109,7 @@ struct ActiveSessionView: View {
                     Label("Cancel Session", systemImage: "xmark.circle")
                 }
                 .disabled(viewModel.isWorking)
+                .accessibilityHint("Cancel this session without generating a snapshot.")
             }
 
             Spacer()
@@ -161,11 +167,14 @@ struct EndSessionView: View {
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(viewModel.isWorking)
+                .accessibilityLabel("Generate Working Memory Snapshot")
+                .accessibilityHint("Save the brain dump, complete the session, and generate a local snapshot.")
 
                 Button("Return to Session") {
                     viewModel.returnToActiveSession()
                 }
                 .disabled(viewModel.isWorking)
+                .accessibilityHint("Go back to the active session without ending it.")
             }
 
             if viewModel.isWorking {
@@ -190,6 +199,7 @@ struct SessionRecoverySheet: View {
     let onResume: () -> Void
     let onEnd: () -> Void
     let onCancel: () -> Void
+    let onRestoreAccess: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -214,12 +224,37 @@ struct SessionRecoverySheet: View {
                     Text(context.session.startedAt.formatted(date: .abbreviated, time: .shortened))
                 }
             }
+            .accessibilityElement(children: .combine)
+
+            if !context.isProjectFolderAccessible {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label(
+                        "This project folder is no longer accessible.",
+                        systemImage: "folder.badge.questionmark"
+                    )
+                    .font(.headline)
+
+                    Text("Choose the folder again before resuming observation.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityElement(children: .combine)
+            }
 
             HStack(spacing: 12) {
                 Button("Resume Session", action: onResume)
                     .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!context.isProjectFolderAccessible)
+                    .accessibilityHint("Resume the interrupted active session.")
                 Button("End Session", action: onEnd)
+                    .accessibilityHint("End the interrupted session and write the brain dump.")
+                if !context.isProjectFolderAccessible {
+                    Button("Choose Folder Again", action: onRestoreAccess)
+                        .accessibilityHint("Restore access to the selected project folder.")
+                }
                 Button("Cancel Session", role: .destructive, action: onCancel)
+                    .accessibilityHint("Cancel the interrupted session.")
             }
         }
         .padding(28)

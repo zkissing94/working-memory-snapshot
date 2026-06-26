@@ -27,6 +27,7 @@ struct ContentView: View {
             default:
                 ProjectDetailContainerView(
                     project: projectsViewModel.selectedProject,
+                    projectsViewModel: projectsViewModel,
                     sessionViewModel: sessionViewModel,
                     projectDetailViewModel: projectDetailViewModel
                 )
@@ -73,6 +74,16 @@ struct ContentView: View {
                     onCancel: {
                         Task {
                             await sessionViewModel.cancelRecoveredSession()
+                        }
+                    },
+                    onRestoreAccess: {
+                        Task {
+                            if let restoredProject = await projectsViewModel.restoreProjectAccessFromPicker(
+                                for: recoveryContext.project
+                            ) {
+                                sessionViewModel.updateRecoveredProject(restoredProject)
+                                projectsViewModel.selectProject(id: restoredProject.id)
+                            }
                         }
                     }
                 )

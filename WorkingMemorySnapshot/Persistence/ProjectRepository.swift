@@ -53,6 +53,35 @@ struct ProjectRepository {
         .first
     }
 
+    func updateProjectRoot(id: UUID, to url: URL) async throws -> Project {
+        let rootPath = normalizedPath(for: url)
+        let now = try DateCoding.date(from: DateCoding.string(from: Date()))
+
+        do {
+            let changedRows = try await database.executeReturningChanges("""
+            UPDATE projects
+            SET root_path = ?, updated_at = ?
+            WHERE id = ?
+            """) { statement in
+                try SQLiteValue.bind(rootPath, to: statement, at: 1)
+                try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 2)
+                try SQLiteValue.bind(id.uuidString, to: statement, at: 3)
+            }
+
+            guard changedRows > 0 else {
+                throw ProjectRepositoryError.projectNotFound(id)
+            }
+        } catch let error as SQLiteError where error.code == SQLITE_CONSTRAINT {
+            throw ProjectRepositoryError.duplicateProject(rootPath: rootPath)
+        }
+
+        guard let project = try await project(for: id) else {
+            throw ProjectRepositoryError.projectNotFound(id)
+        }
+
+        return project
+    }
+
     private func bind(_ project: Project, to statement: OpaquePointer) throws {
         try SQLiteValue.bind(project.id.uuidString, to: statement, at: 1)
         try SQLiteValue.bind(project.name, to: statement, at: 2)
@@ -89,6 +118,7 @@ struct ProjectRepository {
 enum ProjectRepositoryError: Error, Equatable, LocalizedError {
     case duplicateProject(rootPath: String)
     case invalidStoredProject(String)
+    case projectNotFound(UUID)
 
     var errorDescription: String? {
         switch self {
@@ -96,6 +126,8 @@ enum ProjectRepositoryError: Error, Equatable, LocalizedError {
             "That project is already in the list."
         case .invalidStoredProject(let message):
             message
+        case .projectNotFound:
+            "The project could not be found."
         }
     }
 }

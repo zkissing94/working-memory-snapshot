@@ -56,6 +56,43 @@ final class WorkingMemorySnapshotTests: XCTestCase {
         }
     }
 
+    func testUpdateProjectRootRestoresAccessPath() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let originalFolder = try makeTemporaryDirectory(named: "OriginalProject")
+        let restoredFolder = try makeTemporaryDirectory(named: "RestoredProject")
+        let project = try await harness.repository.createProject(at: originalFolder)
+
+        let restoredProject = try await harness.repository.updateProjectRoot(
+            id: project.id,
+            to: restoredFolder
+        )
+
+        XCTAssertEqual(restoredProject.id, project.id)
+        XCTAssertEqual(restoredProject.name, project.name)
+        XCTAssertEqual(
+            restoredProject.rootPath,
+            restoredFolder.standardizedFileURL.resolvingSymlinksInPath().path
+        )
+        XCTAssertGreaterThanOrEqual(restoredProject.updatedAt, project.updatedAt)
+    }
+
+    func testUpdateProjectRootRejectsDuplicateRestoredPath() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let firstFolder = try makeTemporaryDirectory(named: "FirstProject")
+        let secondFolder = try makeTemporaryDirectory(named: "SecondProject")
+        let firstProject = try await harness.repository.createProject(at: firstFolder)
+        _ = try await harness.repository.createProject(at: secondFolder)
+
+        do {
+            _ = try await harness.repository.updateProjectRoot(id: firstProject.id, to: secondFolder)
+            XCTFail("Expected duplicate project path update to fail.")
+        } catch ProjectRepositoryError.duplicateProject(let rootPath) {
+            XCTAssertEqual(rootPath, secondFolder.standardizedFileURL.resolvingSymlinksInPath().path)
+        }
+    }
+
     func testProjectsPersistAcrossRepositoryReload() async throws {
         let rootDirectory = try makeTemporaryDirectory(named: "DatabaseRoot")
         let databaseURL = rootDirectory.appendingPathComponent("working-memory.sqlite3")

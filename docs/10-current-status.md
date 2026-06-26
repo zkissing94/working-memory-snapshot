@@ -5,7 +5,7 @@
 Current handoff branch:
 
 ```text
-feature/m6-real-snapshot-integration
+feature/m7-resume-recovery-polish
 ```
 
 Completed milestones:
@@ -17,6 +17,7 @@ Completed milestones:
 - M4 - Placeholder snapshot vertical slice
 - M5 - Isolated evidence and generation services
 - M6 - Real snapshot integration
+- M7 - Resume and recovery polish
 
 Current implementation state:
 
@@ -53,32 +54,40 @@ Current implementation state:
 - Snapshot detail renders what changed, decisions, open loops, next action, and Resume Brief.
 - Retry-safe save/replace behavior keeps one snapshot per session.
 - Automated M6 tests cover event persistence, observation lifecycle, compaction bounds, prompt formatting, generator persistence, and invalid-result retry safety.
+- Project detail places the latest Resume Brief and next action before project metadata when a snapshot exists.
+- Lost project-folder access is visible from project detail and can be restored with the native folder picker.
+- Active-session recovery distinguishes accessible and inaccessible project folders; Resume Session is blocked until access is restored.
+- Snapshot generation failure states make clear that the session and brain dump are saved and retryable.
+- Settings connection states include concrete recovery suggestions for LM Studio failures and empty model lists.
+- Primary controls have accessibility labels or hints, and app-level commands support Command-N and Command-Comma.
+- The five-session M7 manual dogfood checklist is documented in `docs/11-m7-dogfood-checklist.md`.
+- Automated M7 tests cover project path restoration, duplicate restore rejection, visible access state, recovery blocking for missing folders, and settings recovery copy.
 - LM Studio is not required to compile or launch the app.
 
 ## Next milestone
 
-Next task after merging M6:
+Next task after merging M7:
 
 ```text
-M7 - Resume and recovery polish
+MVP dogfood evaluation
 ```
 
 Expected prompt:
 
 ```text
-prompts/07-m7-resume-and-recovery-polish.md
+Use docs/11-m7-dogfood-checklist.md for manual evaluation before considering post-MVP M8.
 ```
 
-Expected branch:
+Optional post-MVP milestone:
 
 ```text
-feature/m7-resume-recovery-polish
+M8 - Optional evidence-janitor model
 ```
 
-Expected M6 commit message:
+Expected M7 commit message:
 
 ```text
-feat: generate grounded working memory snapshots
+feat: polish resume and session recovery
 ```
 
 ## Fresh chat startup
@@ -99,7 +108,7 @@ git branch --show-current
 ./scripts/check.sh
 ```
 
-Do not start M7 unless M6 has been merged, the worktree is clean, and `./scripts/check.sh` passes.
+Do not start post-MVP M8 unless M7 has been merged, the dogfood checklist has been reviewed, the worktree is clean, and `./scripts/check.sh` passes.
 
 ## M2 completion summary
 
@@ -223,6 +232,33 @@ Branch:
 
 ```text
 feature/m6-real-snapshot-integration
+```
+
+Validation:
+
+```text
+./scripts/check.sh - passed
+```
+
+## M7 completion summary
+
+M7 polished the core resume and recovery loop:
+
+- latest Resume Brief and Start here action appear before project metadata
+- project detail detects missing selected folders and offers Choose Folder Again
+- selected project root paths can be restored without schema changes
+- active-session recovery blocks Resume Session when the folder is inaccessible and offers restoration
+- snapshot generation failures show saved-session context and retry
+- LM Studio settings errors include actionable recovery suggestions
+- primary controls gained accessibility labels or hints
+- Command-N starts a session for the selected project or adds a project when no project is selected
+- Command-Comma opens Settings
+- five-session manual dogfood checklist added
+
+Branch:
+
+```text
+feature/m7-resume-recovery-polish
 ```
 
 Validation:

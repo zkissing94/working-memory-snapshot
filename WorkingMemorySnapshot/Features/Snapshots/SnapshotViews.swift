@@ -42,10 +42,12 @@ struct SnapshotDetailView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(!canStartSession)
+                    .accessibilityHint("Start a new session from this project.")
 
                     Button(action: onBackToProject) {
                         Label("Back to Project", systemImage: "chevron.left")
                     }
+                    .accessibilityHint("Return to the project resume view.")
                 }
             }
             .padding(32)
