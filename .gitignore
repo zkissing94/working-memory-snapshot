@@ -1,0 +1,51 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Build output
+DerivedData/
+.build/
+build/
+*.app.dSYM/
+*.dSYM.zip
+
+# Swift Package Manager
+.swiftpm/
+Package.resolved
+
+# Local databases and journals
+*.sqlite
+*.sqlite3
+*.db
+*.sqlite-shm
+*.sqlite-wal
+*.db-shm
+*.db-wal
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.*
+local.xcconfig
+Local.xcconfig
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*~
