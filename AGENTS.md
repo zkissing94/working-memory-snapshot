@@ -21,6 +21,7 @@ Before any implementation task, read:
 - `docs/05-mvp-roadmap.md`
 - `docs/06-codex-workflow.md`
 - `docs/07-macos-build-compile.md`
+- `docs/10-current-status.md`
 
 Then read the task-relevant documents:
 
@@ -32,6 +33,8 @@ Then read the task-relevant documents:
 - Risk-sensitive work: `docs/09-risk-register.md`
 
 Do not claim to have read a file you did not inspect.
+
+For a fresh chat, use `docs/10-current-status.md` to identify the current milestone, completed work, expected branch, and next prompt. If that document conflicts with Git history, inspect Git and update the document before implementing.
 
 ## Product invariants
 

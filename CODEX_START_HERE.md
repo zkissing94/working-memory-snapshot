@@ -53,6 +53,12 @@ Commit the generated Xcode scaffold on a focused branch, or let the M1 prompt in
 
 ## 4. Implement serially through the vertical slice
 
+Before starting a new Codex chat or milestone, read:
+
+```text
+docs/10-current-status.md
+```
+
 Run these prompts in order:
 
 ```text

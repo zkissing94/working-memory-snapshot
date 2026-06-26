@@ -4,11 +4,13 @@ Implement M2 only: LM Studio settings and connection testing.
 
 Required reading:
 - AGENTS.md
+- docs/10-current-status.md
 - docs/01-system-architecture.md
 - docs/02-ui-spec.md
 - docs/03-data-model.md
 - docs/04-local-ai-spec.md
 - docs/05-mvp-roadmap.md
+- docs/07-macos-build-compile.md
 - docs/07-testing-strategy.md
 
 Branch:

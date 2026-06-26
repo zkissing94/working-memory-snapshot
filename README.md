@@ -53,7 +53,10 @@ Read [`CODEX_START_HERE.md`](CODEX_START_HERE.md).
 - [`docs/07-testing-strategy.md`](docs/07-testing-strategy.md)
 - [`docs/08-decision-log.md`](docs/08-decision-log.md)
 - [`docs/09-risk-register.md`](docs/09-risk-register.md)
+- [`docs/10-current-status.md`](docs/10-current-status.md)
 
 ## Current milestone
 
-**M1 — App shell, build foundation, and project persistence.**
+**M2 — LM Studio settings.**
+
+Fresh chats should read [`docs/10-current-status.md`](docs/10-current-status.md) before starting implementation.

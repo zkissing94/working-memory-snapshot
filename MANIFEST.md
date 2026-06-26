@@ -20,6 +20,7 @@
 - `docs/07-testing-strategy.md`
 - `docs/08-decision-log.md`
 - `docs/09-risk-register.md`
+- `docs/10-current-status.md`
 - `docs/99-external-references.md`
 
 ## Codex task prompts
