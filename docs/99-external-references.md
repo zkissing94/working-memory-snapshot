@@ -20,6 +20,9 @@ These links informed the repository workflow and technical boundaries. The local
 
 ## Apple
 
+- Xcode support: https://developer.apple.com/support/xcode/
+- App Store upload requirements: https://developer.apple.com/news/upcoming-requirements/?id=02212025a
+- App Transport Security local networking key: https://developer.apple.com/documentation/bundleresources/information-property-list/nsapptransportsecurity/nsallowslocalnetworking
 - macOS App Sandbox file access: https://developer.apple.com/documentation/security/accessing-files-from-the-macos-app-sandbox
 - Security-scoped bookmark access: https://developer.apple.com/documentation/professional-video-applications/enabling-security-scoped-bookmark-and-url-access
 - NSWorkspace: https://developer.apple.com/documentation/appkit/nsworkspace

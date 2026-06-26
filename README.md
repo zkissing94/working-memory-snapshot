@@ -4,7 +4,7 @@ A local-first macOS app that helps founder/coders return to deep work in under 6
 
 This repository is a **Codex-ready project seed**. It contains the product requirements, architecture, UI and data specifications, local-model contract, implementation roadmap, engineering workflow, task prompts, validation scripts, Git hooks, and a repository-scoped Codex skill.
 
-It intentionally contains no product implementation yet.
+It now contains the first native macOS scaffold and build foundation.
 
 ## Product loop
 
@@ -22,7 +22,7 @@ Choose project
 - Native macOS app
 - Swift and SwiftUI
 - Local SQLite persistence
-- User-selected project folders with persistent security-scoped access
+- User-selected project folders persisted locally during the MVP
 - LM Studio local server through its OpenAI-compatible API
 - Generic event stream for file, Git, application, and user evidence
 - No cloud backend, accounts, telemetry, screenshots, keystrokes, or clipboard capture
@@ -49,10 +49,11 @@ Read [`CODEX_START_HERE.md`](CODEX_START_HERE.md).
 - [`docs/04-local-ai-spec.md`](docs/04-local-ai-spec.md)
 - [`docs/05-mvp-roadmap.md`](docs/05-mvp-roadmap.md)
 - [`docs/06-codex-workflow.md`](docs/06-codex-workflow.md)
+- [`docs/07-macos-build-compile.md`](docs/07-macos-build-compile.md)
 - [`docs/07-testing-strategy.md`](docs/07-testing-strategy.md)
 - [`docs/08-decision-log.md`](docs/08-decision-log.md)
 - [`docs/09-risk-register.md`](docs/09-risk-register.md)
 
 ## Current milestone
 
-**M0 — Seed the repository and establish the engineering workflow.**
+**M1 — App shell, build foundation, and project persistence.**

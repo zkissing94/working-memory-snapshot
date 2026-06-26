@@ -2,8 +2,8 @@
 
 | Risk | Impact | Early mitigation | Validation point |
 |---|---|---|---|
-| Security-scoped bookmark access fails after relaunch | Project becomes unusable | Convert system URL to bookmark immediately; refresh stale bookmarks | M1 manual relaunch test |
-| App Sandbox prevents Git subprocess behavior | Git evidence unavailable | Run `/usr/bin/git` with an active security scope; keep Git optional; record any entitlement decision | M5a sandbox test |
+| Path-based project access is too loose for distribution | Public release blocked | Keep App Sandbox migration as an explicit later milestone | Pre-distribution hardening |
+| App Sandbox prevents Git subprocess behavior | Git evidence unavailable | Defer sandbox until core loop works; later run `/usr/bin/git` with active security scope and record entitlement decisions | Sandbox migration/M5a |
 | Passive evidence lacks deep meaning from Codex or Claude work | Resume brief becomes generic | Brain dump is primary evidence; preserve mission and Git/file facts; later consider explicit transcript import | M6 dogfood |
 | Model invents decisions | Product becomes untrustworthy | Strict prompt, empty arrays allowed, low temperature, structured output, manual evaluation | M6/M7 |
 | Small model adds latency without quality | Two-stage design harms experience | Keep janitor disabled until measured need | M8 evaluation |
@@ -17,3 +17,4 @@
 | Parallel Codex threads edit shared files | Merge conflicts and inconsistent architecture | Worktrees only after M4; explicit file ownership | M5 |
 | Agent commits unrelated changes | Reviewability degrades | Clean-state protocol, explicit staging, diff review, pre-commit hook | Every task |
 | Hand-authored Xcode project file is malformed | Build cannot open | Generate initial project through Xcode; avoid manual `.pbxproj` creation | Before M1 |
+| Codex changes Xcode build settings opportunistically | Project becomes brittle | Pin settings in `.xcconfig`; require build-contract doc before config edits | Every build config task |

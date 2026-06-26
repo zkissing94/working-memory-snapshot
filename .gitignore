@@ -4,6 +4,7 @@
 .LSOverride
 
 # Xcode user state
+**/xcuserdata/
 xcuserdata/
 *.xcuserstate
 *.xccheckout
@@ -16,8 +17,10 @@ xcuserdata/
 
 # Build output
 DerivedData/
+.derivedData/
 .build/
 build/
+Build/
 *.app.dSYM/
 *.dSYM.zip
 
@@ -49,3 +52,5 @@ Local.xcconfig
 *.tmp
 *.swp
 *~
+tmp/
+temp/

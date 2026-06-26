@@ -9,7 +9,7 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 1
 fi
 
-chmod +x .githooks/pre-commit scripts/check.sh scripts/bootstrap_repo.sh scripts/install_hooks.sh
+chmod +x .githooks/pre-commit scripts/check.sh scripts/doctor.sh scripts/bootstrap_repo.sh scripts/install_hooks.sh
 git config core.hooksPath .githooks
 
 echo "Installed repository hooks from .githooks."

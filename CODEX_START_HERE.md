@@ -37,6 +37,18 @@ Create a new project in this repository root:
 
 Do not create a second nested repository.
 
+Share the `WorkingMemorySnapshot` scheme and commit it under:
+
+```text
+WorkingMemorySnapshot.xcodeproj/xcshareddata/xcschemes/
+```
+
+After the scaffold exists, apply the build contract from:
+
+```text
+docs/07-macos-build-compile.md
+```
+
 Commit the generated Xcode scaffold on a focused branch, or let the M1 prompt incorporate it after inspecting the diff.
 
 ## 4. Implement serially through the vertical slice

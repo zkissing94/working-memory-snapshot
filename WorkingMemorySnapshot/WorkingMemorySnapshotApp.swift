@@ -9,9 +9,21 @@ import SwiftUI
 
 @main
 struct WorkingMemorySnapshotApp: App {
+    @StateObject private var viewModel: ProjectsViewModel
+
+    init() {
+        let environment = AppEnvironment.live()
+        _viewModel = StateObject(
+            wrappedValue: ProjectsViewModel(
+                repository: environment.projectRepository,
+                migrator: environment.databaseMigrator
+            )
+        )
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(viewModel: viewModel)
         }
     }
 }
