@@ -98,7 +98,8 @@ struct ContentView: View {
         sessionViewModel: SessionViewModel(
             sessionRepository: sessionRepository,
             projectRepository: repository,
-            snapshotRepository: snapshotRepository
+            snapshotGenerator: PreviewSnapshotGenerator(snapshotRepository: snapshotRepository),
+            observationCoordinator: PreviewObservationCoordinator()
         ),
         projectDetailViewModel: ProjectDetailViewModel(
             snapshotRepository: snapshotRepository,
@@ -119,4 +120,42 @@ private actor PreviewTokenStore: LMStudioTokenStore {
     func saveToken(_ token: String?) async throws {}
 
     func deleteToken() async throws {}
+}
+
+private struct PreviewSnapshotGenerator: SessionSnapshotGenerating {
+    let snapshotRepository: SnapshotRepository
+
+    func generateSnapshot(for project: Project, session: WorkSession) async throws -> Snapshot {
+        let draft = SnapshotDraft(
+            whatChanged: "Preview snapshot generation is not connected.",
+            decisions: [],
+            openLoops: [],
+            nextAction: "Run the app to generate with LM Studio.",
+            resumeBrief: "Preview mode uses a local stand-in snapshot.",
+            generatorModel: "preview",
+            promptVersion: PromptBuilder.promptVersion
+        )
+        return try await snapshotRepository.saveOrReplaceSnapshot(draft, for: session.id)
+    }
+}
+
+@MainActor
+private final class PreviewObservationCoordinator: SessionObservationCoordinating {
+    var onSummaryChange: (@MainActor (ObservationSessionSummary) -> Void)?
+
+    func startObserving(session: WorkSession, project: Project) async {
+        onSummaryChange?(
+            ObservationSessionSummary(
+                changedFileCount: 0,
+                droppedFileChangeCount: 0,
+                activeApplicationNames: ["Preview"],
+                isGitRepository: nil,
+                notes: []
+            )
+        )
+    }
+
+    func stopObservingForCompletion(session: WorkSession, brainDump: String) async {}
+
+    func stopObservingForCancellation(session: WorkSession) async {}
 }

@@ -79,6 +79,14 @@ struct ActiveSessionView: View {
                     .textSelection(.enabled)
             }
 
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Observed")
+                    .font(.headline)
+                Text(viewModel.observationSummary.displayText)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+
             HStack(spacing: 12) {
                 Button {
                     viewModel.beginEndingActiveSession()

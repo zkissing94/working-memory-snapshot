@@ -118,6 +118,37 @@ struct DatabaseMigrator {
                 """)
             }
         }
+
+        if !appliedVersions.contains(5) {
+            try await applyMigration(version: 5) {
+                try await database.execute("""
+                CREATE TABLE IF NOT EXISTS events (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    session_id TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL,
+                    source TEXT NOT NULL CHECK (
+                        source IN ('system', 'user', 'file', 'git', 'active_app')
+                    ),
+                    kind TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    body TEXT,
+                    payload_json TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+                )
+                """)
+
+                try await database.execute("""
+                CREATE INDEX IF NOT EXISTS events_session_time_index
+                ON events(session_id, occurred_at ASC)
+                """)
+
+                try await database.execute("""
+                CREATE INDEX IF NOT EXISTS events_session_source_kind_index
+                ON events(session_id, source, kind)
+                """)
+            }
+        }
     }
 
     private func applyMigration(version: Int, body: () async throws -> Void) async throws {

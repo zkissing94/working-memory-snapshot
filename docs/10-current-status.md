@@ -5,7 +5,7 @@
 Current handoff branch:
 
 ```text
-feature/m4-placeholder-snapshot
+feature/m6-real-snapshot-integration
 ```
 
 Completed milestones:
@@ -15,6 +15,8 @@ Completed milestones:
 - M2 - LM Studio settings and model discovery
 - M3 - Session lifecycle
 - M4 - Placeholder snapshot vertical slice
+- M5 - Isolated evidence and generation services
+- M6 - Real snapshot integration
 
 Current implementation state:
 
@@ -37,46 +39,46 @@ Current implementation state:
 - Active-session recovery is shown on app launch with resume, end, and cancel choices.
 - Automated M3 tests cover mission validation, complete/cancel transitions, brain dump persistence, active-session uniqueness, project-access failure, and recovery state.
 - Snapshot persistence works through the `snapshots` table.
-- A deterministic placeholder snapshot is generated from mission and brain dump only.
-- Placeholder snapshots always keep `decisions` empty and do not invent unsupported decisions.
+- Generic session events persist through the `events` table.
+- Observation starts only for active sessions and stops at completion or cancellation.
+- File observation records bounded project-relative changed paths.
+- Git evidence captures initial state and final bounded summaries when the project is in a Git repository.
+- Active-app observation records application transitions only, not window content.
+- Evidence compaction deterministically bounds passive evidence while preserving the brain dump verbatim.
+- `PromptBuilder` creates prompt version `v1` with the local AI prompt-injection boundary.
+- `SnapshotGenerator` calls LM Studio structured chat completions and persists only valid snapshots.
+- Generation failure preserves the completed session and brain dump and exposes retry.
+- Non-Git projects remain valid and produce non-Git evidence notes.
 - Project detail shows the latest Resume Brief and next action.
 - Snapshot detail renders what changed, decisions, open loops, next action, and Resume Brief.
 - Retry-safe save/replace behavior keeps one snapshot per session.
-- Automated M4 tests cover placeholder generation rules, snapshot persistence, save/replace behavior, latest-snapshot query, and session-completion snapshot creation.
+- Automated M6 tests cover event persistence, observation lifecycle, compaction bounds, prompt formatting, generator persistence, and invalid-result retry safety.
 - LM Studio is not required to compile or launch the app.
 
 ## Next milestone
 
-Next tasks after merging M4 to `main`:
+Next task after merging M6:
 
 ```text
-M5 - Isolated evidence and generation services
+M7 - Resume and recovery polish
 ```
 
-Use one isolated prompt per branch:
+Expected prompt:
 
 ```text
-prompts/05a-m5-git-service.md
-prompts/05b-m5-file-observation.md
-prompts/05c-m5-active-app-observation.md
-prompts/05d-m5-lm-studio-generation-client.md
+prompts/07-m7-resume-and-recovery-polish.md
 ```
 
-Expected branches:
+Expected branch:
 
 ```text
-feature/m5a-git-service
-feature/m5b-file-observation
-feature/m5c-active-app-observation
-feature/m5d-lm-studio-generation
+feature/m7-resume-recovery-polish
 ```
 
-Do not parallelize M5 branches until M4 has been merged to a clean `main`.
-
-Expected M4 commit message:
+Expected M6 commit message:
 
 ```text
-feat: add placeholder snapshot vertical slice
+feat: generate grounded working memory snapshots
 ```
 
 ## Fresh chat startup
@@ -87,7 +89,7 @@ In a fresh Codex chat, start by opening this repository root and reading:
 - `docs/10-current-status.md`
 - `docs/05-mvp-roadmap.md`
 - `docs/07-macos-build-compile.md`
-- the specific M5 prompt being implemented
+- the specific milestone prompt being implemented
 
 Then run:
 
@@ -97,7 +99,7 @@ git branch --show-current
 ./scripts/check.sh
 ```
 
-Do not start M5 unless M4 has been merged to `main`, `main` is clean, and `./scripts/check.sh` passes.
+Do not start M7 unless M6 has been merged, the worktree is clean, and `./scripts/check.sh` passes.
 
 ## M2 completion summary
 
@@ -193,16 +195,41 @@ Validation:
 ./scripts/check.sh - passed
 ```
 
-## M5 scope reminder
+## M5 completion summary
 
-M5 owns isolated leaf services only:
+M5 completed isolated leaf services:
 
 - Git service
 - file observation
 - active-app observation
 - LM Studio generation client
 
-Each M5 prompt must stay on its own branch and avoid shared-file collisions.
+M6 integrated those branches serially into the app flow.
+
+## M6 completion summary
+
+M6 replaced placeholder generation with grounded local synthesis:
+
+- version 5 events migration and `EventRepository`
+- `ObservationCoordinator` for session-scoped file, Git, and active-app evidence
+- deterministic `EvidenceCompactor`
+- `PromptBuilder` prompt version `v1`
+- `SnapshotGenerator` orchestration through LM Studio structured output
+- active-session observed summary UI
+- generation progress, failure, and retry behavior
+- tests for event persistence, observation lifecycle, compaction bounds, prompt formatting, generation persistence, and invalid-result safety
+
+Branch:
+
+```text
+feature/m6-real-snapshot-integration
+```
+
+Validation:
+
+```text
+./scripts/check.sh - passed
+```
 
 ## Persistent build constraints
 

@@ -22,7 +22,8 @@ final class SessionViewModelTests: XCTestCase {
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
             projectRepository: harness.projectRepository,
-            snapshotRepository: harness.snapshotRepository
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: RecordingSessionObservationCoordinator()
         )
         viewModel.mission = "Start only when the folder is reachable"
 
@@ -40,10 +41,12 @@ final class SessionViewModelTests: XCTestCase {
         let project = try await harness.projectRepository.createProject(
             at: makeTemporaryDirectory(named: "ViewModelProject")
         )
+        let observationCoordinator = RecordingSessionObservationCoordinator()
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
             projectRepository: harness.projectRepository,
-            snapshotRepository: harness.snapshotRepository
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: observationCoordinator
         )
 
         viewModel.beginStartSession(for: project)
@@ -52,21 +55,23 @@ final class SessionViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.activeSession?.projectID, project.id)
         XCTAssertEqual(viewModel.flow, .idle)
+        XCTAssertEqual(observationCoordinator.startCallCount, 1)
 
         viewModel.beginEndingActiveSession()
-        viewModel.brainDump = "Next: wire placeholder snapshots."
+        viewModel.brainDump = "Next: wire grounded snapshots."
         await viewModel.completeActiveSession()
 
         let latestCompleted = try await harness.sessionRepository.latestCompletedSession(for: project.id)
         let completed = try XCTUnwrap(latestCompleted)
         XCTAssertNil(viewModel.activeSession)
-        XCTAssertEqual(completed.brainDump, "Next: wire placeholder snapshots.")
+        XCTAssertEqual(completed.brainDump, "Next: wire grounded snapshots.")
         XCTAssertEqual(completed.status, .completed)
         let storedSnapshot = try await harness.snapshotRepository.snapshot(for: completed.id)
         let snapshot = try XCTUnwrap(storedSnapshot)
-        XCTAssertEqual(snapshot.decisions, [])
-        XCTAssertEqual(snapshot.nextAction, "wire placeholder snapshots")
+        XCTAssertEqual(snapshot.generatorModel, "fake-model")
+        XCTAssertEqual(snapshot.nextAction, "Review generated snapshot wiring.")
         XCTAssertEqual(viewModel.generatedSnapshotContext?.snapshot, snapshot)
+        XCTAssertEqual(observationCoordinator.completedBrainDump, "Next: wire grounded snapshots.")
     }
 
     func testLoadActiveSessionCreatesRecoveryContext() async throws {
@@ -82,7 +87,8 @@ final class SessionViewModelTests: XCTestCase {
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
             projectRepository: harness.projectRepository,
-            snapshotRepository: harness.snapshotRepository
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: RecordingSessionObservationCoordinator()
         )
 
         await viewModel.loadActiveSessionForRecovery()
@@ -121,5 +127,56 @@ final class SessionViewModelTests: XCTestCase {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         temporaryURLs.append(url.deletingLastPathComponent())
         return url
+    }
+
+}
+
+private struct FakeSessionSnapshotGenerator: SessionSnapshotGenerating {
+    let snapshotRepository: SnapshotRepository
+
+    func generateSnapshot(for project: Project, session: WorkSession) async throws -> Snapshot {
+        try await snapshotRepository.saveOrReplaceSnapshot(
+            SnapshotDraft(
+                whatChanged: "Grounded generation returned a fake test snapshot.",
+                decisions: [],
+                openLoops: [],
+                nextAction: "Review generated snapshot wiring.",
+                resumeBrief: "A fake snapshot confirms the view model calls the generator after completion.",
+                generatorModel: "fake-model",
+                promptVersion: PromptBuilder.promptVersion
+            ),
+            for: session.id
+        )
+    }
+}
+
+@MainActor
+private final class RecordingSessionObservationCoordinator: SessionObservationCoordinating {
+    var onSummaryChange: (@MainActor (ObservationSessionSummary) -> Void)?
+    private(set) var startCallCount = 0
+    private(set) var completionStopCallCount = 0
+    private(set) var cancellationStopCallCount = 0
+    private(set) var completedBrainDump: String?
+
+    func startObserving(session: WorkSession, project: Project) async {
+        startCallCount += 1
+        onSummaryChange?(
+            ObservationSessionSummary(
+                changedFileCount: 1,
+                droppedFileChangeCount: 0,
+                activeApplicationNames: ["Terminal"],
+                isGitRepository: true,
+                notes: []
+            )
+        )
+    }
+
+    func stopObservingForCompletion(session: WorkSession, brainDump: String) async {
+        completionStopCallCount += 1
+        completedBrainDump = brainDump
+    }
+
+    func stopObservingForCancellation(session: WorkSession) async {
+        cancellationStopCallCount += 1
     }
 }

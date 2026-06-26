@@ -81,7 +81,11 @@ struct SnapshotDetailView: View {
             return "Deterministic placeholder from mission and brain dump only."
         }
 
-        return "Generated snapshot."
+        if let generatorModel = snapshot.generatorModel {
+            return "Generated locally with \(generatorModel)."
+        }
+
+        return "Generated locally."
     }
 }
 

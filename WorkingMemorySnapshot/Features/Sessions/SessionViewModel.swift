@@ -27,25 +27,29 @@ final class SessionViewModel: ObservableObject {
     @Published var brainDump = ""
     @Published private(set) var errorMessage: String?
     @Published private(set) var isWorking = false
+    @Published private(set) var observationSummary = ObservationSessionSummary()
 
     private let sessionRepository: SessionRepository
     private let projectRepository: ProjectRepository
-    private let snapshotRepository: SnapshotRepository
-    private let placeholderSnapshotGenerator: PlaceholderSnapshotGenerator
+    private let snapshotGenerator: any SessionSnapshotGenerating
+    private let observationCoordinator: any SessionObservationCoordinating
     private let fileManager: FileManager
 
     init(
         sessionRepository: SessionRepository,
         projectRepository: ProjectRepository,
-        snapshotRepository: SnapshotRepository,
-        placeholderSnapshotGenerator: PlaceholderSnapshotGenerator = PlaceholderSnapshotGenerator(),
+        snapshotGenerator: any SessionSnapshotGenerating,
+        observationCoordinator: any SessionObservationCoordinating,
         fileManager: FileManager = .default
     ) {
         self.sessionRepository = sessionRepository
         self.projectRepository = projectRepository
-        self.snapshotRepository = snapshotRepository
-        self.placeholderSnapshotGenerator = placeholderSnapshotGenerator
+        self.snapshotGenerator = snapshotGenerator
+        self.observationCoordinator = observationCoordinator
         self.fileManager = fileManager
+        self.observationCoordinator.onSummaryChange = { [weak self] summary in
+            self?.observationSummary = summary
+        }
     }
 
     var canStartSession: Bool {
@@ -116,6 +120,7 @@ final class SessionViewModel: ObservableObject {
             activeSession = session
             mission = ""
             flow = .idle
+            await observationCoordinator.startObserving(session: session, project: project)
         }
     }
 
@@ -151,9 +156,15 @@ final class SessionViewModel: ObservableObject {
         }
 
         await performSessionUpdate {
+            let endingSession = activeSession
+            let endingBrainDump = brainDump
+            await observationCoordinator.stopObservingForCompletion(
+                session: endingSession,
+                brainDump: endingBrainDump
+            )
             let completedSession = try await sessionRepository.completeSession(
-                id: activeSession.id,
-                brainDump: brainDump
+                id: endingSession.id,
+                brainDump: endingBrainDump
             )
 
             self.activeSession = nil
@@ -162,7 +173,7 @@ final class SessionViewModel: ObservableObject {
             flow = .idle
 
             do {
-                try await savePlaceholderSnapshot(for: completedSession)
+                try await saveGeneratedSnapshot(for: completedSession)
                 failedSnapshotSession = nil
             } catch {
                 failedSnapshotSession = completedSession
@@ -177,7 +188,7 @@ final class SessionViewModel: ObservableObject {
         }
 
         await performSessionUpdate {
-            try await savePlaceholderSnapshot(for: failedSnapshotSession)
+            try await saveGeneratedSnapshot(for: failedSnapshotSession)
             self.failedSnapshotSession = nil
         }
     }
@@ -188,6 +199,7 @@ final class SessionViewModel: ObservableObject {
         }
 
         await performSessionUpdate {
+            await observationCoordinator.stopObservingForCancellation(session: activeSession)
             _ = try await sessionRepository.cancelSession(id: activeSession.id)
             self.activeSession = nil
             recoveryContext = nil
@@ -204,6 +216,12 @@ final class SessionViewModel: ObservableObject {
         activeSession = recoveryContext.session
         self.recoveryContext = nil
         flow = .idle
+        Task {
+            await observationCoordinator.startObserving(
+                session: recoveryContext.session,
+                project: recoveryContext.project
+            )
+        }
     }
 
     func cancelRecoveredSession() async {
@@ -248,12 +266,15 @@ final class SessionViewModel: ObservableObject {
         }
     }
 
-    private func savePlaceholderSnapshot(for session: WorkSession) async throws {
-        let draft = placeholderSnapshotGenerator.makeSnapshot(
-            mission: session.mission,
-            brainDump: session.brainDump
+    private func saveGeneratedSnapshot(for session: WorkSession) async throws {
+        guard let project = try await projectRepository.project(for: session.projectID) else {
+            throw SessionViewModelError.projectMissing
+        }
+
+        let snapshot = try await snapshotGenerator.generateSnapshot(
+            for: project,
+            session: session
         )
-        let snapshot = try await snapshotRepository.saveOrReplaceSnapshot(draft, for: session.id)
         generatedSnapshotContext = GeneratedSnapshotContext(
             projectID: session.projectID,
             snapshot: snapshot
@@ -273,11 +294,14 @@ final class SessionViewModel: ObservableObject {
 
 enum SessionViewModelError: Error, LocalizedError {
     case projectFolderInaccessible
+    case projectMissing
 
     var errorDescription: String? {
         switch self {
         case .projectFolderInaccessible:
             "This project folder is no longer accessible."
+        case .projectMissing:
+            "The project for this session could not be found."
         }
     }
 }

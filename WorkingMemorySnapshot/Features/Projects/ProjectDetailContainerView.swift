@@ -175,7 +175,7 @@ private struct ProjectDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Snapshot generation did not finish.")
                         .font(.headline)
-                    Text("The session and brain dump are saved. Retry the deterministic placeholder snapshot.")
+                    Text("The session and brain dump are saved. Start LM Studio, check Settings, and retry local generation.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                     Button(action: onRetrySnapshot) {

@@ -26,7 +26,8 @@ struct WorkingMemorySnapshotApp: App {
             wrappedValue: SessionViewModel(
                 sessionRepository: environment.sessionRepository,
                 projectRepository: environment.projectRepository,
-                snapshotRepository: environment.snapshotRepository
+                snapshotGenerator: environment.snapshotGenerator,
+                observationCoordinator: environment.observationCoordinator
             )
         )
         _projectDetailViewModel = StateObject(

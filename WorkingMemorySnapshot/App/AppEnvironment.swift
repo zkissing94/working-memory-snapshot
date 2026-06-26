@@ -4,22 +4,40 @@ struct AppEnvironment {
     let databaseMigrator: DatabaseMigrator
     let projectRepository: ProjectRepository
     let sessionRepository: SessionRepository
+    let eventRepository: EventRepository
     let snapshotRepository: SnapshotRepository
     let settingsRepository: SettingsRepository
     let tokenStore: any LMStudioTokenStore
     let lmStudioHTTPTransport: any LMStudioHTTPTransport
+    let observationCoordinator: ObservationCoordinator
+    let snapshotGenerator: any SessionSnapshotGenerating
 
+    @MainActor
     static func live() -> AppEnvironment {
         let database = Database(url: applicationSupportDatabaseURL())
+        let eventRepository = EventRepository(database: database)
+        let snapshotRepository = SnapshotRepository(database: database)
+        let settingsRepository = SettingsRepository(database: database)
+        let tokenStore = KeychainStore()
+        let transport = URLSessionLMStudioHTTPTransport()
 
         return AppEnvironment(
             databaseMigrator: DatabaseMigrator(database: database),
             projectRepository: ProjectRepository(database: database),
             sessionRepository: SessionRepository(database: database),
-            snapshotRepository: SnapshotRepository(database: database),
-            settingsRepository: SettingsRepository(database: database),
-            tokenStore: KeychainStore(),
-            lmStudioHTTPTransport: URLSessionLMStudioHTTPTransport()
+            eventRepository: eventRepository,
+            snapshotRepository: snapshotRepository,
+            settingsRepository: settingsRepository,
+            tokenStore: tokenStore,
+            lmStudioHTTPTransport: transport,
+            observationCoordinator: ObservationCoordinator(eventRepository: eventRepository),
+            snapshotGenerator: SnapshotGenerator(
+                eventRepository: eventRepository,
+                snapshotRepository: snapshotRepository,
+                settingsRepository: settingsRepository,
+                tokenStore: tokenStore,
+                transport: transport
+            )
         )
     }
 
