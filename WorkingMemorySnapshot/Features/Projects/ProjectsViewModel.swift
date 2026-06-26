@@ -1,9 +1,14 @@
 import SwiftUI
 
+enum SidebarSelection: Hashable {
+    case project(Project.ID)
+    case settings
+}
+
 @MainActor
 final class ProjectsViewModel: ObservableObject {
     @Published private(set) var projects: [Project] = []
-    @Published var selectedProjectID: Project.ID?
+    @Published var selectedItem: SidebarSelection?
     @Published private(set) var errorMessage: String?
     @Published private(set) var isLoading = false
 
@@ -16,7 +21,11 @@ final class ProjectsViewModel: ObservableObject {
     }
 
     var selectedProject: Project? {
-        projects.first { $0.id == selectedProjectID }
+        guard case .project(let selectedProjectID) = selectedItem else {
+            return nil
+        }
+
+        return projects.first { $0.id == selectedProjectID }
     }
 
     var isShowingError: Binding<Bool> {
@@ -39,8 +48,13 @@ final class ProjectsViewModel: ObservableObject {
         do {
             try await migrator.migrate()
             projects = try await repository.listProjects()
-            if selectedProjectID == nil {
-                selectedProjectID = projects.first?.id
+            if case .settings = selectedItem {
+                return
+            }
+            if let selectedProject = selectedProject {
+                selectedItem = .project(selectedProject.id)
+            } else {
+                selectedItem = projects.first.map { .project($0.id) }
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -59,7 +73,7 @@ final class ProjectsViewModel: ObservableObject {
         do {
             let project = try await repository.createProject(at: url)
             projects = try await repository.listProjects()
-            selectedProjectID = project.id
+            selectedItem = .project(project.id)
         } catch {
             errorMessage = error.localizedDescription
             projects = (try? await repository.listProjects()) ?? projects
