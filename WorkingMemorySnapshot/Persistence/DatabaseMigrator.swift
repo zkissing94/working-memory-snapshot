@@ -92,6 +92,32 @@ struct DatabaseMigrator {
                 """)
             }
         }
+
+        if !appliedVersions.contains(4) {
+            try await applyMigration(version: 4) {
+                try await database.execute("""
+                CREATE TABLE IF NOT EXISTS snapshots (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    session_id TEXT NOT NULL,
+                    what_changed TEXT NOT NULL,
+                    decisions_json TEXT NOT NULL,
+                    open_loops_json TEXT NOT NULL,
+                    next_action TEXT NOT NULL,
+                    resume_brief TEXT NOT NULL,
+                    generator_model TEXT,
+                    prompt_version TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+                )
+                """)
+
+                try await database.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS snapshots_session_unique
+                ON snapshots(session_id)
+                """)
+            }
+        }
     }
 
     private func applyMigration(version: Int, body: () async throws -> Void) async throws {

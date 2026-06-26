@@ -4,6 +4,7 @@ struct AppEnvironment {
     let databaseMigrator: DatabaseMigrator
     let projectRepository: ProjectRepository
     let sessionRepository: SessionRepository
+    let snapshotRepository: SnapshotRepository
     let settingsRepository: SettingsRepository
     let tokenStore: any LMStudioTokenStore
     let lmStudioHTTPTransport: any LMStudioHTTPTransport
@@ -15,6 +16,7 @@ struct AppEnvironment {
             databaseMigrator: DatabaseMigrator(database: database),
             projectRepository: ProjectRepository(database: database),
             sessionRepository: SessionRepository(database: database),
+            snapshotRepository: SnapshotRepository(database: database),
             settingsRepository: SettingsRepository(database: database),
             tokenStore: KeychainStore(),
             lmStudioHTTPTransport: URLSessionLMStudioHTTPTransport()

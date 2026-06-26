@@ -5,7 +5,7 @@
 Current handoff branch:
 
 ```text
-feature/m3-session-lifecycle
+feature/m4-placeholder-snapshot
 ```
 
 Completed milestones:
@@ -14,6 +14,7 @@ Completed milestones:
 - M1 - App shell, build foundation, and project persistence
 - M2 - LM Studio settings and model discovery
 - M3 - Session lifecycle
+- M4 - Placeholder snapshot vertical slice
 
 Current implementation state:
 
@@ -35,29 +36,44 @@ Current implementation state:
 - Starting a session checks that the selected project folder is still accessible.
 - Active-session recovery is shown on app launch with resume, end, and cancel choices.
 - Automated M3 tests cover mission validation, complete/cancel transitions, brain dump persistence, active-session uniqueness, project-access failure, and recovery state.
+- Snapshot persistence works through the `snapshots` table.
+- A deterministic placeholder snapshot is generated from mission and brain dump only.
+- Placeholder snapshots always keep `decisions` empty and do not invent unsupported decisions.
+- Project detail shows the latest Resume Brief and next action.
+- Snapshot detail renders what changed, decisions, open loops, next action, and Resume Brief.
+- Retry-safe save/replace behavior keeps one snapshot per session.
+- Automated M4 tests cover placeholder generation rules, snapshot persistence, save/replace behavior, latest-snapshot query, and session-completion snapshot creation.
 - LM Studio is not required to compile or launch the app.
 
 ## Next milestone
 
-Next task after merging M3 to `main`:
+Next tasks after merging M4 to `main`:
 
 ```text
-M4 - Placeholder snapshot vertical slice
+M5 - Isolated evidence and generation services
 ```
 
-Use:
+Use one isolated prompt per branch:
 
 ```text
-prompts/04-m4-placeholder-snapshot.md
+prompts/05a-m5-git-service.md
+prompts/05b-m5-file-observation.md
+prompts/05c-m5-active-app-observation.md
+prompts/05d-m5-lm-studio-generation-client.md
 ```
 
-Expected branch:
+Expected branches:
 
 ```text
-feature/m4-placeholder-snapshot
+feature/m5a-git-service
+feature/m5b-file-observation
+feature/m5c-active-app-observation
+feature/m5d-lm-studio-generation
 ```
 
-Expected commit message:
+Do not parallelize M5 branches until M4 has been merged to a clean `main`.
+
+Expected M4 commit message:
 
 ```text
 feat: add placeholder snapshot vertical slice
@@ -71,7 +87,7 @@ In a fresh Codex chat, start by opening this repository root and reading:
 - `docs/10-current-status.md`
 - `docs/05-mvp-roadmap.md`
 - `docs/07-macos-build-compile.md`
-- `prompts/04-m4-placeholder-snapshot.md`
+- the specific M5 prompt being implemented
 
 Then run:
 
@@ -81,7 +97,7 @@ git branch --show-current
 ./scripts/check.sh
 ```
 
-Do not start M4 unless M3 has been merged to `main`, `main` is clean, and `./scripts/check.sh` passes.
+Do not start M5 unless M4 has been merged to `main`, `main` is clean, and `./scripts/check.sh` passes.
 
 ## M2 completion summary
 
@@ -149,17 +165,44 @@ Validation:
 ./scripts/check.sh - passed
 ```
 
-## M4 scope reminder
+## M4 completion summary
 
-M4 owns the placeholder snapshot vertical slice only:
+M4 added the placeholder snapshot vertical slice only:
 
-- snapshots migration and repository
-- deterministic placeholder generator using only mission and brain dump
-- snapshot detail view
+- `Snapshot` and `SnapshotDraft` models
+- version 4 snapshots migration
+- `SnapshotRepository` backed by SQLite
+- deterministic `PlaceholderSnapshotGenerator`
+- completion flow that saves the brain dump, completes the session, and saves/replaces a placeholder snapshot
+- snapshot generation retry state after persistence failure
 - latest Resume Brief and next action on project detail
-- retry-safe save/replace behavior
+- snapshot detail view
+- targeted tests for placeholder generation, persistence, latest query, and session-completion snapshot creation
 
-M4 must not add observation, Git service, file watcher, active-app service, or LM Studio chat completion.
+M4 did not add observation, Git service, file watcher, active-app service, or LM Studio chat completion.
+
+Branch:
+
+```text
+feature/m4-placeholder-snapshot
+```
+
+Validation:
+
+```text
+./scripts/check.sh - passed
+```
+
+## M5 scope reminder
+
+M5 owns isolated leaf services only:
+
+- Git service
+- file observation
+- active-app observation
+- LM Studio generation client
+
+Each M5 prompt must stay on its own branch and avoid shared-file collisions.
 
 ## Persistent build constraints
 

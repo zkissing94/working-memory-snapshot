@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var projectsViewModel: ProjectsViewModel
     @ObservedObject var sessionViewModel: SessionViewModel
+    @ObservedObject var projectDetailViewModel: ProjectDetailViewModel
     @ObservedObject var settingsViewModel: SettingsViewModel
 
     var body: some View {
@@ -26,7 +27,8 @@ struct ContentView: View {
             default:
                 ProjectDetailContainerView(
                     project: projectsViewModel.selectedProject,
-                    sessionViewModel: sessionViewModel
+                    sessionViewModel: sessionViewModel,
+                    projectDetailViewModel: projectDetailViewModel
                 )
             }
         }
@@ -48,6 +50,13 @@ struct ContentView: View {
             }
         } message: {
             Text(sessionViewModel.errorMessage ?? "The session could not be updated.")
+        }
+        .alert("Snapshot Error", isPresented: projectDetailViewModel.isShowingError) {
+            Button("OK", role: .cancel) {
+                projectDetailViewModel.clearError()
+            }
+        } message: {
+            Text(projectDetailViewModel.errorMessage ?? "The snapshot could not be loaded.")
         }
         .sheet(isPresented: sessionViewModel.isShowingRecoverySheet) {
             if let recoveryContext = sessionViewModel.recoveryContext {
@@ -77,6 +86,7 @@ struct ContentView: View {
     let database = Database(url: URL(fileURLWithPath: "/tmp/working-memory-preview.sqlite3"))
     let repository = ProjectRepository(database: database)
     let sessionRepository = SessionRepository(database: database)
+    let snapshotRepository = SnapshotRepository(database: database)
     let settingsRepository = SettingsRepository(database: database)
     let migrator = DatabaseMigrator(database: database)
 
@@ -87,7 +97,12 @@ struct ContentView: View {
         ),
         sessionViewModel: SessionViewModel(
             sessionRepository: sessionRepository,
-            projectRepository: repository
+            projectRepository: repository,
+            snapshotRepository: snapshotRepository
+        ),
+        projectDetailViewModel: ProjectDetailViewModel(
+            snapshotRepository: snapshotRepository,
+            sessionRepository: sessionRepository
         ),
         settingsViewModel: SettingsViewModel(
             repository: settingsRepository,

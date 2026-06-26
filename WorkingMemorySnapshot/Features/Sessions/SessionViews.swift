@@ -148,7 +148,7 @@ struct EndSessionView: View {
                         await viewModel.completeActiveSession()
                     }
                 } label: {
-                    Label("Complete Session", systemImage: "checkmark.circle")
+                    Label("Generate Working Memory Snapshot", systemImage: "doc.text")
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return, modifiers: .command)
@@ -158,6 +158,16 @@ struct EndSessionView: View {
                     viewModel.returnToActiveSession()
                 }
                 .disabled(viewModel.isWorking)
+            }
+
+            if viewModel.isWorking {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Creating your Working Memory Snapshot locally...")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()

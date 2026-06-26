@@ -21,7 +21,8 @@ final class SessionViewModelTests: XCTestCase {
 
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
-            projectRepository: harness.projectRepository
+            projectRepository: harness.projectRepository,
+            snapshotRepository: harness.snapshotRepository
         )
         viewModel.mission = "Start only when the folder is reachable"
 
@@ -41,7 +42,8 @@ final class SessionViewModelTests: XCTestCase {
         )
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
-            projectRepository: harness.projectRepository
+            projectRepository: harness.projectRepository,
+            snapshotRepository: harness.snapshotRepository
         )
 
         viewModel.beginStartSession(for: project)
@@ -60,6 +62,11 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.activeSession)
         XCTAssertEqual(completed.brainDump, "Next: wire placeholder snapshots.")
         XCTAssertEqual(completed.status, .completed)
+        let storedSnapshot = try await harness.snapshotRepository.snapshot(for: completed.id)
+        let snapshot = try XCTUnwrap(storedSnapshot)
+        XCTAssertEqual(snapshot.decisions, [])
+        XCTAssertEqual(snapshot.nextAction, "wire placeholder snapshots")
+        XCTAssertEqual(viewModel.generatedSnapshotContext?.snapshot, snapshot)
     }
 
     func testLoadActiveSessionCreatesRecoveryContext() async throws {
@@ -74,7 +81,8 @@ final class SessionViewModelTests: XCTestCase {
         )
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
-            projectRepository: harness.projectRepository
+            projectRepository: harness.projectRepository,
+            snapshotRepository: harness.snapshotRepository
         )
 
         await viewModel.loadActiveSessionForRecovery()
@@ -92,15 +100,17 @@ final class SessionViewModelTests: XCTestCase {
         database: Database,
         migrator: DatabaseMigrator,
         projectRepository: ProjectRepository,
-        sessionRepository: SessionRepository
+        sessionRepository: SessionRepository,
+        snapshotRepository: SnapshotRepository
     ) {
         let rootDirectory = try makeTemporaryDirectory(named: "DatabaseRoot")
         let database = Database(url: rootDirectory.appendingPathComponent("working-memory.sqlite3"))
         let migrator = DatabaseMigrator(database: database)
         let projectRepository = ProjectRepository(database: database)
         let sessionRepository = SessionRepository(database: database)
+        let snapshotRepository = SnapshotRepository(database: database)
 
-        return (database, migrator, projectRepository, sessionRepository)
+        return (database, migrator, projectRepository, sessionRepository, snapshotRepository)
     }
 
     private func makeTemporaryDirectory(named name: String) throws -> URL {

@@ -11,10 +11,17 @@ struct SessionRecoveryContext: Equatable {
     let project: Project
 }
 
+struct GeneratedSnapshotContext: Equatable {
+    let projectID: Project.ID
+    let snapshot: Snapshot
+}
+
 @MainActor
 final class SessionViewModel: ObservableObject {
     @Published private(set) var activeSession: WorkSession?
     @Published private(set) var recoveryContext: SessionRecoveryContext?
+    @Published private(set) var generatedSnapshotContext: GeneratedSnapshotContext?
+    @Published private(set) var failedSnapshotSession: WorkSession?
     @Published private(set) var flow: SessionFlow = .idle
     @Published var mission = ""
     @Published var brainDump = ""
@@ -23,15 +30,21 @@ final class SessionViewModel: ObservableObject {
 
     private let sessionRepository: SessionRepository
     private let projectRepository: ProjectRepository
+    private let snapshotRepository: SnapshotRepository
+    private let placeholderSnapshotGenerator: PlaceholderSnapshotGenerator
     private let fileManager: FileManager
 
     init(
         sessionRepository: SessionRepository,
         projectRepository: ProjectRepository,
+        snapshotRepository: SnapshotRepository,
+        placeholderSnapshotGenerator: PlaceholderSnapshotGenerator = PlaceholderSnapshotGenerator(),
         fileManager: FileManager = .default
     ) {
         self.sessionRepository = sessionRepository
         self.projectRepository = projectRepository
+        self.snapshotRepository = snapshotRepository
+        self.placeholderSnapshotGenerator = placeholderSnapshotGenerator
         self.fileManager = fileManager
     }
 
@@ -138,7 +151,7 @@ final class SessionViewModel: ObservableObject {
         }
 
         await performSessionUpdate {
-            _ = try await sessionRepository.completeSession(
+            let completedSession = try await sessionRepository.completeSession(
                 id: activeSession.id,
                 brainDump: brainDump
             )
@@ -147,6 +160,25 @@ final class SessionViewModel: ObservableObject {
             recoveryContext = nil
             brainDump = ""
             flow = .idle
+
+            do {
+                try await savePlaceholderSnapshot(for: completedSession)
+                failedSnapshotSession = nil
+            } catch {
+                failedSnapshotSession = completedSession
+                throw error
+            }
+        }
+    }
+
+    func retrySnapshotGeneration() async {
+        guard let failedSnapshotSession else {
+            return
+        }
+
+        await performSessionUpdate {
+            try await savePlaceholderSnapshot(for: failedSnapshotSession)
+            self.failedSnapshotSession = nil
         }
     }
 
@@ -195,6 +227,10 @@ final class SessionViewModel: ObservableObject {
         errorMessage = nil
     }
 
+    func clearGeneratedSnapshotContext() {
+        generatedSnapshotContext = nil
+    }
+
     private func performSessionUpdate(_ body: () async throws -> Void) async {
         guard !isWorking else {
             return
@@ -210,6 +246,18 @@ final class SessionViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func savePlaceholderSnapshot(for session: WorkSession) async throws {
+        let draft = placeholderSnapshotGenerator.makeSnapshot(
+            mission: session.mission,
+            brainDump: session.brainDump
+        )
+        let snapshot = try await snapshotRepository.saveOrReplaceSnapshot(draft, for: session.id)
+        generatedSnapshotContext = GeneratedSnapshotContext(
+            projectID: session.projectID,
+            snapshot: snapshot
+        )
     }
 
     private func validateAccess(to project: Project) throws {
