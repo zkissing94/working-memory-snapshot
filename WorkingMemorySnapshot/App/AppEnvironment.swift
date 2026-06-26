@@ -3,13 +3,19 @@ import Foundation
 struct AppEnvironment {
     let databaseMigrator: DatabaseMigrator
     let projectRepository: ProjectRepository
+    let settingsRepository: SettingsRepository
+    let tokenStore: any LMStudioTokenStore
+    let lmStudioHTTPTransport: any LMStudioHTTPTransport
 
     static func live() -> AppEnvironment {
         let database = Database(url: applicationSupportDatabaseURL())
 
         return AppEnvironment(
             databaseMigrator: DatabaseMigrator(database: database),
-            projectRepository: ProjectRepository(database: database)
+            projectRepository: ProjectRepository(database: database),
+            settingsRepository: SettingsRepository(database: database),
+            tokenStore: KeychainStore(),
+            lmStudioHTTPTransport: URLSessionLMStudioHTTPTransport()
         )
     }
 

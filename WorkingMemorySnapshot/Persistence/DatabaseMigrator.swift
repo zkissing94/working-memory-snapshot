@@ -12,39 +12,86 @@ struct DatabaseMigrator {
         )
         """)
 
-        let appliedVersions = try await appliedVersions()
-        guard !appliedVersions.contains(1) else {
-            return
+        let appliedVersions = Set(try await appliedVersions())
+        if !appliedVersions.contains(1) {
+            try await applyMigration(version: 1) {
+                try await database.execute("""
+                CREATE TABLE IF NOT EXISTS projects (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    name TEXT NOT NULL,
+                    root_path TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """)
+
+                try await database.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS projects_root_path_unique
+                ON projects(root_path)
+                """)
+            }
         }
 
+        if !appliedVersions.contains(2) {
+            try await applyMigration(version: 2) {
+                try await database.execute("""
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    key TEXT PRIMARY KEY NOT NULL,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """)
+
+                let now = DateCoding.string(from: Date())
+                try await insertDefaultSetting(
+                    key: SettingsKey.lmStudioBaseURL.rawValue,
+                    value: LMStudioSettings.defaultBaseURLString,
+                    appliedAt: now
+                )
+                try await insertDefaultSetting(
+                    key: SettingsKey.lmStudioSynthesizerModel.rawValue,
+                    value: "",
+                    appliedAt: now
+                )
+                try await insertDefaultSetting(
+                    key: SettingsKey.snapshotPromptVersion.rawValue,
+                    value: "v1",
+                    appliedAt: now
+                )
+            }
+        }
+    }
+
+    private func applyMigration(version: Int, body: () async throws -> Void) async throws {
         try await database.execute("BEGIN IMMEDIATE TRANSACTION")
         do {
-            try await database.execute("""
-            CREATE TABLE IF NOT EXISTS projects (
-                id TEXT PRIMARY KEY NOT NULL,
-                name TEXT NOT NULL,
-                root_path TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            )
-            """)
-
-            try await database.execute("""
-            CREATE UNIQUE INDEX IF NOT EXISTS projects_root_path_unique
-            ON projects(root_path)
-            """)
+            try await body()
 
             try await database.execute("""
             INSERT INTO schema_migrations(version, applied_at)
-            VALUES(1, ?)
+            VALUES(?, ?)
             """) { statement in
-                try SQLiteValue.bind(DateCoding.string(from: Date()), to: statement, at: 1)
+                guard sqlite3_bind_int64(statement, 1, Int64(version)) == SQLITE_OK else {
+                    throw SQLiteError(code: SQLITE_MISUSE, message: "Could not bind migration version.")
+                }
+                try SQLiteValue.bind(DateCoding.string(from: Date()), to: statement, at: 2)
             }
 
             try await database.execute("COMMIT")
         } catch {
             try? await database.execute("ROLLBACK")
             throw error
+        }
+    }
+
+    private func insertDefaultSetting(key: String, value: String, appliedAt: String) async throws {
+        try await database.execute("""
+        INSERT OR IGNORE INTO app_settings(key, value, updated_at)
+        VALUES(?, ?, ?)
+        """) { statement in
+            try SQLiteValue.bind(key, to: statement, at: 1)
+            try SQLiteValue.bind(value, to: statement, at: 2)
+            try SQLiteValue.bind(appliedAt, to: statement, at: 3)
         }
     }
 

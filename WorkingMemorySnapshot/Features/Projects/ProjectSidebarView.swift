@@ -4,18 +4,25 @@ struct ProjectSidebarView: View {
     @ObservedObject var viewModel: ProjectsViewModel
 
     var body: some View {
-        List(selection: $viewModel.selectedProjectID) {
-            if viewModel.projects.isEmpty {
-                ContentUnavailableView(
-                    "No Projects",
-                    systemImage: "folder",
-                    description: Text("Add a local project folder to begin.")
-                )
-            } else {
-                ForEach(viewModel.projects) { project in
-                    ProjectRow(project: project)
-                        .tag(project.id)
+        List(selection: $viewModel.selectedItem) {
+            Section("Projects") {
+                if viewModel.projects.isEmpty {
+                    ContentUnavailableView(
+                        "No Projects",
+                        systemImage: "folder",
+                        description: Text("Add a local project folder to begin.")
+                    )
+                } else {
+                    ForEach(viewModel.projects) { project in
+                        ProjectRow(project: project)
+                            .tag(SidebarSelection.project(project.id))
+                    }
                 }
+            }
+
+            Section {
+                Label("Settings", systemImage: "gearshape")
+                    .tag(SidebarSelection.settings)
             }
         }
         .navigationTitle("Projects")
