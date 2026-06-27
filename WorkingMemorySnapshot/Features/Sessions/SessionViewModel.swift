@@ -378,8 +378,21 @@ final class SessionViewModel: ObservableObject {
         do {
             try await body()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingErrorMessage(for: error)
         }
+    }
+
+    private func userFacingErrorMessage(for error: Error) -> String {
+        if let generationError = error as? LMStudioGenerationError,
+           generationError == .invalidChatCompletionEnvelope {
+            return """
+            The selected model did not return a valid snapshot.
+
+            Your session and brain dump are saved. Try again or select another model.
+            """
+        }
+
+        return error.localizedDescription
     }
 
     private func saveGeneratedSnapshot(for session: WorkSession) async throws {

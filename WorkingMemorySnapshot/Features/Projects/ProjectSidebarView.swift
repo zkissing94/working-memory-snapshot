@@ -5,16 +5,10 @@ struct ProjectSidebarView: View {
     let activeProjectID: Project.ID?
 
     var body: some View {
-        List(selection: $viewModel.selectedItem) {
+        List {
             if let activeProject {
                 Section("Active") {
-                    ProjectRow(
-                        project: activeProject,
-                        metadata: viewModel.sidebarMetadata[activeProject.id],
-                        isActive: true,
-                        isSelected: viewModel.selectedItem == .project(activeProject.id)
-                    )
-                    .tag(SidebarSelection.project(activeProject.id))
+                    projectRowButton(for: activeProject, isActive: true)
                 }
             }
 
@@ -27,20 +21,21 @@ struct ProjectSidebarView: View {
                     )
                 } else {
                     ForEach(listedProjects) { project in
-                        ProjectRow(
-                            project: project,
-                            metadata: viewModel.sidebarMetadata[project.id],
-                            isActive: project.id == activeProjectID,
-                            isSelected: viewModel.selectedItem == .project(project.id)
-                        )
-                            .tag(SidebarSelection.project(project.id))
+                        projectRowButton(for: project, isActive: project.id == activeProjectID)
                     }
                 }
             }
 
             Section {
-                Label("Settings", systemImage: "gearshape")
-                    .tag(SidebarSelection.settings)
+                Button {
+                    viewModel.selectSettings()
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(Color.clear)
             }
         }
         .navigationTitle("Projects")
@@ -69,6 +64,22 @@ struct ProjectSidebarView: View {
     private var listedProjects: [Project] {
         viewModel.projects.filter { $0.id != activeProjectID }
     }
+
+    private func projectRowButton(for project: Project, isActive: Bool) -> some View {
+        Button {
+            viewModel.selectProject(id: project.id)
+        } label: {
+            ProjectRow(
+                project: project,
+                metadata: viewModel.sidebarMetadata[project.id],
+                isActive: isActive,
+                isSelected: viewModel.selectedItem == .project(project.id)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Color.clear)
+    }
 }
 
 private struct ProjectRow: View {
@@ -82,7 +93,7 @@ private struct ProjectRow: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: isActive ? "timer.circle.fill" : "folder")
                     .font(.title3)
-                    .foregroundStyle(isActive ? Color.accentColor : secondaryTextColor)
+                    .foregroundStyle(isActive ? activeGreen : secondaryTextColor)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -96,12 +107,12 @@ private struct ProjectRow: View {
                             Text("Active")
                                 .font(.caption2)
                                 .fontWeight(.semibold)
-                                .foregroundStyle(.green)
+                                .foregroundStyle(activeGreen)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(
                                     Capsule()
-                                        .fill(Color.green.opacity(0.12))
+                                        .fill(activeGreen.opacity(0.14))
                                 )
                         }
                     }
@@ -139,7 +150,7 @@ private struct ProjectRow: View {
         .overlay(alignment: .leading) {
             if isActive {
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.accentColor)
+                    .fill(activeGreen)
                     .frame(width: 3)
                     .padding(.vertical, 6)
             }
@@ -159,16 +170,23 @@ private struct ProjectRow: View {
         Color(nsColor: .secondaryLabelColor)
     }
 
+    private var activeGreen: Color {
+        Color(red: 0.08, green: 0.63, blue: 0.31)
+    }
+
     private var cardFill: Color {
-        if isActive || isSelected {
-            return Color.accentColor.opacity(isActive ? 0.10 : 0.07)
+        if isActive {
+            return activeGreen.opacity(0.10)
         }
         return Color(nsColor: .controlBackgroundColor)
     }
 
     private var cardStroke: Color {
-        if isActive || isSelected {
-            return Color.accentColor.opacity(0.45)
+        if isActive {
+            return activeGreen.opacity(0.45)
+        }
+        if isSelected {
+            return Color(nsColor: .separatorColor).opacity(0.85)
         }
         return Color(nsColor: .separatorColor).opacity(0.55)
     }

@@ -85,6 +85,50 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(blocks.first?.status, .interrupted)
     }
 
+    func testInvalidChatCompletionEnvelopeShowsFriendlySnapshotErrorAndPreservesRetrySession() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let project = try await harness.projectRepository.createProject(
+            at: makeTemporaryDirectory(named: "InvalidEnvelopeProject")
+        )
+        let viewModel = SessionViewModel(
+            sessionRepository: harness.sessionRepository,
+            projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
+            snapshotGenerator: FailingSessionSnapshotGenerator(
+                error: LMStudioGenerationError.invalidChatCompletionEnvelope
+            ),
+            observationCoordinator: RecordingSessionObservationCoordinator()
+        )
+
+        viewModel.beginStartSession(for: project)
+        viewModel.mission = "Save the session before generation"
+        await viewModel.startSession(for: project)
+        viewModel.beginEndingActiveSession()
+        viewModel.brainDump = "The session should remain retryable after a malformed model response."
+
+        await viewModel.completeActiveSession()
+
+        let latestCompleted = try await harness.sessionRepository.latestCompletedSession(for: project.id)
+        let completed = try XCTUnwrap(latestCompleted)
+        XCTAssertNil(viewModel.activeSession)
+        XCTAssertEqual(completed.status, .completed)
+        XCTAssertEqual(
+            completed.brainDump,
+            "The session should remain retryable after a malformed model response."
+        )
+        XCTAssertEqual(viewModel.failedSnapshotSession?.id, completed.id)
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            """
+            The selected model did not return a valid snapshot.
+
+            Your session and brain dump are saved. Try again or select another model.
+            """
+        )
+    }
+
     func testCompletingBlockAllowsNextBlockWithoutEndingSession() async throws {
         let harness = try makeHarness()
         try await harness.migrator.migrate()
@@ -298,6 +342,14 @@ private struct FakeSessionSnapshotGenerator: SessionSnapshotGenerating {
             ),
             for: session.id
         )
+    }
+}
+
+private struct FailingSessionSnapshotGenerator: SessionSnapshotGenerating {
+    let error: Error
+
+    func generateSnapshot(for project: Project, session: WorkSession) async throws -> Snapshot {
+        throw error
     }
 }
 

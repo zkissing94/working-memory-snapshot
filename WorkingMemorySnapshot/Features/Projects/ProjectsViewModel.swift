@@ -130,6 +130,10 @@ final class ProjectsViewModel: ObservableObject {
         selectedItem = .project(id)
     }
 
+    func selectSettings() {
+        selectedItem = .settings
+    }
+
     private func loadSidebarMetadata(for projects: [Project]) async throws -> [Project.ID: ProjectSidebarMetadata] {
         var values: [Project.ID: ProjectSidebarMetadata] = [:]
         for project in projects {
