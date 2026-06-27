@@ -11,7 +11,8 @@ struct ProjectSidebarView: View {
                     ProjectRow(
                         project: activeProject,
                         metadata: viewModel.sidebarMetadata[activeProject.id],
-                        isActive: true
+                        isActive: true,
+                        isSelected: viewModel.selectedItem == .project(activeProject.id)
                     )
                     .tag(SidebarSelection.project(activeProject.id))
                 }
@@ -29,7 +30,8 @@ struct ProjectSidebarView: View {
                         ProjectRow(
                             project: project,
                             metadata: viewModel.sidebarMetadata[project.id],
-                            isActive: project.id == activeProjectID
+                            isActive: project.id == activeProjectID,
+                            isSelected: viewModel.selectedItem == .project(project.id)
                         )
                             .tag(SidebarSelection.project(project.id))
                     }
@@ -73,13 +75,14 @@ private struct ProjectRow: View {
     let project: Project
     let metadata: ProjectSidebarMetadata?
     let isActive: Bool
+    let isSelected: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: isActive ? "timer.circle.fill" : "folder")
                     .font(.title3)
-                    .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(isActive ? Color.accentColor : secondaryTextColor)
                     .frame(width: 24)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -87,6 +90,7 @@ private struct ProjectRow: View {
                         Text(project.name)
                             .font(.body)
                             .fontWeight(isActive ? .semibold : .regular)
+                            .foregroundStyle(primaryTextColor)
                             .lineLimit(2)
                         if isActive {
                             Text("Active")
@@ -104,7 +108,7 @@ private struct ProjectRow: View {
 
                     Text(project.rootPath)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(secondaryTextColor)
                         .lineLimit(1)
                         .truncationMode(.middle)
 
@@ -121,7 +125,7 @@ private struct ProjectRow: View {
                             }
                         }
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(secondaryTextColor)
                     }
                 }
             }
@@ -130,7 +134,7 @@ private struct ProjectRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(isActive ? Color.accentColor.opacity(0.08) : Color(nsColor: .controlBackgroundColor))
+                .fill(cardFill)
         )
         .overlay(alignment: .leading) {
             if isActive {
@@ -142,8 +146,30 @@ private struct ProjectRow: View {
         }
         .overlay {
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isActive ? Color.accentColor.opacity(0.35) : Color.secondary.opacity(0.16))
+                .stroke(cardStroke, lineWidth: isSelected ? 1.5 : 1)
         }
         .padding(.vertical, 3)
+    }
+
+    private var primaryTextColor: Color {
+        Color(nsColor: .labelColor)
+    }
+
+    private var secondaryTextColor: Color {
+        Color(nsColor: .secondaryLabelColor)
+    }
+
+    private var cardFill: Color {
+        if isActive || isSelected {
+            return Color.accentColor.opacity(isActive ? 0.10 : 0.07)
+        }
+        return Color(nsColor: .controlBackgroundColor)
+    }
+
+    private var cardStroke: Color {
+        if isActive || isSelected {
+            return Color.accentColor.opacity(0.45)
+        }
+        return Color(nsColor: .separatorColor).opacity(0.55)
     }
 }
