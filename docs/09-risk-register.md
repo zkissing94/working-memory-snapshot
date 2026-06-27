@@ -4,9 +4,11 @@
 |---|---|---|---|
 | Path-based project access is too loose for distribution | Public release blocked | Keep App Sandbox migration as an explicit later milestone | Pre-distribution hardening |
 | App Sandbox prevents Git subprocess behavior | Git evidence unavailable | Defer sandbox until core loop works; later run `/usr/bin/git` with active security scope and record entitlement decisions | Sandbox migration/M5a |
-| Passive evidence lacks deep meaning from Codex or Claude work | Resume brief becomes generic | Brain dump is primary evidence; preserve mission and Git/file facts; later consider explicit transcript import | M6 dogfood |
+| Passive evidence lacks deep meaning from Codex or Claude work | Resume brief becomes generic | Brain dump is primary evidence; preserve mission, manual increments, and Git/file facts | M6/M8 dogfood |
 | Model invents decisions | Product becomes untrustworthy | Strict prompt, empty arrays allowed, low temperature, structured output, manual evaluation | M6/M7 |
-| Small model adds latency without quality | Two-stage design harms experience | Keep janitor disabled until measured need | M8 evaluation |
+| Small model adds latency without quality | Two-stage design harms experience | Keep janitor disabled until measured need | M9 evaluation |
+| Pomodoro UI shifts the product toward productivity enforcement | Calm cognitive-continuity loop becomes a timer app | Treat blocks as optional capture points; no auto-ending sessions, streaks, scores, or notifications | M8 dogfood |
+| Session detail implies message or transcript observation | Privacy promise is weakened and user trust drops | Render only Git/file/app events as observed context; explicitly exclude messages/transcripts from schema and UI | M8 review |
 | Large repositories create event noise or CPU load | Observation disrupts work | FSEvents, ignore rules, bounded aggregation, no repeated full scans | M5b |
 | Pre-existing Git changes are attributed to the session | Snapshot reports false work | Capture initial state and session-observed paths; label limitations | M5a/M6 |
 | App closes during an active session | Session is orphaned | Persist state at start; recovery sheet on launch | M3 |

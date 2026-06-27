@@ -119,6 +119,17 @@ For the MVP, run with App Sandbox off, persist selected project paths, use expli
 
 **Reasoning:** The first milestone needs a boring compile path and a working product loop before adding security-scoped bookmark and entitlement complexity. Sandbox migration remains required before public distribution.
 
+## ADR-014 — Pomodoro blocks as session capture points
+
+**Date:** 2026-06-27
+**Status:** Accepted
+
+Add Pomodoro blocks inside sessions as lightweight capture points with optional summaries and manual note/decision/blocker increments. Keep sessions as the resumable memory container and keep snapshots session-level.
+
+**Reasoning:** The product promise is cognitive continuity, not productivity enforcement. Blocks make a long session easier to scan and summarize without turning the app into a timer, task manager, or activity monitor.
+
+**Consequences:** Passive Git/file/app evidence remains in the generic `events` table and is rendered as observed context by session or block time window. No message, transcript, clipboard, browser-history, screenshot, or keystroke observation is introduced. Snapshot prompts may include user-entered block summaries and manual increments below the brain dump and above passive evidence.
+
 ## Open decision template
 
 ### ADR-NNN — Title

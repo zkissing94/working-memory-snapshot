@@ -52,70 +52,327 @@ struct ActiveSessionView: View {
     let project: Project
     let session: WorkSession
     @ObservedObject var viewModel: SessionViewModel
+    @State private var blockSummary = ""
+    @State private var nextBlockIntention = ""
+    @State private var incrementKind: WorkIncrementKind = .note
+    @State private var incrementTitle = ""
+    @State private var incrementDetail = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 26) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Session active")
-                        .font(.title)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Active Session")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        Text("Started \(session.startedAt.formatted(date: .omitted, time: .shortened))")
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+
+                    Spacer()
+
+                    TimelineView(.periodic(from: session.startedAt, by: 1)) { context in
+                        Text(elapsedString(from: session.startedAt, to: context.date))
+                            .font(.system(.title2, design: .monospaced))
+                            .monospacedDigit()
+                    }
+                }
+
+                pomodoroBlockCard
+                workIncrementsSection
+
+                DashboardSurface {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Session Mission")
+                            .font(.headline)
+                        Text(session.mission)
+                            .font(.body)
+                            .textSelection(.enabled)
+                    }
+                }
+
+                observedContextSection
+                blocksInSessionSection
+
+                HStack(spacing: 12) {
+                    Button {
+                        viewModel.beginEndingActiveSession()
+                    } label: {
+                        Label("End Session", systemImage: "stop")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.isWorking)
+                    .accessibilityLabel("End Session")
+                    .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
+
+                    Button(role: .destructive) {
+                        Task {
+                            await viewModel.cancelActiveSession()
+                        }
+                    } label: {
+                        Label("Cancel Session", systemImage: "xmark.circle")
+                    }
+                    .disabled(viewModel.isWorking)
+                    .accessibilityHint("Cancel this session without generating a snapshot.")
+                }
+            }
+            .padding(28)
+            .frame(maxWidth: 900, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private var pomodoroBlockCard: some View {
+        DashboardSurface {
+            if let activeBlock = viewModel.activeBlock {
+                activeBlockContent(activeBlock)
+            } else {
+                betweenBlocksContent
+            }
+        }
+    }
+
+    private func activeBlockContent(_ block: PomodoroBlock) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(spacing: 8) {
+                        Text("Pomodoro Block \(block.blockIndex)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        Text(block.status == .paused ? "Paused" : "Focus Time")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(block.status == .paused ? .orange : .green)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill((block.status == .paused ? Color.orange : Color.green).opacity(0.12))
+                            )
+                    }
+
+                    Text(block.intention ?? session.mission)
+                        .font(.title3)
                         .fontWeight(.semibold)
-                    Text(project.name)
-                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
                         .textSelection(.enabled)
                 }
 
                 Spacer()
 
-                TimelineView(.periodic(from: session.startedAt, by: 1)) { context in
-                    Text(elapsedString(from: session.startedAt, to: context.date))
-                        .font(.system(.title, design: .monospaced))
-                        .monospacedDigit()
+                TimelineView(.periodic(from: block.startedAt, by: 1)) { context in
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(DurationFormatter.timerString(from: block.remainingSeconds(at: context.date)))
+                            .font(.system(.title, design: .monospaced))
+                            .monospacedDigit()
+                        Text("remaining")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Mission")
-                    .font(.headline)
-                Text(session.mission)
-                    .font(.title3)
-                    .textSelection(.enabled)
+            TimelineView(.periodic(from: block.startedAt, by: 1)) { context in
+                ProgressView(value: progress(for: block, at: context.date))
+                    .tint(.green)
             }
 
+            HStack(spacing: 8) {
+                Text("\(DurationFormatter.shortString(from: block.elapsedSeconds())) elapsed")
+                Text("·")
+                Text("\(DurationFormatter.shortString(from: block.plannedDurationSeconds)) total")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+
             VStack(alignment: .leading, spacing: 8) {
-                Text("Observed")
-                    .font(.headline)
-                Text(viewModel.observationSummary.displayText)
+                Text("Block summary")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
+                TextField("What changed during this block?", text: $blockSummary, axis: .vertical)
+                    .lineLimit(2, reservesSpace: true)
+                    .textFieldStyle(.roundedBorder)
             }
 
             HStack(spacing: 12) {
                 Button {
-                    viewModel.beginEndingActiveSession()
+                    Task {
+                        if block.status == .paused {
+                            await viewModel.resumeCurrentBlock()
+                        } else {
+                            await viewModel.pauseCurrentBlock()
+                        }
+                    }
                 } label: {
-                    Label("End Session", systemImage: "checkmark.circle")
+                    Label(block.status == .paused ? "Resume" : "Pause", systemImage: block.status == .paused ? "play.fill" : "pause.fill")
+                }
+                .disabled(viewModel.isWorking)
+
+                Button {
+                    let summary = blockSummary
+                    Task {
+                        await viewModel.completeCurrentBlock(summary: summary)
+                        blockSummary = ""
+                    }
+                } label: {
+                    Label("Complete Block", systemImage: "checkmark.circle")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
-                .accessibilityLabel("End Session")
-                .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
 
-                Button(role: .destructive) {
+                Button {
+                    let summary = blockSummary
                     Task {
-                        await viewModel.cancelActiveSession()
+                        await viewModel.completeCurrentBlock(summary: summary)
+                        blockSummary = ""
                     }
                 } label: {
-                    Label("Cancel Session", systemImage: "xmark.circle")
+                    Label("Take Break", systemImage: "cup.and.saucer")
                 }
                 .disabled(viewModel.isWorking)
-                .accessibilityHint("Cancel this session without generating a snapshot.")
             }
-
-            Spacer()
         }
-        .padding(32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var betweenBlocksContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Between Blocks")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+            Text("The session is still active. Start another 20-minute block when you are ready.")
+                .font(.body)
+
+            TextField("Next block intention", text: $nextBlockIntention, axis: .vertical)
+                .lineLimit(2, reservesSpace: true)
+                .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 12) {
+                Button {
+                    let intention = nextBlockIntention
+                    Task {
+                        await viewModel.startNextBlock(intention: intention)
+                        nextBlockIntention = ""
+                    }
+                } label: {
+                    Label("Start Next Block", systemImage: "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.isWorking)
+
+                Button {
+                    viewModel.beginEndingActiveSession()
+                } label: {
+                    Label("End Session", systemImage: "stop")
+                }
+            }
+        }
+    }
+
+    private var workIncrementsSection: some View {
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Current Block - Work Increments")
+                    .font(.headline)
+
+                if viewModel.activeBlock == nil {
+                    Text("Start a block to capture notes, decisions, or blockers.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else if viewModel.activeBlockIncrements.isEmpty {
+                    Text("No manual increments yet.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(viewModel.activeBlockIncrements) { increment in
+                            IncrementRow(increment: increment)
+                            if increment.id != viewModel.activeBlockIncrements.last?.id {
+                                Divider()
+                            }
+                        }
+                    }
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Picker("Kind", selection: $incrementKind) {
+                        ForEach(WorkIncrementKind.allCases, id: \.self) { kind in
+                            Text(kind.displayName).tag(kind)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    TextField("Add a note, decision, or blocker", text: $incrementTitle)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("Detail (optional)", text: $incrementDetail, axis: .vertical)
+                        .lineLimit(2, reservesSpace: true)
+                        .textFieldStyle(.roundedBorder)
+
+                    Button {
+                        let kind = incrementKind
+                        let title = incrementTitle
+                        let detail = incrementDetail
+                        Task {
+                            await viewModel.addIncrement(kind: kind, title: title, detail: detail)
+                            if viewModel.errorMessage == nil {
+                                incrementTitle = ""
+                                incrementDetail = ""
+                                incrementKind = .note
+                            }
+                        }
+                    } label: {
+                        Label("Add Increment", systemImage: "plus")
+                    }
+                    .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
+                }
+            }
+        }
+    }
+
+    private var observedContextSection: some View {
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Observed Context")
+                    .font(.headline)
+                Text(viewModel.observationSummary.displayText)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
+    private var blocksInSessionSection: some View {
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Blocks in This Session")
+                    .font(.headline)
+                if viewModel.sessionBlocks.isEmpty {
+                    Text("No blocks recorded yet.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                        ForEach(viewModel.sessionBlocks) { block in
+                            BlockChip(block: block)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func progress(for block: PomodoroBlock, at date: Date) -> Double {
+        min(1, Double(block.elapsedSeconds(at: date)) / Double(max(1, block.plannedDurationSeconds)))
     }
 
     private func elapsedString(from startDate: Date, to endDate: Date) -> String {
@@ -262,6 +519,369 @@ struct SessionRecoverySheet: View {
     }
 }
 
+struct HistoricalSessionDetailView: View {
+    let project: Project
+    let session: WorkSession
+    let snapshot: Snapshot?
+    let blocks: [PomodoroBlock]
+    let incrementsForBlock: (PomodoroBlock) -> [WorkIncrement]
+    let events: [SessionEvent]
+    let onBackToProject: () -> Void
+    let onViewSnapshot: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text("Session Detail")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        Text(project.name)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    Spacer()
+                    Button(action: onBackToProject) {
+                        Label("Back", systemImage: "chevron.left")
+                    }
+                }
+
+                DashboardSurface {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Session Summary")
+                            .font(.headline)
+                        Text(session.mission)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .textSelection(.enabled)
+                        HStack(spacing: 8) {
+                            Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
+                            if let endedAt = session.endedAt {
+                                Text("·")
+                                Text(DurationFormatter.shortString(from: Int(endedAt.timeIntervalSince(session.startedAt))))
+                            }
+                            Text("·")
+                            Text(session.status.rawValue.capitalized)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+
+                snapshotSection
+                blocksSection
+                observedContextSection
+            }
+            .padding(28)
+            .frame(maxWidth: 900, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    private var snapshotSection: some View {
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Working Memory Snapshot")
+                    .font(.headline)
+                if let snapshot {
+                    Text(snapshot.resumeBrief)
+                        .font(.body)
+                        .textSelection(.enabled)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Next action")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(snapshot.nextAction)
+                            .font(.headline)
+                            .textSelection(.enabled)
+                    }
+                    Button(action: onViewSnapshot) {
+                        Label("View Full Snapshot", systemImage: "doc.text.magnifyingglass")
+                    }
+                } else if session.status == .cancelled {
+                    Text("Cancelled sessions do not generate snapshots.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("No snapshot is saved for this session yet.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var blocksSection: some View {
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Pomodoro Blocks")
+                    .font(.headline)
+                if blocks.isEmpty {
+                    Text("No focus blocks were recorded for this session.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(blocks) { block in
+                            HistoricalBlockRow(
+                                block: block,
+                                increments: incrementsForBlock(block)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var observedContextSection: some View {
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Observed Context")
+                    .font(.headline)
+                ObservedContextFact(
+                    title: "Git Repository",
+                    value: gitSummary,
+                    systemImage: "point.3.connected.trianglepath.dotted"
+                )
+                ObservedContextFact(
+                    title: "Files Touched",
+                    value: "\(changedFiles.count) file\(changedFiles.count == 1 ? "" : "s")",
+                    systemImage: "doc.on.doc"
+                )
+                ObservedContextFact(
+                    title: "Apps Observed",
+                    value: activeApps.isEmpty ? "None observed" : activeApps.prefix(4).joined(separator: ", "),
+                    systemImage: "macwindow"
+                )
+            }
+        }
+    }
+
+    private var changedFiles: [String] {
+        events
+            .filter { $0.source == .file && $0.kind == SessionEventKind.fileChanged }
+            .map(\.title)
+            .orderedUnique()
+    }
+
+    private var activeApps: [String] {
+        events
+            .filter { $0.source == .activeApp && $0.kind == SessionEventKind.appActivated }
+            .map(\.title)
+            .orderedUnique()
+    }
+
+    private var gitSummary: String {
+        let gitEvents = events.filter { $0.source == .git }
+        if gitEvents.isEmpty {
+            return "No Git evidence"
+        }
+        if gitEvents.contains(where: { $0.title.localizedCaseInsensitiveContains("not a git") }) {
+            return "Not a Git repository"
+        }
+        return "\(gitEvents.count) event\(gitEvents.count == 1 ? "" : "s")"
+    }
+}
+
+private struct HistoricalBlockRow: View {
+    let block: PomodoroBlock
+    let increments: [WorkIncrement]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                BlockStatusBadge(block: block)
+                Spacer()
+                Text(DurationFormatter.shortString(from: block.elapsedSeconds(at: block.endedAt ?? Date())))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let intention = block.intention {
+                Text(intention)
+                    .font(.callout)
+                    .fontWeight(.semibold)
+                    .textSelection(.enabled)
+            }
+
+            if let summary = block.summary {
+                Text(summary)
+                    .font(.callout)
+                    .textSelection(.enabled)
+            }
+
+            if increments.isEmpty {
+                Text("No manual increments.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(increments) { increment in
+                        IncrementRow(increment: increment)
+                        if increment.id != increments.last?.id {
+                            Divider()
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.secondary.opacity(0.16))
+        }
+    }
+}
+
+private struct ObservedContextFact: View {
+    let title: String
+    let value: String
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .foregroundStyle(.secondary)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.callout)
+                    .fontWeight(.semibold)
+                Text(value)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+    }
+}
+
+private struct IncrementRow: View {
+    let increment: WorkIncrement
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(increment.occurredAt.formatted(date: .omitted, time: .shortened))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 54, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(increment.title)
+                        .font(.callout)
+                    Text(increment.kind.displayName)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(kindColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(kindColor.opacity(0.12)))
+                }
+                if let detail = increment.detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+        }
+        .padding(.vertical, 8)
+    }
+
+    private var kindColor: Color {
+        switch increment.kind {
+        case .note:
+            .blue
+        case .decision:
+            .green
+        case .blocker:
+            .orange
+        }
+    }
+}
+
+private struct BlockChip: View {
+    let block: PomodoroBlock
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            BlockStatusBadge(block: block)
+            Text(block.intention ?? "Block \(block.blockIndex)")
+                .font(.callout)
+                .fontWeight(.semibold)
+                .lineLimit(2)
+            Text(block.status == .active || block.status == .paused
+                 ? "\(DurationFormatter.timerString(from: block.remainingSeconds())) left"
+                 : DurationFormatter.shortString(from: block.elapsedSeconds(at: block.endedAt ?? Date())))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(statusColor.opacity(0.55), lineWidth: block.status == .active ? 1.5 : 1)
+        }
+    }
+
+    private var statusColor: Color {
+        switch block.status {
+        case .active:
+            .accentColor
+        case .paused:
+            .orange
+        case .completed:
+            .green
+        case .interrupted:
+            .secondary
+        }
+    }
+}
+
+private struct BlockStatusBadge: View {
+    let block: PomodoroBlock
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("\(block.blockIndex)")
+                .font(.callout)
+                .fontWeight(.semibold)
+            Text(block.status.rawValue.capitalized)
+                .font(.caption2)
+                .fontWeight(.semibold)
+                .foregroundStyle(color)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(color.opacity(0.12)))
+        }
+    }
+
+    private var color: Color {
+        switch block.status {
+        case .active:
+            .accentColor
+        case .paused:
+            .orange
+        case .completed:
+            .green
+        case .interrupted:
+            .secondary
+        }
+    }
+}
+
 private struct Header: View {
     let project: Project
 
@@ -278,5 +898,17 @@ private struct Header: View {
                 .truncationMode(.middle)
                 .textSelection(.enabled)
         }
+    }
+}
+
+private extension Array where Element == String {
+    func orderedUnique() -> [String] {
+        var seen = Set<String>()
+        var values: [String] = []
+        for value in self where !seen.contains(value) {
+            seen.insert(value)
+            values.append(value)
+        }
+        return values
     }
 }

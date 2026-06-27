@@ -22,6 +22,16 @@ The selected project, active session, end-session form, snapshot, or settings.
 
 Do not create a tab bar, dashboard, or multi-level information architecture in v0.
 
+### Post-MVP M8 layout
+
+After M7 dogfooding, the app may expand into a three-column `NavigationSplitView` while preserving the same product loop:
+
+- sidebar: active project, card-like project rows, lightweight project metadata, Settings
+- middle pane: selected project dashboard with project header, active session card, previous sessions grouped by date, and latest memory summary
+- detail pane: active session, selected historical session, project memory overview, snapshot, or settings
+
+This is still not a generic productivity dashboard. The hierarchy is `Project -> Session -> Pomodoro Block -> Work Increment`, and every surface should help the user preserve or resume cognitive context.
+
 ## 3. Project list
 
 Each row shows:
@@ -145,6 +155,27 @@ Observed
 Do not show a live feed of raw events by default.
 
 The timer counts upward. It does not enforce intervals or trigger break notifications.
+
+### Post-MVP M8 active block surface
+
+The active session surface may include one 20-minute Pomodoro block capture card:
+
+- countdown from 20 minutes by default
+- pause/resume current block
+- complete block with an optional summary
+- start next block without ending the session
+- take a break by leaving the session active with no open block
+- end session through the existing brain-dump flow
+
+A session never ends automatically when a block ends. Blocks are capture points, not productivity enforcement. Do not add streaks, scores, break notifications, or gamified status.
+
+Manual work increments can be added inside the current block with these kinds:
+
+- note
+- decision
+- blocker
+
+Observed context remains read-only and generic: Git, changed files, and active applications from existing events. Do not add message, transcript, clipboard, browser-history, screenshot, or keystroke observation.
 
 ## 8. End-session brain dump
 
@@ -355,3 +386,4 @@ No:
 - heat maps
 - animated countdown rings
 - dense side panels
+- message/transcript capture

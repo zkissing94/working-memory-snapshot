@@ -19,7 +19,10 @@ final class ProjectDetailViewModelTests: XCTestCase {
         let project = try await harness.projectRepository.createProject(at: projectFolder)
         let viewModel = ProjectDetailViewModel(
             snapshotRepository: harness.snapshotRepository,
-            sessionRepository: harness.sessionRepository
+            sessionRepository: harness.sessionRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
+            eventRepository: harness.eventRepository
         )
 
         await viewModel.checkProjectAccess(for: project)
@@ -35,6 +38,9 @@ final class ProjectDetailViewModelTests: XCTestCase {
         migrator: DatabaseMigrator,
         projectRepository: ProjectRepository,
         sessionRepository: SessionRepository,
+        pomodoroBlockRepository: PomodoroBlockRepository,
+        workIncrementRepository: WorkIncrementRepository,
+        eventRepository: EventRepository,
         snapshotRepository: SnapshotRepository
     ) {
         let rootDirectory = try makeTemporaryDirectory(named: "DatabaseRoot")
@@ -42,9 +48,21 @@ final class ProjectDetailViewModelTests: XCTestCase {
         let migrator = DatabaseMigrator(database: database)
         let projectRepository = ProjectRepository(database: database)
         let sessionRepository = SessionRepository(database: database)
+        let pomodoroBlockRepository = PomodoroBlockRepository(database: database)
+        let workIncrementRepository = WorkIncrementRepository(database: database)
+        let eventRepository = EventRepository(database: database)
         let snapshotRepository = SnapshotRepository(database: database)
 
-        return (database, migrator, projectRepository, sessionRepository, snapshotRepository)
+        return (
+            database,
+            migrator,
+            projectRepository,
+            sessionRepository,
+            pomodoroBlockRepository,
+            workIncrementRepository,
+            eventRepository,
+            snapshotRepository
+        )
     }
 
     private func makeTemporaryDirectory(named name: String) throws -> URL {

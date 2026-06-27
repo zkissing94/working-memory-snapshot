@@ -13,6 +13,7 @@ M0 repository seed
 → M5 isolated evidence and generation services
 → M6 real snapshot integration
 → M7 resume and recovery polish
+→ M8 session timeline and Pomodoro capture redesign
 ```
 
 ## M0 — Repository seed
@@ -294,7 +295,44 @@ feature/m7-resume-recovery-polish
 
 A dogfood user can reopen the app and identify the correct next action in under 60 seconds.
 
-## M8 — Optional evidence-janitor model
+## M8 — Session timeline and Pomodoro capture redesign
+
+Post-MVP only, after M7 dogfood and merge.
+
+### Goal
+
+Make sessions easier to scan and resume by adding a project dashboard, historical session detail, and Pomodoro blocks as lightweight capture points inside a session.
+
+### Deliverables
+
+- three-column `NavigationSplitView` structure
+- card-like sidebar project rows with active project state and metadata
+- project dashboard with active session card, previous sessions grouped by date, and latest memory summary
+- active-session block surface with 20-minute countdown, pause/resume, complete block, next block, break, and end-session actions
+- `pomodoro_blocks` and `work_increments` tables
+- block and increment repositories
+- active-block recovery for existing active sessions
+- snapshot evidence that includes block summaries and manual note/decision/blocker increments above passive evidence
+- historical session detail with snapshot sections, block timeline, and read-only observed context from existing Git/file/app events
+
+### Branch
+
+```text
+feature/m8-session-timeline-blocks
+```
+
+### Exit criteria
+
+- starting a session creates Block 1 with a 20-minute default duration
+- one active or paused block exists per session
+- completing a block does not end the session
+- break state leaves the session active with no active block
+- ending or cancelling a session interrupts any open block
+- snapshots include user-entered block capture points without adding message/transcript observation
+- project deletion cascades sessions, events, blocks, increments, and snapshots
+- full check passes
+
+## M9 — Optional evidence-janitor model
 
 Post-MVP only.
 

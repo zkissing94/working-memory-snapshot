@@ -5,18 +5,34 @@ enum SidebarSelection: Hashable {
     case settings
 }
 
+struct ProjectSidebarMetadata: Equatable {
+    var sessionCount: Int
+    var latestCompletedSessionEndedAt: Date?
+    var hasSnapshot: Bool
+}
+
 @MainActor
 final class ProjectsViewModel: ObservableObject {
     @Published private(set) var projects: [Project] = []
+    @Published private(set) var sidebarMetadata: [Project.ID: ProjectSidebarMetadata] = [:]
     @Published var selectedItem: SidebarSelection?
     @Published private(set) var errorMessage: String?
     @Published private(set) var isLoading = false
 
     private let repository: ProjectRepository
+    private let sessionRepository: SessionRepository
+    private let snapshotRepository: SnapshotRepository
     private let migrator: DatabaseMigrator
 
-    init(repository: ProjectRepository, migrator: DatabaseMigrator) {
+    init(
+        repository: ProjectRepository,
+        sessionRepository: SessionRepository,
+        snapshotRepository: SnapshotRepository,
+        migrator: DatabaseMigrator
+    ) {
         self.repository = repository
+        self.sessionRepository = sessionRepository
+        self.snapshotRepository = snapshotRepository
         self.migrator = migrator
     }
 
@@ -48,6 +64,7 @@ final class ProjectsViewModel: ObservableObject {
         do {
             try await migrator.migrate()
             projects = try await repository.listProjects()
+            sidebarMetadata = try await loadSidebarMetadata(for: projects)
             if case .settings = selectedItem {
                 return
             }
@@ -73,10 +90,12 @@ final class ProjectsViewModel: ObservableObject {
         do {
             let project = try await repository.createProject(at: url)
             projects = try await repository.listProjects()
+            sidebarMetadata = try await loadSidebarMetadata(for: projects)
             selectedItem = .project(project.id)
         } catch {
             errorMessage = error.localizedDescription
             projects = (try? await repository.listProjects()) ?? projects
+            sidebarMetadata = (try? await loadSidebarMetadata(for: projects)) ?? sidebarMetadata
         }
     }
 
@@ -92,11 +111,13 @@ final class ProjectsViewModel: ObservableObject {
         do {
             let restoredProject = try await repository.updateProjectRoot(id: project.id, to: url)
             projects = try await repository.listProjects()
+            sidebarMetadata = try await loadSidebarMetadata(for: projects)
             selectedItem = .project(project.id)
             return restoredProject
         } catch {
             errorMessage = error.localizedDescription
             projects = (try? await repository.listProjects()) ?? projects
+            sidebarMetadata = (try? await loadSidebarMetadata(for: projects)) ?? sidebarMetadata
             return nil
         }
     }
@@ -107,5 +128,22 @@ final class ProjectsViewModel: ObservableObject {
 
     func selectProject(id: Project.ID) {
         selectedItem = .project(id)
+    }
+
+    private func loadSidebarMetadata(for projects: [Project]) async throws -> [Project.ID: ProjectSidebarMetadata] {
+        var values: [Project.ID: ProjectSidebarMetadata] = [:]
+        for project in projects {
+            let sessions = try await sessionRepository.listSessions(for: project.id)
+            let latestCompleted = sessions.first {
+                $0.status == .completed && $0.endedAt != nil
+            }
+            let latestSnapshot = try await snapshotRepository.latestSnapshot(for: project.id)
+            values[project.id] = ProjectSidebarMetadata(
+                sessionCount: sessions.filter { $0.status == .completed }.count,
+                latestCompletedSessionEndedAt: latestCompleted?.endedAt,
+                hasSnapshot: latestSnapshot != nil
+            )
+        }
+        return values
     }
 }

@@ -4,6 +4,8 @@ struct AppEnvironment {
     let databaseMigrator: DatabaseMigrator
     let projectRepository: ProjectRepository
     let sessionRepository: SessionRepository
+    let pomodoroBlockRepository: PomodoroBlockRepository
+    let workIncrementRepository: WorkIncrementRepository
     let eventRepository: EventRepository
     let snapshotRepository: SnapshotRepository
     let settingsRepository: SettingsRepository
@@ -15,6 +17,8 @@ struct AppEnvironment {
     @MainActor
     static func live() -> AppEnvironment {
         let database = Database(url: applicationSupportDatabaseURL())
+        let pomodoroBlockRepository = PomodoroBlockRepository(database: database)
+        let workIncrementRepository = WorkIncrementRepository(database: database)
         let eventRepository = EventRepository(database: database)
         let snapshotRepository = SnapshotRepository(database: database)
         let settingsRepository = SettingsRepository(database: database)
@@ -25,6 +29,8 @@ struct AppEnvironment {
             databaseMigrator: DatabaseMigrator(database: database),
             projectRepository: ProjectRepository(database: database),
             sessionRepository: SessionRepository(database: database),
+            pomodoroBlockRepository: pomodoroBlockRepository,
+            workIncrementRepository: workIncrementRepository,
             eventRepository: eventRepository,
             snapshotRepository: snapshotRepository,
             settingsRepository: settingsRepository,
@@ -33,6 +39,8 @@ struct AppEnvironment {
             observationCoordinator: ObservationCoordinator(eventRepository: eventRepository),
             snapshotGenerator: SnapshotGenerator(
                 eventRepository: eventRepository,
+                pomodoroBlockRepository: pomodoroBlockRepository,
+                workIncrementRepository: workIncrementRepository,
                 snapshotRepository: snapshotRepository,
                 settingsRepository: settingsRepository,
                 tokenStore: tokenStore,

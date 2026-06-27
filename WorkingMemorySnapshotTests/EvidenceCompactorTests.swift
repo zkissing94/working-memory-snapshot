@@ -53,6 +53,47 @@ final class EvidenceCompactorTests: XCTestCase {
         XCTAssertEqual(digest.activeApplications.map(\.displayName), ["Terminal", "Safari"])
     }
 
+    func testCompactorIncludesPomodoroBlocksAndManualIncrements() {
+        let session = makeCompletedSession(brainDump: "Next: use block notes.")
+        let block = PomodoroBlock(
+            id: UUID(),
+            sessionID: session.id,
+            blockIndex: 1,
+            plannedDurationSeconds: 1_200,
+            intention: "Implement block capture",
+            summary: "Completed repository and prompt wiring.",
+            status: .completed,
+            startedAt: Date(timeIntervalSince1970: 100),
+            pausedAt: nil,
+            accumulatedPauseSeconds: 0,
+            endedAt: Date(timeIntervalSince1970: 700),
+            createdAt: Date(timeIntervalSince1970: 100),
+            updatedAt: Date(timeIntervalSince1970: 700)
+        )
+        let increment = WorkIncrement(
+            id: UUID(),
+            blockID: block.id,
+            occurredAt: Date(timeIntervalSince1970: 300),
+            kind: .decision,
+            title: "Blocks live inside sessions",
+            detail: "Passive events stay generic.",
+            createdAt: Date(timeIntervalSince1970: 300),
+            updatedAt: Date(timeIntervalSince1970: 300)
+        )
+
+        let digest = EvidenceCompactor().compact(
+            project: makeProject(),
+            session: session,
+            events: [],
+            pomodoroBlocks: [block],
+            workIncrementsByBlockID: [block.id: [increment]]
+        )
+
+        XCTAssertEqual(digest.pomodoroBlocks.first?.intention, "Implement block capture")
+        XCTAssertEqual(digest.pomodoroBlocks.first?.summary, "Completed repository and prompt wiring.")
+        XCTAssertEqual(digest.pomodoroBlocks.first?.increments.first?.title, "Blocks live inside sessions")
+    }
+
     private func makeProject() -> Project {
         Project(
             id: UUID(),

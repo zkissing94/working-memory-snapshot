@@ -19,6 +19,8 @@ struct WorkingMemorySnapshotApp: App {
         _projectsViewModel = StateObject(
             wrappedValue: ProjectsViewModel(
                 repository: environment.projectRepository,
+                sessionRepository: environment.sessionRepository,
+                snapshotRepository: environment.snapshotRepository,
                 migrator: environment.databaseMigrator
             )
         )
@@ -26,6 +28,8 @@ struct WorkingMemorySnapshotApp: App {
             wrappedValue: SessionViewModel(
                 sessionRepository: environment.sessionRepository,
                 projectRepository: environment.projectRepository,
+                pomodoroBlockRepository: environment.pomodoroBlockRepository,
+                workIncrementRepository: environment.workIncrementRepository,
                 snapshotGenerator: environment.snapshotGenerator,
                 observationCoordinator: environment.observationCoordinator
             )
@@ -33,7 +37,10 @@ struct WorkingMemorySnapshotApp: App {
         _projectDetailViewModel = StateObject(
             wrappedValue: ProjectDetailViewModel(
                 snapshotRepository: environment.snapshotRepository,
-                sessionRepository: environment.sessionRepository
+                sessionRepository: environment.sessionRepository,
+                pomodoroBlockRepository: environment.pomodoroBlockRepository,
+                workIncrementRepository: environment.workIncrementRepository,
+                eventRepository: environment.eventRepository
             )
         )
         _settingsViewModel = StateObject(

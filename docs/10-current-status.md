@@ -5,7 +5,7 @@
 Current handoff branch:
 
 ```text
-feature/m7-resume-recovery-polish
+feature/m8-session-timeline-blocks
 ```
 
 Completed milestones:
@@ -18,6 +18,7 @@ Completed milestones:
 - M5 - Isolated evidence and generation services
 - M6 - Real snapshot integration
 - M7 - Resume and recovery polish
+- M8 - Session timeline and Pomodoro capture redesign
 
 Current implementation state:
 
@@ -62,32 +63,46 @@ Current implementation state:
 - Primary controls have accessibility labels or hints, and app-level commands support Command-N and Command-Comma.
 - The five-session M7 manual dogfood checklist is documented in `docs/11-m7-dogfood-checklist.md`.
 - Automated M7 tests cover project path restoration, duplicate restore rejection, visible access state, recovery blocking for missing folders, and settings recovery copy.
+- SQLite migration version 6 adds `pomodoro_blocks` and `work_increments`.
+- `PomodoroBlockRepository` and `WorkIncrementRepository` manage block lifecycle and manual note/decision/blocker capture.
+- Starting a session creates Block 1 with a 20-minute default duration.
+- Legacy active sessions without blocks recover by creating Block 1.
+- Only one active or paused block can exist per session.
+- Completing a block leaves the session active and allows a next block.
+- Taking a break leaves the session active with no open block.
+- Ending or cancelling a session interrupts any active or paused block before the existing brain-dump/cancel flow continues.
+- The main UI now uses a three-column structure: sidebar, project dashboard, and detail pane.
+- The project dashboard shows project metrics, active-session state, latest memory, and previous sessions grouped by date.
+- Historical session detail shows mission, timing, snapshot sections, block timeline, and observed context from existing Git/file/app events.
+- Snapshot evidence includes user-entered block summaries and manual increments below the brain dump and above passive evidence.
+- Message, transcript, clipboard, browser-history, screenshot, and keystroke observation remain excluded.
+- Automated M8 tests cover migration v6, block/increment repositories, session view-model block flow, snapshot prompt inclusion, compaction, and project-deletion cascades.
 - LM Studio is not required to compile or launch the app.
 
 ## Next milestone
 
-Next task after merging M7:
+Next task after merging M8:
 
 ```text
-MVP dogfood evaluation
+M8 manual dogfood review
 ```
 
 Expected prompt:
 
 ```text
-Use docs/11-m7-dogfood-checklist.md for manual evaluation before considering post-MVP M8.
+Launch the app and manually dogfood the session timeline and Pomodoro block flow against docs/02-ui-spec.md.
 ```
 
 Optional post-MVP milestone:
 
 ```text
-M8 - Optional evidence-janitor model
+M9 - Optional evidence-janitor model
 ```
 
-Expected M7 commit message:
+Expected M8 commit message:
 
 ```text
-feat: polish resume and session recovery
+feat: add session timeline and pomodoro capture
 ```
 
 ## Fresh chat startup
@@ -108,7 +123,7 @@ git branch --show-current
 ./scripts/check.sh
 ```
 
-Do not start post-MVP M8 unless M7 has been merged, the dogfood checklist has been reviewed, the worktree is clean, and `./scripts/check.sh` passes.
+Do not start post-MVP M9 unless M8 has been merged, the M8 UI flow has been dogfooded, the worktree is clean, and `./scripts/check.sh` passes.
 
 ## M2 completion summary
 

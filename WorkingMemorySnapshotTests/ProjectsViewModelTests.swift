@@ -16,6 +16,8 @@ final class ProjectsViewModelTests: XCTestCase {
         let harness = try makeHarness()
         let viewModel = ProjectsViewModel(
             repository: harness.repository,
+            sessionRepository: harness.sessionRepository,
+            snapshotRepository: harness.snapshotRepository,
             migrator: harness.migrator
         )
         let originalFolder = try makeTemporaryDirectory(named: "MovedProject")
@@ -39,6 +41,8 @@ final class ProjectsViewModelTests: XCTestCase {
         let harness = try makeHarness()
         let viewModel = ProjectsViewModel(
             repository: harness.repository,
+            sessionRepository: harness.sessionRepository,
+            snapshotRepository: harness.snapshotRepository,
             migrator: harness.migrator
         )
         let firstFolder = try makeTemporaryDirectory(named: "FirstProject")
@@ -58,14 +62,18 @@ final class ProjectsViewModelTests: XCTestCase {
     private func makeHarness() throws -> (
         database: Database,
         migrator: DatabaseMigrator,
-        repository: ProjectRepository
+        repository: ProjectRepository,
+        sessionRepository: SessionRepository,
+        snapshotRepository: SnapshotRepository
     ) {
         let rootDirectory = try makeTemporaryDirectory(named: "DatabaseRoot")
         let database = Database(url: rootDirectory.appendingPathComponent("working-memory.sqlite3"))
         let migrator = DatabaseMigrator(database: database)
         let repository = ProjectRepository(database: database)
+        let sessionRepository = SessionRepository(database: database)
+        let snapshotRepository = SnapshotRepository(database: database)
 
-        return (database, migrator, repository)
+        return (database, migrator, repository, sessionRepository, snapshotRepository)
     }
 
     private func makeTemporaryDirectory(named name: String) throws -> URL {

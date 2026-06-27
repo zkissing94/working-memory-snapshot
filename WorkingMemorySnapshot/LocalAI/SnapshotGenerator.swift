@@ -6,6 +6,8 @@ protocol SessionSnapshotGenerating: Sendable {
 
 struct SnapshotGenerator: SessionSnapshotGenerating {
     private let eventRepository: EventRepository
+    private let pomodoroBlockRepository: PomodoroBlockRepository
+    private let workIncrementRepository: WorkIncrementRepository
     private let snapshotRepository: SnapshotRepository
     private let settingsRepository: SettingsRepository
     private let tokenStore: any LMStudioTokenStore
@@ -15,6 +17,8 @@ struct SnapshotGenerator: SessionSnapshotGenerating {
 
     init(
         eventRepository: EventRepository,
+        pomodoroBlockRepository: PomodoroBlockRepository,
+        workIncrementRepository: WorkIncrementRepository,
         snapshotRepository: SnapshotRepository,
         settingsRepository: SettingsRepository,
         tokenStore: any LMStudioTokenStore,
@@ -23,6 +27,8 @@ struct SnapshotGenerator: SessionSnapshotGenerating {
         promptBuilder: PromptBuilder = PromptBuilder()
     ) {
         self.eventRepository = eventRepository
+        self.pomodoroBlockRepository = pomodoroBlockRepository
+        self.workIncrementRepository = workIncrementRepository
         self.snapshotRepository = snapshotRepository
         self.settingsRepository = settingsRepository
         self.tokenStore = tokenStore
@@ -43,10 +49,15 @@ struct SnapshotGenerator: SessionSnapshotGenerating {
 
         let token = try await tokenStore.loadToken()
         let events = try await eventRepository.listEvents(for: session.id)
+        let blocks = try await pomodoroBlockRepository.listBlocks(for: session.id)
+        let increments = try await workIncrementRepository.listIncrementsForSession(session.id)
+        let incrementsByBlockID = Dictionary(grouping: increments, by: \.blockID)
         let digest = evidenceCompactor.compact(
             project: project,
             session: session,
-            events: events
+            events: events,
+            pomodoroBlocks: blocks,
+            workIncrementsByBlockID: incrementsByBlockID
         )
         let prompt = promptBuilder.makePrompt(from: digest)
         let client = try LMStudioClient(

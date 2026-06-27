@@ -22,6 +22,8 @@ final class SessionViewModelTests: XCTestCase {
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
             projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
             snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
             observationCoordinator: RecordingSessionObservationCoordinator()
         )
@@ -48,6 +50,8 @@ final class SessionViewModelTests: XCTestCase {
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
             projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
             snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
             observationCoordinator: observationCoordinator
         )
@@ -57,6 +61,8 @@ final class SessionViewModelTests: XCTestCase {
         await viewModel.startSession(for: project)
 
         XCTAssertEqual(viewModel.activeSession?.projectID, project.id)
+        XCTAssertEqual(viewModel.activeBlock?.blockIndex, 1)
+        XCTAssertEqual(viewModel.activeBlock?.plannedDurationSeconds, 1_200)
         XCTAssertEqual(viewModel.flow, .idle)
         XCTAssertEqual(observationCoordinator.startCallCount, 1)
 
@@ -75,6 +81,100 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(snapshot.nextAction, "Review generated snapshot wiring.")
         XCTAssertEqual(viewModel.generatedSnapshotContext?.snapshot, snapshot)
         XCTAssertEqual(observationCoordinator.completedBrainDump, "Next: wire grounded snapshots.")
+        let blocks = try await harness.pomodoroBlockRepository.listBlocks(for: completed.id)
+        XCTAssertEqual(blocks.first?.status, .interrupted)
+    }
+
+    func testCompletingBlockAllowsNextBlockWithoutEndingSession() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let project = try await harness.projectRepository.createProject(
+            at: makeTemporaryDirectory(named: "BlockFlowProject")
+        )
+        let viewModel = SessionViewModel(
+            sessionRepository: harness.sessionRepository,
+            projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: RecordingSessionObservationCoordinator()
+        )
+
+        viewModel.beginStartSession(for: project)
+        viewModel.mission = "Capture blocks"
+        await viewModel.startSession(for: project)
+        let firstBlockID = try XCTUnwrap(viewModel.activeBlock?.id)
+
+        await viewModel.completeCurrentBlock(summary: "Setup complete.")
+
+        XCTAssertNotNil(viewModel.activeSession)
+        XCTAssertNil(viewModel.activeBlock)
+        let completedBlock = try await harness.pomodoroBlockRepository.block(for: firstBlockID)
+        XCTAssertEqual(completedBlock?.status, .completed)
+        XCTAssertEqual(completedBlock?.summary, "Setup complete.")
+
+        await viewModel.startNextBlock(intention: "Implement next step")
+
+        XCTAssertEqual(viewModel.activeBlock?.blockIndex, 2)
+        XCTAssertEqual(viewModel.activeBlock?.intention, "Implement next step")
+        XCTAssertEqual(viewModel.sessionBlocks.count, 2)
+    }
+
+    func testTakeBreakLeavesSessionActiveWithNoOpenBlock() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let project = try await harness.projectRepository.createProject(
+            at: makeTemporaryDirectory(named: "BreakProject")
+        )
+        let viewModel = SessionViewModel(
+            sessionRepository: harness.sessionRepository,
+            projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: RecordingSessionObservationCoordinator()
+        )
+
+        viewModel.beginStartSession(for: project)
+        viewModel.mission = "Pause between blocks"
+        await viewModel.startSession(for: project)
+        await viewModel.completeCurrentBlock(summary: nil)
+
+        XCTAssertNotNil(viewModel.activeSession)
+        XCTAssertNil(viewModel.activeBlock)
+        let activeSessionID = try XCTUnwrap(viewModel.activeSession?.id)
+        let openBlock = try await harness.pomodoroBlockRepository.openBlock(for: activeSessionID)
+        XCTAssertNil(openBlock)
+    }
+
+    func testManualIncrementIsAddedToActiveBlock() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let project = try await harness.projectRepository.createProject(
+            at: makeTemporaryDirectory(named: "IncrementProject")
+        )
+        let viewModel = SessionViewModel(
+            sessionRepository: harness.sessionRepository,
+            projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: RecordingSessionObservationCoordinator()
+        )
+
+        viewModel.beginStartSession(for: project)
+        viewModel.mission = "Capture manual decisions"
+        await viewModel.startSession(for: project)
+
+        await viewModel.addIncrement(
+            kind: .decision,
+            title: "Blocks live inside sessions",
+            detail: "Do not duplicate passive events."
+        )
+
+        XCTAssertEqual(viewModel.activeBlockIncrements.count, 1)
+        XCTAssertEqual(viewModel.activeBlockIncrements.first?.kind, .decision)
+        XCTAssertEqual(viewModel.activeBlockIncrements.first?.title, "Blocks live inside sessions")
     }
 
     func testLoadActiveSessionCreatesRecoveryContext() async throws {
@@ -90,6 +190,8 @@ final class SessionViewModelTests: XCTestCase {
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
             projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
             snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
             observationCoordinator: RecordingSessionObservationCoordinator()
         )
@@ -119,6 +221,8 @@ final class SessionViewModelTests: XCTestCase {
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
             projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
             snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
             observationCoordinator: RecordingSessionObservationCoordinator()
         )
@@ -142,6 +246,8 @@ final class SessionViewModelTests: XCTestCase {
         migrator: DatabaseMigrator,
         projectRepository: ProjectRepository,
         sessionRepository: SessionRepository,
+        pomodoroBlockRepository: PomodoroBlockRepository,
+        workIncrementRepository: WorkIncrementRepository,
         snapshotRepository: SnapshotRepository
     ) {
         let rootDirectory = try makeTemporaryDirectory(named: "DatabaseRoot")
@@ -149,9 +255,19 @@ final class SessionViewModelTests: XCTestCase {
         let migrator = DatabaseMigrator(database: database)
         let projectRepository = ProjectRepository(database: database)
         let sessionRepository = SessionRepository(database: database)
+        let pomodoroBlockRepository = PomodoroBlockRepository(database: database)
+        let workIncrementRepository = WorkIncrementRepository(database: database)
         let snapshotRepository = SnapshotRepository(database: database)
 
-        return (database, migrator, projectRepository, sessionRepository, snapshotRepository)
+        return (
+            database,
+            migrator,
+            projectRepository,
+            sessionRepository,
+            pomodoroBlockRepository,
+            workIncrementRepository,
+            snapshotRepository
+        )
     }
 
     private func makeTemporaryDirectory(named name: String) throws -> URL {

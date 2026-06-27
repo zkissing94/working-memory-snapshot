@@ -114,7 +114,65 @@ app_activated
 
 Adding a kind does not require a schema migration.
 
-## 7. Snapshots
+## 7. Pomodoro blocks and work increments
+
+Pomodoro blocks are lightweight capture points inside a session. They do not replace sessions, and they do not duplicate passive evidence.
+
+```sql
+CREATE TABLE pomodoro_blocks (
+    id TEXT PRIMARY KEY NOT NULL,
+    session_id TEXT NOT NULL,
+    block_index INTEGER NOT NULL,
+    planned_duration_seconds INTEGER NOT NULL,
+    intention TEXT,
+    summary TEXT,
+    status TEXT NOT NULL CHECK (
+        status IN ('active', 'paused', 'completed', 'interrupted')
+    ),
+    started_at TEXT NOT NULL,
+    paused_at TEXT,
+    accumulated_pause_seconds INTEGER NOT NULL,
+    ended_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX pomodoro_blocks_session_index_unique
+ON pomodoro_blocks(session_id, block_index);
+
+CREATE UNIQUE INDEX pomodoro_blocks_one_open_per_session
+ON pomodoro_blocks(session_id)
+WHERE status IN ('active', 'paused');
+
+CREATE INDEX pomodoro_blocks_session_started_index
+ON pomodoro_blocks(session_id, started_at ASC);
+```
+
+`planned_duration_seconds` defaults to 1200 for the 20-minute capture block. `accumulated_pause_seconds` is used to preserve remaining time across app reloads.
+
+```sql
+CREATE TABLE work_increments (
+    id TEXT PRIMARY KEY NOT NULL,
+    block_id TEXT NOT NULL,
+    occurred_at TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (
+        kind IN ('note', 'decision', 'blocker')
+    ),
+    title TEXT NOT NULL,
+    detail TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(block_id) REFERENCES pomodoro_blocks(id) ON DELETE CASCADE
+);
+
+CREATE INDEX work_increments_block_time_index
+ON work_increments(block_id, occurred_at ASC);
+```
+
+Work increments are manual, user-entered capture. Git/file/app observations remain in the generic `events` table and are rendered as read-only observed context.
+
+## 8. Snapshots
 
 ```sql
 CREATE TABLE snapshots (
@@ -138,7 +196,7 @@ ON snapshots(session_id);
 
 `decisions_json` and `open_loops_json` encode arrays of strings. Decode errors are treated as data corruption, not silently replaced.
 
-## 8. Application settings
+## 9. Application settings
 
 ```sql
 CREATE TABLE app_settings (
@@ -165,7 +223,7 @@ janitor_enabled = false
 
 The LM Studio API token is stored in Keychain under a stable service and account identifier.
 
-## 9. Domain models
+## 10. Domain models
 
 Suggested shapes:
 
@@ -194,6 +252,50 @@ struct WorkSession: Identifiable, Equatable, Sendable {
     var startedAt: Date
     var endedAt: Date?
     var status: SessionStatus
+    var createdAt: Date
+    var updatedAt: Date
+}
+```
+
+```swift
+enum PomodoroBlockStatus: String, Codable, Sendable {
+    case active
+    case paused
+    case completed
+    case interrupted
+}
+
+struct PomodoroBlock: Identifiable, Equatable, Sendable {
+    let id: UUID
+    let sessionID: UUID
+    var blockIndex: Int
+    var plannedDurationSeconds: Int
+    var intention: String?
+    var summary: String?
+    var status: PomodoroBlockStatus
+    var startedAt: Date
+    var pausedAt: Date?
+    var accumulatedPauseSeconds: Int
+    var endedAt: Date?
+    var createdAt: Date
+    var updatedAt: Date
+}
+```
+
+```swift
+enum WorkIncrementKind: String, Codable, Sendable {
+    case note
+    case decision
+    case blocker
+}
+
+struct WorkIncrement: Identifiable, Equatable, Sendable {
+    let id: UUID
+    let blockID: UUID
+    var occurredAt: Date
+    var kind: WorkIncrementKind
+    var title: String
+    var detail: String?
     var createdAt: Date
     var updatedAt: Date
 }
@@ -237,7 +339,7 @@ struct Snapshot: Identifiable, Equatable, Sendable {
 }
 ```
 
-## 10. Repository contracts
+## 11. Repository contracts
 
 ### ProjectRepository
 
@@ -264,6 +366,23 @@ struct Snapshot: Identifiable, Equatable, Sendable {
 - list distinct active apps
 - list changed file paths
 
+### PomodoroBlockRepository
+
+- create next block for active session
+- ensure the first block for legacy active sessions
+- get open block for session
+- list blocks for session
+- pause block
+- resume block
+- complete block
+- interrupt open block before session end or cancellation
+
+### WorkIncrementRepository
+
+- add manual increment to an active or paused block in an active session
+- list increments for block
+- list increments for session
+
 ### SnapshotRepository
 
 - save or replace snapshot for session
@@ -283,7 +402,7 @@ struct Snapshot: Identifiable, Equatable, Sendable {
 - save optional token
 - delete token
 
-## 11. Invariants
+## 12. Invariants
 
 - A project can exist without sessions.
 - A session can exist without a snapshot.
@@ -291,6 +410,14 @@ struct Snapshot: Identifiable, Equatable, Sendable {
 - A cancelled session does not generate a snapshot.
 - A brain dump survives generation failure.
 - Only one active session exists.
+- A session may contain zero or more Pomodoro blocks.
+- Only one active or paused Pomodoro block exists per session.
+- Starting a new session creates Block 1 with a 20-minute default duration.
+- Legacy active sessions without blocks are recovered by creating Block 1.
+- Completing a block does not complete the session.
+- Ending or cancelling a session interrupts any active or paused block first.
+- Work increments are manual notes, decisions, or blockers attached to blocks.
 - Events are accepted only for the active session.
+- Passive Git/file/app evidence remains in generic events, not in block-specific or tool-specific tables.
 - Snapshot arrays may be empty.
-- Project deletion cascades to sessions, events, and snapshots after confirmation.
+- Project deletion cascades to sessions, events, blocks, increments, and snapshots after confirmation.

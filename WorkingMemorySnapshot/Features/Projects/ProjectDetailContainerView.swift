@@ -60,7 +60,7 @@ private struct ProjectSessionRouteView: View {
             SnapshotDetailView(
                 project: project,
                 snapshot: snapshot,
-                session: projectDetailViewModel.latestSnapshotSession,
+                session: projectDetailViewModel.session(for: snapshot),
                 canStartSession: sessionViewModel.canStartSession,
                 onStartNewSession: {
                     projectDetailViewModel.dismissPresentedSnapshot()
@@ -87,8 +87,27 @@ private struct ProjectSessionRouteView: View {
                     viewModel: sessionViewModel
                 )
             }
+        } else if let selectedSession = projectDetailViewModel.selectedSession {
+            HistoricalSessionDetailView(
+                project: project,
+                session: selectedSession,
+                snapshot: projectDetailViewModel.snapshot(for: selectedSession),
+                blocks: projectDetailViewModel.blocks(for: selectedSession),
+                incrementsForBlock: { block in
+                    projectDetailViewModel.increments(for: block)
+                },
+                events: projectDetailViewModel.events(for: selectedSession),
+                onBackToProject: {
+                    projectDetailViewModel.clearSelectedSession()
+                },
+                onViewSnapshot: {
+                    if let snapshot = projectDetailViewModel.snapshot(for: selectedSession) {
+                        projectDetailViewModel.presentSnapshot(snapshot)
+                    }
+                }
+            )
         } else {
-            ProjectDetailView(
+            ProjectMemoryOverviewView(
                 project: project,
                 latestSnapshot: projectDetailViewModel.latestSnapshot,
                 latestSnapshotSession: projectDetailViewModel.latestSnapshotSession,
@@ -121,7 +140,7 @@ private struct ProjectSessionRouteView: View {
     }
 }
 
-private struct ProjectDetailView: View {
+private struct ProjectMemoryOverviewView: View {
     let project: Project
     let latestSnapshot: Snapshot?
     let latestSnapshotSession: WorkSession?

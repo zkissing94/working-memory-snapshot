@@ -14,10 +14,30 @@ struct SnapshotEvidenceDigest: Equatable, Sendable {
     let endedAt: Date?
     let durationSeconds: Int?
     let brainDump: String
+    let pomodoroBlocks: [CompactedPomodoroBlock]
     let changedPaths: [CompactedChangedPath]
     let gitEvidenceLines: [String]
     let activeApplications: [CompactedActiveApplication]
     let compactorNotes: [String]
+}
+
+struct CompactedPomodoroBlock: Equatable, Sendable {
+    let blockIndex: Int
+    let status: PomodoroBlockStatus
+    let intention: String?
+    let summary: String?
+    let startedAt: Date
+    let endedAt: Date?
+    let plannedDurationSeconds: Int
+    let elapsedSeconds: Int
+    let increments: [CompactedWorkIncrement]
+}
+
+struct CompactedWorkIncrement: Equatable, Sendable {
+    let occurredAt: Date
+    let kind: WorkIncrementKind
+    let title: String
+    let detail: String?
 }
 
 struct CompactedChangedPath: Equatable, Sendable {
@@ -42,7 +62,9 @@ struct EvidenceCompactor: Sendable {
     func compact(
         project: Project,
         session: WorkSession,
-        events: [SessionEvent]
+        events: [SessionEvent],
+        pomodoroBlocks: [PomodoroBlock] = [],
+        workIncrementsByBlockID: [PomodoroBlock.ID: [WorkIncrement]] = [:]
     ) -> SnapshotEvidenceDigest {
         var notes: [String] = []
         let sortedEvents = events.sorted { first, second in
@@ -55,6 +77,10 @@ struct EvidenceCompactor: Sendable {
         let changedPaths = compactChangedPaths(from: sortedEvents, notes: &notes)
         let activeApplications = compactActiveApplications(from: sortedEvents, notes: &notes)
         let gitEvidenceLines = compactGitEvidence(from: sortedEvents, notes: &notes)
+        let compactedBlocks = compactPomodoroBlocks(
+            pomodoroBlocks,
+            workIncrementsByBlockID: workIncrementsByBlockID
+        )
         appendObservationIssues(from: sortedEvents, notes: &notes)
 
         let endedAt = session.endedAt
@@ -67,11 +93,49 @@ struct EvidenceCompactor: Sendable {
             endedAt: endedAt,
             durationSeconds: durationSeconds,
             brainDump: session.brainDump ?? "",
+            pomodoroBlocks: compactedBlocks,
             changedPaths: changedPaths,
             gitEvidenceLines: gitEvidenceLines,
             activeApplications: activeApplications,
             compactorNotes: Array(notes.prefix(configuration.maxNotes))
         )
+    }
+
+    private func compactPomodoroBlocks(
+        _ blocks: [PomodoroBlock],
+        workIncrementsByBlockID: [PomodoroBlock.ID: [WorkIncrement]]
+    ) -> [CompactedPomodoroBlock] {
+        blocks
+            .sorted { $0.blockIndex < $1.blockIndex }
+            .map { block in
+                let increments = (workIncrementsByBlockID[block.id] ?? [])
+                    .sorted { first, second in
+                        if first.occurredAt == second.occurredAt {
+                            return first.createdAt < second.createdAt
+                        }
+                        return first.occurredAt < second.occurredAt
+                    }
+                    .map {
+                        CompactedWorkIncrement(
+                            occurredAt: $0.occurredAt,
+                            kind: $0.kind,
+                            title: $0.title,
+                            detail: $0.detail
+                        )
+                    }
+
+                return CompactedPomodoroBlock(
+                    blockIndex: block.blockIndex,
+                    status: block.status,
+                    intention: block.intention,
+                    summary: block.summary,
+                    startedAt: block.startedAt,
+                    endedAt: block.endedAt,
+                    plannedDurationSeconds: block.plannedDurationSeconds,
+                    elapsedSeconds: block.elapsedSeconds(at: block.endedAt ?? Date()),
+                    increments: increments
+                )
+            }
     }
 
     private func compactChangedPaths(

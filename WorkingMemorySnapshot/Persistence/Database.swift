@@ -159,6 +159,12 @@ enum SQLiteValue {
         }
     }
 
+    static func bind(_ integer: Int, to statement: OpaquePointer, at index: Int32) throws {
+        guard sqlite3_bind_int64(statement, index, Int64(integer)) == SQLITE_OK else {
+            throw SQLiteError(code: SQLITE_MISUSE, message: "Could not bind integer at index \(index).")
+        }
+    }
+
     static func bind(_ data: Data, to statement: OpaquePointer, at index: Int32) throws {
         try data.withUnsafeBytes { buffer in
             guard sqlite3_bind_blob(statement, index, buffer.baseAddress, Int32(buffer.count), transient) == SQLITE_OK else {

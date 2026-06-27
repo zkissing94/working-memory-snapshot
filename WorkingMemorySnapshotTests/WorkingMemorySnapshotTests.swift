@@ -25,7 +25,7 @@ final class WorkingMemorySnapshotTests: XCTestCase {
         try await harness.migrator.migrate()
 
         let versions = try await harness.migrator.appliedVersions()
-        XCTAssertEqual(versions, [1, 2, 3, 4, 5])
+        XCTAssertEqual(versions, [1, 2, 3, 4, 5, 6])
     }
 
     func testCreatesAndListsProjects() async throws {

@@ -82,6 +82,19 @@ struct ProjectRepository {
         return project
     }
 
+    func deleteProject(id: UUID) async throws {
+        let changedRows = try await database.executeReturningChanges("""
+        DELETE FROM projects
+        WHERE id = ?
+        """) { statement in
+            try SQLiteValue.bind(id.uuidString, to: statement, at: 1)
+        }
+
+        guard changedRows > 0 else {
+            throw ProjectRepositoryError.projectNotFound(id)
+        }
+    }
+
     private func bind(_ project: Project, to statement: OpaquePointer) throws {
         try SQLiteValue.bind(project.id.uuidString, to: statement, at: 1)
         try SQLiteValue.bind(project.name, to: statement, at: 2)

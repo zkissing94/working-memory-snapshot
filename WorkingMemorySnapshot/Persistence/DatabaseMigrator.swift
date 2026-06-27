@@ -149,6 +149,68 @@ struct DatabaseMigrator {
                 """)
             }
         }
+
+        if !appliedVersions.contains(6) {
+            try await applyMigration(version: 6) {
+                try await database.execute("""
+                CREATE TABLE IF NOT EXISTS pomodoro_blocks (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    session_id TEXT NOT NULL,
+                    block_index INTEGER NOT NULL,
+                    planned_duration_seconds INTEGER NOT NULL,
+                    intention TEXT,
+                    summary TEXT,
+                    status TEXT NOT NULL CHECK (
+                        status IN ('active', 'paused', 'completed', 'interrupted')
+                    ),
+                    started_at TEXT NOT NULL,
+                    paused_at TEXT,
+                    accumulated_pause_seconds INTEGER NOT NULL,
+                    ended_at TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(session_id) REFERENCES sessions(id) ON DELETE CASCADE
+                )
+                """)
+
+                try await database.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS pomodoro_blocks_session_index_unique
+                ON pomodoro_blocks(session_id, block_index)
+                """)
+
+                try await database.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS pomodoro_blocks_one_open_per_session
+                ON pomodoro_blocks(session_id)
+                WHERE status IN ('active', 'paused')
+                """)
+
+                try await database.execute("""
+                CREATE INDEX IF NOT EXISTS pomodoro_blocks_session_started_index
+                ON pomodoro_blocks(session_id, started_at ASC)
+                """)
+
+                try await database.execute("""
+                CREATE TABLE IF NOT EXISTS work_increments (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    block_id TEXT NOT NULL,
+                    occurred_at TEXT NOT NULL,
+                    kind TEXT NOT NULL CHECK (
+                        kind IN ('note', 'decision', 'blocker')
+                    ),
+                    title TEXT NOT NULL,
+                    detail TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    FOREIGN KEY(block_id) REFERENCES pomodoro_blocks(id) ON DELETE CASCADE
+                )
+                """)
+
+                try await database.execute("""
+                CREATE INDEX IF NOT EXISTS work_increments_block_time_index
+                ON work_increments(block_id, occurred_at ASC)
+                """)
+            }
+        }
     }
 
     private func applyMigration(version: Int, body: () async throws -> Void) async throws {
