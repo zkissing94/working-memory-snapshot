@@ -5,7 +5,7 @@
 Current handoff branch:
 
 ```text
-feature/m9-neuro-ergo-refactor
+feature/m8-session-timeline-blocks
 ```
 
 Completed milestones:
@@ -19,8 +19,6 @@ Completed milestones:
 - M6 - Real snapshot integration
 - M7 - Resume and recovery polish
 - M8 - Session timeline and Pomodoro capture redesign
-- M8 merge to main
-- M9 - Neuroergonomic UI refactor branch implementation
 
 Current implementation state:
 
@@ -74,29 +72,25 @@ Current implementation state:
 - Taking a break leaves the session active with no open block.
 - Ending or cancelling a session interrupts any active or paused block before the existing brain-dump/cancel flow continues.
 - The main UI now uses a three-column structure: sidebar, project dashboard, and detail pane.
-- The project dashboard shows active-session state, latest memory, and previous sessions grouped by date.
+- The project dashboard shows project metrics, active-session state, latest memory, and previous sessions grouped by date.
 - Historical session detail shows mission, timing, snapshot sections, block timeline, and observed context from existing Git/file/app events.
 - Snapshot evidence includes user-entered block summaries and manual increments below the brain dump and above passive evidence.
 - Message, transcript, clipboard, browser-history, screenshot, and keystroke observation remain excluded.
 - Automated M8 tests cover migration v6, block/increment repositories, session view-model block flow, snapshot prompt inclusion, compaction, and project-deletion cascades.
-- M8 has been fast-forwarded into `main`.
-- M9 keeps the M8 data model but changes user-facing language to focus blocks and captures.
-- The active-session surface is simplified around mission, one capture input, and collapsed focus/evidence details.
-- Targeted M9 tests cover capture saving, empty capture validation, and requiring an open focus block before saving a capture.
 - LM Studio is not required to compile or launch the app.
 
 ## Next milestone
 
-Next task:
+Next task after merging M8:
 
 ```text
-M9 manual dogfood and merge prep
+M8 manual dogfood review
 ```
 
 Expected prompt:
 
 ```text
-Launch the app and manually dogfood the neuroergonomic session flow against docs/02-ui-spec.md and the M9 mockup.
+Launch the app and manually dogfood the session timeline and Pomodoro block flow against docs/02-ui-spec.md.
 ```
 
 Optional post-MVP milestone:
@@ -129,7 +123,7 @@ git branch --show-current
 ./scripts/check.sh
 ```
 
-Do not start the optional evidence-janitor M9 unless the neuroergonomic UI refactor has been completed or explicitly deferred, the worktree is clean, and `./scripts/check.sh` passes.
+Do not start post-MVP M9 unless M8 has been merged, the M8 UI flow has been dogfooded, the worktree is clean, and `./scripts/check.sh` passes.
 
 ## M2 completion summary
 

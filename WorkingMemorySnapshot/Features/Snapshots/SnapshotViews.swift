@@ -14,14 +14,6 @@ struct SnapshotDetailView: View {
                 header
 
                 SnapshotTextSection(
-                    title: "Next action",
-                    text: snapshot.nextAction
-                )
-                SnapshotTextSection(
-                    title: "Resume Brief",
-                    text: snapshot.resumeBrief
-                )
-                SnapshotTextSection(
                     title: "What changed",
                     text: snapshot.whatChanged
                 )
@@ -35,7 +27,14 @@ struct SnapshotDetailView: View {
                     items: snapshot.openLoops,
                     emptyText: "No open loops were identified."
                 )
-                generatorMetadata
+                SnapshotTextSection(
+                    title: "Next action",
+                    text: snapshot.nextAction
+                )
+                SnapshotTextSection(
+                    title: "Resume Brief",
+                    text: snapshot.resumeBrief
+                )
 
                 HStack(spacing: 12) {
                     Button(action: onStartNewSession) {
@@ -72,13 +71,7 @@ struct SnapshotDetailView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
-        }
-    }
 
-    private var generatorMetadata: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Generation")
-                .font(.headline)
             Text(generatorDescription)
                 .font(.callout)
                 .foregroundStyle(.secondary)

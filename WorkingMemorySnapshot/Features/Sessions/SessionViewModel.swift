@@ -350,7 +350,7 @@ final class SessionViewModel: ObservableObject {
 
     func addIncrement(kind: WorkIncrementKind, title: String, detail: String?) async {
         guard let activeBlock else {
-            errorMessage = "Start a focus block before saving a capture."
+            errorMessage = "Start a focus block before adding a work increment."
             return
         }
 
@@ -365,10 +365,6 @@ final class SessionViewModel: ObservableObject {
         }
     }
 
-    func addCapture(kind: WorkIncrementKind, text: String) async {
-        await addIncrement(kind: kind, title: text, detail: nil)
-    }
-
     private func performSessionUpdate(_ body: () async throws -> Void) async {
         guard !isWorking else {
             return
@@ -380,7 +376,6 @@ final class SessionViewModel: ObservableObject {
         }
 
         do {
-            errorMessage = nil
             try await body()
         } catch {
             errorMessage = userFacingErrorMessage(for: error)

@@ -164,9 +164,9 @@ enum WorkIncrementRepositoryError: Error, Equatable, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .emptyTitle:
-            "Enter a capture before saving."
+            "Enter a note before adding a work increment."
         case .blockNotOpen:
-            "Captures can only be saved to an active focus block."
+            "Work increments can only be added to an active block."
         case .invalidStoredIncrement(let message):
             message
         }

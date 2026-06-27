@@ -30,7 +30,7 @@ After M7 dogfooding, the app may expand into a three-column `NavigationSplitView
 - middle pane: selected project dashboard with project header, active session card, previous sessions grouped by date, and latest memory summary
 - detail pane: active session, selected historical session, project memory overview, snapshot, or settings
 
-This is still not a generic productivity dashboard. The product hierarchy remains `Project -> Session -> Pomodoro Block -> Work Increment` in the data model, but the user-facing language should be calmer: focus blocks and captures. Every surface should help the user preserve or resume cognitive context.
+This is still not a generic productivity dashboard. The hierarchy is `Project -> Session -> Pomodoro Block -> Work Increment`, and every surface should help the user preserve or resume cognitive context.
 
 ## 3. Project list
 
@@ -156,35 +156,20 @@ Do not show a live feed of raw events by default.
 
 The timer counts upward. It does not enforce intervals or trigger break notifications.
 
-### Post-MVP M8 active focus surface
+### Post-MVP M8 active block surface
 
-The active session surface may include one 20-minute focus block, but it should not make timer management the dominant activity. The default active-session hierarchy is:
-
-- `Active Session` header with a small elapsed-time chip
-- mission card
-- one `Capture what matters` input
-- `Note / Decision / Blocker` segmented control
-- secondary action: `Save Capture`
-- primary action: `End Session`
-
-Collapsed by default:
-
-- focus block controls
-- observed context
-- captures and block history
-
-The focus block disclosure may include:
+The active session surface may include one 20-minute Pomodoro block capture card:
 
 - countdown from 20 minutes by default
 - pause/resume current block
 - complete block with an optional summary
-- start next focus block without ending the session
+- start next block without ending the session
 - take a break by leaving the session active with no open block
 - end session through the existing brain-dump flow
 
-A session never ends automatically when a focus block ends. Focus blocks are capture scaffolding, not productivity enforcement. Do not add streaks, scores, break notifications, or gamified status.
+A session never ends automatically when a block ends. Blocks are capture points, not productivity enforcement. Do not add streaks, scores, break notifications, or gamified status.
 
-Manual captures can be added inside the current focus block with these kinds:
+Manual work increments can be added inside the current block with these kinds:
 
 - note
 - decision

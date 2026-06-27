@@ -52,128 +52,51 @@ struct ActiveSessionView: View {
     let project: Project
     let session: WorkSession
     @ObservedObject var viewModel: SessionViewModel
-    @State private var focusBlockSummary = ""
-    @State private var nextFocusBlockIntention = ""
-    @State private var captureKind: WorkIncrementKind = .note
-    @State private var captureText = ""
+    @State private var blockSummary = ""
+    @State private var nextBlockIntention = ""
+    @State private var incrementKind: WorkIncrementKind = .note
+    @State private var incrementTitle = ""
+    @State private var incrementDetail = ""
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                activeSessionHeader
-                missionCard
-                captureCard
-                detailDisclosures
-                cancelSessionButton
-            }
-            .padding(28)
-            .frame(maxWidth: 900, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-        }
-        .background(Color(nsColor: .windowBackgroundColor))
-    }
-
-    private var activeSessionHeader: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Active Session")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Text("Started \(session.startedAt.formatted(date: .omitted, time: .shortened)) · observation running locally")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-            }
-
-            Spacer()
-
-            TimelineView(.periodic(from: session.startedAt, by: 1)) { context in
-                Text("\(elapsedString(from: session.startedAt, to: context.date)) elapsed")
-                    .font(.system(.callout, design: .monospaced))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(nsColor: .controlBackgroundColor))
-                    )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.secondary.opacity(0.16))
-                    }
-            }
-        }
-    }
-
-    private var missionCard: some View {
-        DashboardSurface {
-            VStack(alignment: .leading, spacing: 9) {
-                Text("Mission")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                Text(session.mission)
-                    .font(.title3)
-                    .fontWeight(.semibold)
-                    .lineLimit(5)
-                    .textSelection(.enabled)
-            }
-        }
-    }
-
-    private var captureCard: some View {
-        DashboardSurface {
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Capture what matters")
-                            .font(.caption)
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Active Session")
+                            .font(.title2)
                             .fontWeight(.semibold)
+                        Text("Started \(session.startedAt.formatted(date: .omitted, time: .shortened))")
                             .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-                        Text(capturePrompt)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
                     }
-
-                    Picker("Capture kind", selection: $captureKind) {
-                        ForEach(WorkIncrementKind.allCases, id: \.self) { kind in
-                            Text(kind.displayName).tag(kind)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 320)
-                }
-
-                TextField("Decision, blocker, surprise, or next step", text: $captureText, axis: .vertical)
-                    .lineLimit(4, reservesSpace: true)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
-
-                HStack(alignment: .center) {
-                    Text(captureCountText)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
 
                     Spacer()
 
-                    Button {
-                        let kind = captureKind
-                        let text = captureText
-                        Task {
-                            await viewModel.addCapture(kind: kind, text: text)
-                            if viewModel.errorMessage == nil {
-                                captureText = ""
-                                captureKind = .note
-                            }
-                        }
-                    } label: {
-                        Label("Save Capture", systemImage: "plus")
+                    TimelineView(.periodic(from: session.startedAt, by: 1)) { context in
+                        Text(elapsedString(from: session.startedAt, to: context.date))
+                            .font(.system(.title2, design: .monospaced))
+                            .monospacedDigit()
                     }
-                    .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
+                }
 
+                pomodoroBlockCard
+                workIncrementsSection
+
+                DashboardSurface {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Session Mission")
+                            .font(.headline)
+                        Text(session.mission)
+                            .font(.body)
+                            .textSelection(.enabled)
+                    }
+                }
+
+                observedContextSection
+                blocksInSessionSection
+
+                HStack(spacing: 12) {
                     Button {
                         viewModel.beginEndingActiveSession()
                     } label: {
@@ -183,47 +106,31 @@ struct ActiveSessionView: View {
                     .disabled(viewModel.isWorking)
                     .accessibilityLabel("End Session")
                     .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
+
+                    Button(role: .destructive) {
+                        Task {
+                            await viewModel.cancelActiveSession()
+                        }
+                    } label: {
+                        Label("Cancel Session", systemImage: "xmark.circle")
+                    }
+                    .disabled(viewModel.isWorking)
+                    .accessibilityHint("Cancel this session without generating a snapshot.")
                 }
             }
+            .padding(28)
+            .frame(maxWidth: 900, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    private var capturePrompt: String {
-        if viewModel.activeBlock == nil {
-            return "Start a focus block to save notes, decisions, or blockers."
-        }
-        return "Short notes here feed the final snapshot."
-    }
-
-    private var captureCountText: String {
-        let count = viewModel.activeBlockIncrements.count
-        if count == 0 {
-            return "No captures saved in the current focus block."
-        }
-        return "\(count) capture\(count == 1 ? "" : "s") saved in the current focus block."
-    }
-
-    private var detailDisclosures: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 12)], spacing: 12) {
-            focusBlockDisclosure
-            observedContextDisclosure
-            capturesDisclosure
-        }
-    }
-
-    private var focusBlockDisclosure: some View {
+    private var pomodoroBlockCard: some View {
         DashboardSurface {
-            DisclosureGroup {
-                Divider()
-                    .padding(.vertical, 8)
-                if let activeBlock = viewModel.activeBlock {
-                    activeBlockContent(activeBlock)
-                } else {
-                    betweenFocusBlocksContent
-                }
-            } label: {
-                Label("Focus block", systemImage: "timer")
-                    .font(.headline)
+            if let activeBlock = viewModel.activeBlock {
+                activeBlockContent(activeBlock)
+            } else {
+                betweenBlocksContent
             }
         }
     }
@@ -233,12 +140,12 @@ struct ActiveSessionView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(spacing: 8) {
-                        Text("Focus block \(block.blockIndex)")
+                        Text("Pomodoro Block \(block.blockIndex)")
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
-                        Text(block.status == .paused ? "Paused" : "Focus time")
+                        Text(block.status == .paused ? "Paused" : "Focus Time")
                             .font(.caption2)
                             .fontWeight(.semibold)
                             .foregroundStyle(block.status == .paused ? .orange : .green)
@@ -285,10 +192,10 @@ struct ActiveSessionView: View {
             .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Focus block summary")
+                Text("Block summary")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                TextField("What changed during this focus block?", text: $focusBlockSummary, axis: .vertical)
+                TextField("What changed during this block?", text: $blockSummary, axis: .vertical)
                     .lineLimit(2, reservesSpace: true)
                     .textFieldStyle(.roundedBorder)
             }
@@ -308,22 +215,22 @@ struct ActiveSessionView: View {
                 .disabled(viewModel.isWorking)
 
                 Button {
-                    let summary = focusBlockSummary
+                    let summary = blockSummary
                     Task {
                         await viewModel.completeCurrentBlock(summary: summary)
-                        focusBlockSummary = ""
+                        blockSummary = ""
                     }
                 } label: {
-                    Label("Complete Focus Block", systemImage: "checkmark.circle")
+                    Label("Complete Block", systemImage: "checkmark.circle")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
 
                 Button {
-                    let summary = focusBlockSummary
+                    let summary = blockSummary
                     Task {
                         await viewModel.completeCurrentBlock(summary: summary)
-                        focusBlockSummary = ""
+                        blockSummary = ""
                     }
                 } label: {
                     Label("Take Break", systemImage: "cup.and.saucer")
@@ -333,113 +240,135 @@ struct ActiveSessionView: View {
         }
     }
 
-    private var betweenFocusBlocksContent: some View {
+    private var betweenBlocksContent: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Between focus blocks")
+            Text("Between Blocks")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
-            Text("The session is still active. Start another 20-minute focus block when you are ready.")
+            Text("The session is still active. Start another 20-minute block when you are ready.")
                 .font(.body)
 
-            TextField("Next focus block intention", text: $nextFocusBlockIntention, axis: .vertical)
+            TextField("Next block intention", text: $nextBlockIntention, axis: .vertical)
                 .lineLimit(2, reservesSpace: true)
                 .textFieldStyle(.roundedBorder)
 
             HStack(spacing: 12) {
                 Button {
-                    let intention = nextFocusBlockIntention
+                    let intention = nextBlockIntention
                     Task {
                         await viewModel.startNextBlock(intention: intention)
-                        nextFocusBlockIntention = ""
+                        nextBlockIntention = ""
                     }
                 } label: {
-                    Label("Start Focus Block", systemImage: "play.fill")
+                    Label("Start Next Block", systemImage: "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
+
+                Button {
+                    viewModel.beginEndingActiveSession()
+                } label: {
+                    Label("End Session", systemImage: "stop")
+                }
             }
         }
     }
 
-    private var observedContextDisclosure: some View {
+    private var workIncrementsSection: some View {
         DashboardSurface {
-            DisclosureGroup {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Current Block - Work Increments")
+                    .font(.headline)
+
+                if viewModel.activeBlock == nil {
+                    Text("Start a block to capture notes, decisions, or blockers.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else if viewModel.activeBlockIncrements.isEmpty {
+                    Text("No manual increments yet.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(viewModel.activeBlockIncrements) { increment in
+                            IncrementRow(increment: increment)
+                            if increment.id != viewModel.activeBlockIncrements.last?.id {
+                                Divider()
+                            }
+                        }
+                    }
+                }
+
                 Divider()
-                    .padding(.vertical, 8)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Picker("Kind", selection: $incrementKind) {
+                        ForEach(WorkIncrementKind.allCases, id: \.self) { kind in
+                            Text(kind.displayName).tag(kind)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    TextField("Add a note, decision, or blocker", text: $incrementTitle)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("Detail (optional)", text: $incrementDetail, axis: .vertical)
+                        .lineLimit(2, reservesSpace: true)
+                        .textFieldStyle(.roundedBorder)
+
+                    Button {
+                        let kind = incrementKind
+                        let title = incrementTitle
+                        let detail = incrementDetail
+                        Task {
+                            await viewModel.addIncrement(kind: kind, title: title, detail: detail)
+                            if viewModel.errorMessage == nil {
+                                incrementTitle = ""
+                                incrementDetail = ""
+                                incrementKind = .note
+                            }
+                        }
+                    } label: {
+                        Label("Add Increment", systemImage: "plus")
+                    }
+                    .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
+                }
+            }
+        }
+    }
+
+    private var observedContextSection: some View {
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Observed Context")
+                    .font(.headline)
                 Text(viewModel.observationSummary.displayText)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
-            } label: {
-                Label("Observed context", systemImage: "macwindow")
-                    .font(.headline)
             }
         }
     }
 
-    private var capturesDisclosure: some View {
+    private var blocksInSessionSection: some View {
         DashboardSurface {
-            DisclosureGroup {
-                Divider()
-                    .padding(.vertical, 8)
-
-                VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Current focus block captures")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        if viewModel.activeBlockIncrements.isEmpty {
-                            Text("No captures saved in the current focus block.")
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            VStack(spacing: 0) {
-                                ForEach(viewModel.activeBlockIncrements) { increment in
-                                    IncrementRow(increment: increment)
-                                    if increment.id != viewModel.activeBlockIncrements.last?.id {
-                                        Divider()
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Focus blocks in this session")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                        if viewModel.sessionBlocks.isEmpty {
-                            Text("No focus blocks recorded yet.")
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                                ForEach(viewModel.sessionBlocks) { block in
-                                    BlockChip(block: block)
-                                }
-                            }
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Blocks in This Session")
+                    .font(.headline)
+                if viewModel.sessionBlocks.isEmpty {
+                    Text("No blocks recorded yet.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                        ForEach(viewModel.sessionBlocks) { block in
+                            BlockChip(block: block)
                         }
                     }
                 }
-            } label: {
-                Label("Captures", systemImage: "tray.full")
-                    .font(.headline)
             }
         }
-    }
-
-    private var cancelSessionButton: some View {
-        Button(role: .destructive) {
-            Task {
-                await viewModel.cancelActiveSession()
-            }
-        } label: {
-            Label("Cancel Session", systemImage: "xmark.circle")
-        }
-        .disabled(viewModel.isWorking)
-        .accessibilityHint("Cancel this session without generating a snapshot.")
     }
 
     private func progress(for block: PomodoroBlock, at date: Date) -> Double {
@@ -687,7 +616,7 @@ struct HistoricalSessionDetailView: View {
     private var blocksSection: some View {
         DashboardSurface {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Focus Blocks")
+                Text("Pomodoro Blocks")
                     .font(.headline)
                 if blocks.isEmpty {
                     Text("No focus blocks were recorded for this session.")
@@ -885,7 +814,7 @@ private struct BlockChip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             BlockStatusBadge(block: block)
-            Text(block.intention ?? "Focus block \(block.blockIndex)")
+            Text(block.intention ?? "Block \(block.blockIndex)")
                 .font(.callout)
                 .fontWeight(.semibold)
                 .lineLimit(2)

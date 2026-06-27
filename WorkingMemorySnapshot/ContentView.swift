@@ -32,6 +32,9 @@ struct ContentView: View {
                             onStartSession: {
                                 sessionViewModel.beginStartSession(for: project)
                             },
+                            onEndSession: {
+                                sessionViewModel.beginEndingActiveSession()
+                            },
                             onViewSnapshot: {
                                 projectDetailViewModel.presentLatestSnapshot()
                             },
