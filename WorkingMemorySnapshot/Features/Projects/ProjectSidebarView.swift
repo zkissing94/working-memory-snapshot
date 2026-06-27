@@ -87,32 +87,39 @@ private struct ProjectRow: View {
     let metadata: ProjectSidebarMetadata?
     let isActive: Bool
     let isSelected: Bool
+    @State private var isHovered = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
-                Image(systemName: isActive ? "timer.circle.fill" : "folder")
-                    .font(.title3)
-                    .foregroundStyle(isActive ? activeGreen : secondaryTextColor)
-                    .frame(width: 24)
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(iconFill)
+
+                    Image(systemName: isActive ? "timer.circle.fill" : "folder")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(isActive ? Color.accentColor : secondaryTextColor)
+                }
+                .frame(width: 34, height: 34)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 6) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(project.name)
-                            .font(.body)
-                            .fontWeight(isActive ? .semibold : .regular)
+                            .font(.headline.weight(isActive ? .semibold : .medium))
                             .foregroundStyle(primaryTextColor)
                             .lineLimit(2)
+                            .layoutPriority(1)
                         if isActive {
+                            Spacer(minLength: 4)
                             Text("Active")
                                 .font(.caption2)
-                                .fontWeight(.semibold)
+                                .fontWeight(.medium)
                                 .foregroundStyle(activeGreen)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
                                 .background(
                                     Capsule()
-                                        .fill(activeGreen.opacity(0.14))
+                                        .fill(activeGreen.opacity(0.15))
                                 )
                         }
                     }
@@ -141,25 +148,33 @@ private struct ProjectRow: View {
                 }
             }
         }
-        .padding(10)
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(cardFill)
         )
         .overlay(alignment: .leading) {
             if isActive {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(activeGreen)
-                    .frame(width: 3)
-                    .padding(.vertical, 6)
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(Color.accentColor)
+                    .frame(width: 4)
+                    .padding(.vertical, 10)
             }
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(cardStroke, lineWidth: isSelected ? 1.5 : 1)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .strokeBorder(cardStroke, lineWidth: 1)
         }
-        .padding(.vertical, 3)
+        .shadow(color: shadowColor, radius: shadowRadius, y: 2)
+        .scaleEffect(isHovered ? 1.01 : 1)
+        .animation(.easeInOut(duration: 0.18), value: isActive)
+        .animation(.easeInOut(duration: 0.18), value: isSelected)
+        .animation(.easeOut(duration: 0.18), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .padding(.vertical, 4)
     }
 
     private var primaryTextColor: Color {
@@ -174,20 +189,54 @@ private struct ProjectRow: View {
         Color(red: 0.08, green: 0.63, blue: 0.31)
     }
 
-    private var cardFill: Color {
+    private var cornerRadius: CGFloat {
+        14
+    }
+
+    private var cardFill: AnyShapeStyle {
         if isActive {
-            return activeGreen.opacity(0.10)
+            return AnyShapeStyle(Color.accentColor.opacity(0.08))
         }
-        return Color(nsColor: .controlBackgroundColor)
+        return AnyShapeStyle(.regularMaterial)
     }
 
     private var cardStroke: Color {
         if isActive {
-            return activeGreen.opacity(0.45)
+            return Color.accentColor.opacity(isHovered ? 0.42 : 0.35)
         }
         if isSelected {
             return Color(nsColor: .separatorColor).opacity(0.85)
         }
-        return Color(nsColor: .separatorColor).opacity(0.55)
+        if isHovered {
+            return Color(nsColor: .separatorColor).opacity(0.70)
+        }
+        return Color(nsColor: .quaternaryLabelColor).opacity(0.70)
+    }
+
+    private var iconFill: AnyShapeStyle {
+        if isActive {
+            return AnyShapeStyle(
+                LinearGradient(
+                    colors: [Color.accentColor.opacity(0.18), Color.cyan.opacity(0.10)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        }
+        return AnyShapeStyle(Color(nsColor: .secondaryLabelColor).opacity(0.08))
+    }
+
+    private var shadowColor: Color {
+        if isActive {
+            return Color.accentColor.opacity(isHovered ? 0.17 : 0.15)
+        }
+        return Color.black.opacity(isHovered ? 0.045 : 0.03)
+    }
+
+    private var shadowRadius: CGFloat {
+        if isActive {
+            return isHovered ? 13.8 : 12
+        }
+        return isHovered ? 6.9 : 6
     }
 }
