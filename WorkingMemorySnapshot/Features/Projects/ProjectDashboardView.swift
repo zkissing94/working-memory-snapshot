@@ -5,7 +5,6 @@ struct ProjectDashboardView: View {
     @ObservedObject var sessionViewModel: SessionViewModel
     @ObservedObject var projectDetailViewModel: ProjectDetailViewModel
     let onStartSession: () -> Void
-    let onEndSession: () -> Void
     let onViewSnapshot: () -> Void
     let onSelectSession: (WorkSession) -> Void
     let onRestoreProjectAccess: () -> Void
@@ -33,15 +32,19 @@ struct ProjectDashboardView: View {
                     accessRecovery
                 }
 
+                if let latestSnapshot = projectDetailViewModel.latestSnapshot {
+                    latestMemoryCard(latestSnapshot)
+                }
+
                 if let activeSession {
                     ActiveSessionDashboardCard(
                         session: activeSession,
                         activeBlock: sessionViewModel.activeBlock,
                         blocks: sessionViewModel.sessionBlocks,
+                        captureCount: sessionViewModel.activeBlockIncrements.count,
                         onContinue: {
                             projectDetailViewModel.clearSelectedSession()
-                        },
-                        onEnd: onEndSession
+                        }
                     )
                 } else {
                     startSessionCard
@@ -50,10 +53,6 @@ struct ProjectDashboardView: View {
                 if let failedSnapshotSession = sessionViewModel.failedSnapshotSession,
                    failedSnapshotSession.projectID == project.id {
                     snapshotFailureCard(failedSnapshotSession)
-                }
-
-                if let latestSnapshot = projectDetailViewModel.latestSnapshot {
-                    latestMemoryCard(latestSnapshot)
                 }
 
                 sessionTimeline
@@ -81,26 +80,7 @@ struct ProjectDashboardView: View {
                 .lineLimit(2)
                 .truncationMode(.middle)
                 .textSelection(.enabled)
-
-            HStack(spacing: 8) {
-                MetricPill(title: "Sessions", value: "\(completedSessionCount)")
-                MetricPill(title: "Blocks", value: "\(completedBlockCount)")
-                if let latest = projectDetailViewModel.latestSnapshotSession?.endedAt {
-                    MetricPill(title: "Last", value: latest.formatted(date: .omitted, time: .shortened))
-                }
-            }
         }
-    }
-
-    private var completedSessionCount: Int {
-        projectDetailViewModel.sessions.filter { $0.status == .completed }.count
-    }
-
-    private var completedBlockCount: Int {
-        projectDetailViewModel.blocksBySessionID.values
-            .flatMap { $0 }
-            .filter { $0.status == .completed }
-            .count
     }
 
     private var accessRecovery: some View {
@@ -253,8 +233,8 @@ private struct ActiveSessionDashboardCard: View {
     let session: WorkSession
     let activeBlock: PomodoroBlock?
     let blocks: [PomodoroBlock]
+    let captureCount: Int
     let onContinue: () -> Void
-    let onEnd: () -> Void
 
     var body: some View {
         DashboardSurface {
@@ -283,41 +263,28 @@ private struct ActiveSessionDashboardCard: View {
                 HStack(spacing: 6) {
                     Text("Started \(session.startedAt.formatted(date: .omitted, time: .shortened))")
                     Text("·")
-                    Text("\(completedBlocks) blocks completed")
+                    Text("\(captureCount) capture\(captureCount == 1 ? "" : "s") saved")
                     if let activeBlock {
                         Text("·")
-                        Text("Block \(activeBlock.blockIndex)")
+                        Text("Focus block \(activeBlock.blockIndex)")
+                    } else if completedBlocks > 0 {
+                        Text("·")
+                        Text("\(completedBlocks) focus block\(completedBlocks == 1 ? "" : "s") completed")
                     }
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-                ProgressView(value: progress)
-                    .tint(.accentColor)
-
-                HStack(spacing: 10) {
-                    Button(action: onContinue) {
-                        Label("Continue Session", systemImage: "rectangle.and.pencil.and.ellipsis")
-                    }
-                    .buttonStyle(.borderedProminent)
-
-                    Button(action: onEnd) {
-                        Label("End Session", systemImage: "stop")
-                    }
+                Button(action: onContinue) {
+                    Label("Continue Session", systemImage: "rectangle.and.pencil.and.ellipsis")
                 }
+                .buttonStyle(.borderedProminent)
             }
         }
     }
 
     private var completedBlocks: Int {
         blocks.filter { $0.status == .completed }.count
-    }
-
-    private var progress: Double {
-        guard let activeBlock else {
-            return blocks.isEmpty ? 0 : 1
-        }
-        return min(1, Double(activeBlock.elapsedSeconds()) / Double(max(1, activeBlock.plannedDurationSeconds)))
     }
 }
 
@@ -384,32 +351,6 @@ private struct SessionTimelineRow: View {
             return nil
         }
         return DurationFormatter.shortString(from: Int(endedAt.timeIntervalSince(session.startedAt)))
-    }
-}
-
-private struct MetricPill: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(.callout)
-                .fontWeight(.semibold)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.secondary.opacity(0.15))
-        }
     }
 }
 

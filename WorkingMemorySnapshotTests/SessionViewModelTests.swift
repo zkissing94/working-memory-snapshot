@@ -221,6 +221,91 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.activeBlockIncrements.first?.title, "Blocks live inside sessions")
     }
 
+    func testCaptureIsAddedToActiveFocusBlockWithoutDetail() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let project = try await harness.projectRepository.createProject(
+            at: makeTemporaryDirectory(named: "CaptureProject")
+        )
+        let viewModel = SessionViewModel(
+            sessionRepository: harness.sessionRepository,
+            projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: RecordingSessionObservationCoordinator()
+        )
+
+        viewModel.beginStartSession(for: project)
+        viewModel.mission = "Capture what matters"
+        await viewModel.startSession(for: project)
+
+        await viewModel.addCapture(kind: .blocker, text: "Need to reduce active-session UI load.")
+
+        XCTAssertEqual(viewModel.activeBlockIncrements.count, 1)
+        let capture = try XCTUnwrap(viewModel.activeBlockIncrements.first)
+        XCTAssertEqual(capture.kind, .blocker)
+        XCTAssertEqual(capture.title, "Need to reduce active-session UI load.")
+        XCTAssertNil(capture.detail)
+    }
+
+    func testEmptyCaptureShowsValidationAndDoesNotPersist() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let project = try await harness.projectRepository.createProject(
+            at: makeTemporaryDirectory(named: "EmptyCaptureProject")
+        )
+        let viewModel = SessionViewModel(
+            sessionRepository: harness.sessionRepository,
+            projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: RecordingSessionObservationCoordinator()
+        )
+
+        viewModel.beginStartSession(for: project)
+        viewModel.mission = "Validate empty capture"
+        await viewModel.startSession(for: project)
+
+        await viewModel.addCapture(kind: .note, text: "   ")
+
+        XCTAssertEqual(viewModel.activeBlockIncrements, [])
+        XCTAssertEqual(viewModel.errorMessage, "Enter a capture before saving.")
+
+        await viewModel.addCapture(kind: .decision, text: "Use one capture input.")
+
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(viewModel.activeBlockIncrements.count, 1)
+        XCTAssertEqual(viewModel.activeBlockIncrements.first?.kind, .decision)
+    }
+
+    func testCaptureRequiresOpenFocusBlock() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let project = try await harness.projectRepository.createProject(
+            at: makeTemporaryDirectory(named: "NoOpenCaptureProject")
+        )
+        let viewModel = SessionViewModel(
+            sessionRepository: harness.sessionRepository,
+            projectRepository: harness.projectRepository,
+            pomodoroBlockRepository: harness.pomodoroBlockRepository,
+            workIncrementRepository: harness.workIncrementRepository,
+            snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
+            observationCoordinator: RecordingSessionObservationCoordinator()
+        )
+
+        viewModel.beginStartSession(for: project)
+        viewModel.mission = "Require focus block"
+        await viewModel.startSession(for: project)
+        await viewModel.completeCurrentBlock(summary: nil)
+
+        await viewModel.addCapture(kind: .note, text: "This should not save.")
+
+        XCTAssertEqual(viewModel.activeBlockIncrements, [])
+        XCTAssertEqual(viewModel.errorMessage, "Start a focus block before saving a capture.")
+    }
+
     func testLoadActiveSessionCreatesRecoveryContext() async throws {
         let harness = try makeHarness()
         try await harness.migrator.migrate()

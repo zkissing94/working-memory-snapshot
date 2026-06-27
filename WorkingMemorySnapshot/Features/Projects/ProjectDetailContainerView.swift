@@ -73,20 +73,13 @@ private struct ProjectSessionRouteView: View {
         } else if sessionViewModel.isStartingSession(for: project) {
             StartSessionView(project: project, viewModel: sessionViewModel)
         } else if let activeSession = sessionViewModel.activeSession,
-                  activeSession.projectID == project.id {
-            if sessionViewModel.isEndingSession(activeSession) {
-                EndSessionView(
-                    project: project,
-                    session: activeSession,
-                    viewModel: sessionViewModel
-                )
-            } else {
-                ActiveSessionView(
-                    project: project,
-                    session: activeSession,
-                    viewModel: sessionViewModel
-                )
-            }
+                  activeSession.projectID == project.id,
+                  sessionViewModel.isEndingSession(activeSession) {
+            EndSessionView(
+                project: project,
+                session: activeSession,
+                viewModel: sessionViewModel
+            )
         } else if let selectedSession = projectDetailViewModel.selectedSession {
             HistoricalSessionDetailView(
                 project: project,
@@ -105,6 +98,13 @@ private struct ProjectSessionRouteView: View {
                         projectDetailViewModel.presentSnapshot(snapshot)
                     }
                 }
+            )
+        } else if let activeSession = sessionViewModel.activeSession,
+                  activeSession.projectID == project.id {
+            ActiveSessionView(
+                project: project,
+                session: activeSession,
+                viewModel: sessionViewModel
             )
         } else {
             ProjectMemoryOverviewView(
