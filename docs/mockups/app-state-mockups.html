@@ -144,6 +144,10 @@
       align-items: start;
     }
 
+    .mock-layout.single {
+      grid-template-columns: minmax(860px, 1fr);
+    }
+
     .window {
       min-height: 650px;
       border: 1px solid var(--line-strong);
@@ -332,6 +336,11 @@
 
     .status-dot.live { background: var(--green); }
     .status-dot.blue { background: var(--blue); }
+
+    .status-dot.pulse {
+      background: var(--blue);
+      box-shadow: 0 0 0 4px rgba(8, 105, 247, 0.10);
+    }
 
     .icon-mark.gear {
       color: #3e4652;
@@ -566,6 +575,112 @@
       display: block;
       margin-bottom: 7px;
       font-weight: 720;
+    }
+
+    .start-workspace {
+      padding: 42px 48px;
+      background: #fbfcfd;
+    }
+
+    .start-shell {
+      max-width: 790px;
+    }
+
+    .start-kicker {
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .start-title {
+      font-size: 31px;
+      line-height: 1.12;
+      font-weight: 680;
+    }
+
+    .start-form {
+      margin-top: 34px;
+    }
+
+    .mission-label {
+      display: block;
+      margin-bottom: 12px;
+      font-size: 16px;
+      font-weight: 680;
+    }
+
+    .mission-textarea {
+      min-height: 192px;
+      padding: 18px;
+      border: 1px solid rgba(203, 210, 218, 0.78);
+      border-radius: 12px;
+      background: #ffffff;
+      color: #69717d;
+      font-size: 16px;
+      line-height: 1.45;
+      box-shadow: 0 12px 28px rgba(25, 31, 42, 0.06);
+    }
+
+    .mission-helper {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .start-preview {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      margin-top: 24px;
+      padding: 15px 0;
+      border-top: 1px solid rgba(223, 227, 232, 0.78);
+      border-bottom: 1px solid rgba(223, 227, 232, 0.78);
+    }
+
+    .start-preview-title {
+      font-size: 15px;
+      font-weight: 680;
+    }
+
+    .start-preview-meta,
+    .observing-line {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .observing-line {
+      margin-top: 14px;
+    }
+
+    .start-actions {
+      margin-top: 28px;
+    }
+
+    .start-actions .button.primary {
+      min-width: 138px;
+      min-height: 40px;
+    }
+
+    .recent-quiet {
+      margin-top: 42px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(223, 227, 232, 0.72);
+    }
+
+    .recent-quiet h3 {
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 680;
+    }
+
+    .recent-quiet .session-row {
+      color: var(--muted);
+    }
+
+    .recent-quiet strong {
+      color: var(--text);
+      font-weight: 620;
     }
 
     .block-card {
@@ -934,47 +1049,52 @@
           <p>Goal entry creates the session and Block 1 when the project folder is accessible.</p>
         </div>
       </div>
-      <div class="mock-layout">
+      <div class="mock-layout single">
         <div class="window">
           <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
           <div class="app">
             <aside class="sidebar">
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="section-label">Active</div>
-              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Preparing new session...</div></div><span class="tag">...</span></div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Preparing session...</div></div><span class="status-dot pulse"></span></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Last session today</div></div><span class="status-dot live"></span></div>
               <div class="project-row"><div class="icon-mark" style="color:var(--green);background:var(--green-soft);">P</div><div><div class="project-name">wms-m3-test-project</div><div class="project-meta">4 sessions</div></div><span class="status-dot"></span></div>
               <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
-            <section class="workspace">
-              <div class="workspace-header"><div><div class="project-title">Start New Session</div><div class="path">wms-m6-smoke-visible - ~/Documents/wms-m6-smoke-visible</div></div></div>
-              <div class="surface">
-                <div class="field"><label>Goal</label><div class="textarea">What are you trying to make true?</div></div>
-                <div class="block-card">
-                  <div class="block-top">
-                    <div><div class="section-label" style="margin-top:0;">Focus Block 1</div><h2>Created automatically when the session starts</h2><p class="muted" style="margin-top:8px;">Default planned duration is 20 minutes. The user can add an optional first-block intention after the session starts.</p></div>
-                    <div><div class="timer">20:00</div><div class="timer-label">planned</div></div>
+            <section class="workspace start-workspace">
+              <div class="start-shell">
+                <div class="start-kicker">wms-m6-smoke-visible &middot; ~/Documents/wms-m6-smoke-visible</div>
+                <h1 class="start-title">Start New Session</h1>
+
+                <div class="start-form">
+                  <label class="mission-label">What are you trying to make true?</label>
+                  <div class="mission-textarea">Validate the snapshot integration and close the README follow-up.</div>
+                  <p class="mission-helper">A good mission names the outcome, not the task list.</p>
+
+                  <div class="start-preview">
+                    <div>
+                      <div class="start-preview-title">Block 1 will start automatically</div>
+                      <div class="start-preview-meta">20 min focus &middot; captured automatically</div>
+                    </div>
+                    <span class="tag">Focus block</span>
                   </div>
+
+                  <p class="observing-line">Observing after start: Git &middot; Files &middot; Apps</p>
+
+                  <div class="button-row start-actions"><button class="button primary">Start Session</button><button class="button">Cancel</button></div>
                 </div>
-                <div class="surface soft">
-                  <h3>Observed sources after start</h3>
-                  <div class="tag-row"><span class="tag">Git</span><span class="tag">Project files</span><span class="tag">Active apps</span></div>
+
+                <div class="recent-quiet">
+                  <h3>Recent Sessions</h3>
+                  <div class="session-row"><div class="time">Today, 5:05 PM</div><div><strong>M6 real snapshot integration</strong></div><div class="project-meta">5 blocks</div></div>
+                  <div class="session-row"><div class="time">Yesterday, 2:14 PM</div><div><strong>Codex evaluation harness iteration</strong></div><div class="project-meta">4 blocks</div></div>
+                  <div class="session-row"><div class="time">Jun 24, 4:32 PM</div><div><strong>Initial project setup</strong></div><div class="project-meta">2 blocks</div></div>
                 </div>
-                <div class="button-row"><button class="button primary">Start Session</button><button class="button">Cancel</button></div>
               </div>
             </section>
           </div>
         </div>
-        <aside class="contract">
-          <h3>State contract</h3>
-          <dl>
-            <dt>Entry</dt><dd><code>SessionFlow.starting(project.id)</code>.</dd>
-            <dt>Data</dt><dd>Draft goal text stored in `mission`, selected `Project`, no active session.</dd>
-            <dt>Writes</dt><dd>`sessions` active row plus `pomodoro_blocks` Block 1.</dd>
-            <dt>Services</dt><dd>Access check, `SessionRepository.createActiveSession`, `PomodoroBlockRepository.createNextBlock`, `ObservationCoordinator.startObserving`.</dd>
-          </dl>
-        </aside>
       </div>
     </section>
 
