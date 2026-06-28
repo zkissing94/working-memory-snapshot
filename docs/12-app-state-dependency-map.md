@@ -26,8 +26,8 @@ This is a static design artifact only. The current SwiftUI implementation still 
 - The source of truth is the local SQLite data model, repository contracts, view-model state, and local LM Studio API boundary.
 - The screenshots are visual guidance for layout, density, hierarchy, and calm tone.
 - The screenshots imply a planned total appended to the current block label. The current data model stores `block_index`, status, timing, intention, and summary, but does not store a target block count for a session. Current UI can truthfully render "Block 2" and "2 blocks completed"; showing a planned total would require a new explicit product/schema decision.
-- Pomodoro blocks are capture points inside a session. They do not end the session automatically, create scores, or enforce breaks.
-- The two-column mockups still treat Pomodoro blocks as first-class state: active and paused block timers, block summaries, manual note/decision/blocker increments, between-block state, historical block timelines, and prompt inclusion are all represented.
+- Focus blocks are capture points inside a session. They do not end the session automatically, create scores, or enforce breaks. The current implementation names remain `PomodoroBlock`, `PomodoroBlockRepository`, and `pomodoro_blocks`.
+- The two-column mockups still treat Focus blocks as first-class state: active and paused block timers, block summaries, manual note/decision/blocker increments, between-block state, historical block timelines, and prompt inclusion are all represented.
 - Observed context remains Git, project-relative files, and active applications only. No screenshots, clipboard, browser history, transcripts, keystrokes, or files outside the selected project.
 
 ## State Model
@@ -49,7 +49,7 @@ stateDiagram-v2
     ProjectDashboard --> Settings
     ProjectDashboard --> ProjectAccessLost: root path unreadable
 
-    StartSessionForm --> ActiveSession: mission valid and session created
+    StartSessionForm --> ActiveSession: goal valid and session created
     StartSessionForm --> ProjectDashboard: cancel
     StartSessionForm --> SessionError: project inaccessible or active session exists
 
@@ -82,7 +82,7 @@ stateDiagram-v2
 |---|---|---|---|---|---|
 | App launching | `ContentView.task` starts | Sidebar and detail may be empty or loading | `schema_migrations`, `projects`, active `sessions`, `app_settings`, Keychain token | `DatabaseMigrator.migrate()`, `ProjectsViewModel.loadProjects()`, `SessionViewModel.loadActiveSessionForRecovery()`, `SettingsViewModel.loadSettings()` | No projects, selected project, recovery sheet, settings |
 | No project selected | `selectedItem == nil` or selected project missing | Native unavailable view | `projects` list | None beyond project repository load | Select project, add project, settings |
-| No projects | `projects.isEmpty` | Sidebar empty state with Add Project | `projects` table | `NSOpenPanel` when adding | Add project picker |
+| No projects | `projects.isEmpty` | Sidebar Projects header with `+`, plus empty-state Add Project action | `projects` table | `NSOpenPanel` when adding | Add project picker |
 | Project load error | Migration or repository load throws | Project error alert | Database initialization, migrations, project rows | SQLite through `Database` actor | Dismiss alert, retry by relaunch/reload |
 | Settings selected | `selectedItem == .settings` | Middle column settings summary, detail settings form | `app_settings`, Keychain token | `SettingsRepository`, `KeychainStore` | Select project, test/refresh/save settings |
 
@@ -90,7 +90,7 @@ stateDiagram-v2
 
 | State | Entry condition | Primary UI | Data dependencies | Service/API dependencies | Exit transitions |
 |---|---|---|---|---|---|
-| Add project picker | User activates Add Project | Native directory picker | New `Project` defaults to folder name and path | `NSOpenPanel`, `ProjectRepository.createProject(at:)`, SQLite unique `root_path` index | Project dashboard, project error |
+| Add project picker | User activates Projects `+` or Add Project action | Native directory picker | New `Project` defaults to folder name and path | `NSOpenPanel`, `ProjectRepository.createProject(at:)`, SQLite unique `root_path` index | Project dashboard, project error |
 | Project dashboard, no sessions | Selected project has no completed sessions | Project header, Start Session, empty previous sessions | `Project`, zero `sessions`, no `snapshots` | `ProjectDetailViewModel.loadLatestSnapshot`, `checkProjectAccess` | Start session form, settings, add project |
 | Project dashboard, latest memory | Selected project has a latest snapshot | Resume Brief, Start here, project metrics, Previous Sessions | `projects`, completed `sessions`, `snapshots`, `pomodoro_blocks`, `events` | `SnapshotRepository.latestSnapshot`, `SessionRepository.listSessions`, `PomodoroBlockRepository.listBlocks`, `EventRepository.listEvents` | Start session, view snapshot, select historical session |
 | Project dashboard, active session elsewhere | One global active session belongs to another project | Start Session disabled with one-active-session copy | `sessions_single_active_index`, `activeSession.projectID` | `SessionRepository.activeSession()` | End/cancel active session, then start |
@@ -103,8 +103,8 @@ stateDiagram-v2
 
 | State | Entry condition | Primary UI | Data dependencies | Service/API dependencies | Exit transitions |
 |---|---|---|---|---|---|
-| Start session form | `SessionFlow.starting(project.id)` | Mission field, Start Session, Cancel | `Project`, `mission` draft | `SessionRepository.createActiveSession`, `PomodoroBlockRepository.createNextBlock`, access check | Active session, cancel, session error |
-| Start session invalid | Empty mission or inaccessible project | Disabled/failed start with error alert | `mission`, `Project.rootPath` | `SessionRepository` validation, `FileManager` | Correct mission/access, cancel |
+| Start session form | `SessionFlow.starting(project.id)` | Goal field, Start Session, Cancel | `Project`, user-facing goal stored as `mission` draft | `SessionRepository.createActiveSession`, `PomodoroBlockRepository.createNextBlock`, access check | Active session, cancel, session error |
+| Start session invalid | Empty goal or inaccessible project | Disabled/failed start with error alert | `mission`, `Project.rootPath` | `SessionRepository` validation, `FileManager` | Correct goal/access, cancel |
 | Active session with active block | `activeSession != nil`, `activeBlock.status == .active` | Active session, block timer, block summary, increments, observed context | `WorkSession`, `PomodoroBlock`, active block `WorkIncrement`, live `ObservationSessionSummary` | `ObservationCoordinator.startObserving`, FSEvents, Git service, active-app service | Pause, complete block, take break, add increment, end, cancel |
 | Active session paused block | `activeBlock.status == .paused` | Paused block card, Resume, Complete Block | `PomodoroBlock.paused_at`, accumulated pause seconds | `PomodoroBlockRepository.resumeBlock` | Resume, complete, end, cancel |
 | Between blocks | Active session with no open block | Start next block intention, End Session | Completed/interrupted `pomodoro_blocks`; no active/paused block | `PomodoroBlockRepository.createNextBlock` | Active block, end session |
@@ -118,7 +118,7 @@ stateDiagram-v2
 
 | State | Entry condition | Primary UI | Data dependencies | Service/API dependencies | Exit transitions |
 |---|---|---|---|---|---|
-| Recovery sheet, accessible | App launches with active session and readable project root | Modal with project, mission, started time, Resume/End/Cancel | Active `WorkSession`, `Project`, `PomodoroBlock` ensured for legacy sessions | `SessionRepository.activeSession`, `ProjectRepository.project`, `PomodoroBlockRepository.ensureFirstBlock`, `FileManager` | Resume active, end brain dump, cancel |
+| Recovery sheet, accessible | App launches with active session and readable project root | Modal with project, goal, started time, Resume/End/Cancel | Active `WorkSession`, `Project`, `PomodoroBlock` ensured for legacy sessions | `SessionRepository.activeSession`, `ProjectRepository.project`, `PomodoroBlockRepository.ensureFirstBlock`, `FileManager` | Resume active, end brain dump, cancel |
 | Recovery sheet, inaccessible | App launches with active session and missing project root | Modal warning, Resume disabled, Choose Folder Again | Same as above, `isProjectFolderAccessible == false` | `ProjectRepository.updateProjectRoot`, `NSOpenPanel` | Restore then resume/end/cancel |
 | Recovered session resumed | User resumes accessible recovery | Active session detail | Existing active session and block list | Observation restarts only after resume | Active block, end, cancel |
 | Recovered session ended | User chooses End Session from sheet | Brain dump form | Existing active session | Existing completion/generation flow | Snapshot detail or generation failed |
@@ -233,4 +233,4 @@ The companion HTML mockups cover these states:
 
 States not shown as full screens in the mockup file are represented in the tables above when they are native alerts, transient loading states, or data-only variations of a rendered screen.
 
-All session-related mockups retain the Pomodoro block layer instead of flattening it into generic session metadata.
+All session-related mockups retain the Focus block layer instead of flattening it into generic session metadata.
