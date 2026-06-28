@@ -5,7 +5,19 @@
 Current handoff branch:
 
 ```text
-feature/m8-session-timeline-blocks
+feature/m9-neuro-ergo-refactor
+```
+
+Current focus:
+
+```text
+M8/M9 design review support - app state dependency map and static mockups
+```
+
+Baseline:
+
+```text
+main is at the completed M8 session timeline and Pomodoro capture implementation.
 ```
 
 Completed milestones:

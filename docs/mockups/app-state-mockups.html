@@ -1,0 +1,1551 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Working Memory Snapshot - App State Mockups</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --sidebar: #f7f8fa;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --line: #dfe3e8;
+      --line-strong: #cbd2da;
+      --text: #17191f;
+      --muted: #5f6673;
+      --subtle: #858d9a;
+      --blue: #0869f7;
+      --blue-soft: #eaf2ff;
+      --green: #17a34a;
+      --green-soft: #e9f8ee;
+      --orange: #d96c16;
+      --orange-soft: #fff2e8;
+      --purple: #7457d7;
+      --purple-soft: #f0edff;
+      --red: #e0332e;
+      --red-soft: #fff0ef;
+      --shadow: 0 18px 50px rgba(22, 28, 40, 0.10);
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.45;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    a {
+      color: var(--blue);
+    }
+
+    .page {
+      max-width: 1640px;
+      margin: 0 auto;
+      padding: 32px 28px 64px;
+    }
+
+    .page-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: start;
+      margin-bottom: 26px;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 30px;
+      font-weight: 720;
+    }
+
+    h2 {
+      font-size: 21px;
+      font-weight: 700;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .intro {
+      margin-top: 8px;
+      max-width: 960px;
+      color: var(--muted);
+    }
+
+    .global-note {
+      max-width: 420px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .global-note strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .index {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 22px 0 34px;
+    }
+
+    .index a {
+      text-decoration: none;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .mock-section {
+      margin-top: 34px;
+      padding-top: 30px;
+      border-top: 1px solid var(--line);
+    }
+
+    .section-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: baseline;
+      margin-bottom: 16px;
+    }
+
+    .section-heading p {
+      color: var(--muted);
+    }
+
+    .mock-layout {
+      display: grid;
+      grid-template-columns: minmax(920px, 1fr) 320px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .window {
+      min-height: 650px;
+      border: 1px solid var(--line-strong);
+      border-radius: 18px;
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .traffic {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 18px;
+      background: rgba(255, 255, 255, 0.80);
+      border-bottom: 1px solid rgba(223, 227, 232, 0.65);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.red { background: #ff5f57; }
+    .dot.yellow { background: #ffbd2e; }
+    .dot.green { background: #28c840; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 260px 360px minmax(0, 1fr);
+      min-height: 608px;
+    }
+
+    .sidebar {
+      background: var(--sidebar);
+      border-right: 1px solid var(--line);
+      padding: 20px 18px;
+    }
+
+    .brand {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin: 4px 0 22px;
+    }
+
+    .brand-mark,
+    .icon-mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      font-weight: 800;
+      color: var(--blue);
+      background: var(--blue-soft);
+      border: 1px solid rgba(8, 105, 247, 0.14);
+    }
+
+    .brand-title {
+      font-weight: 720;
+      font-size: 15px;
+    }
+
+    .brand-subtitle {
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .sidebar-button,
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 34px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line-strong);
+      background: var(--panel);
+      color: var(--text);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .sidebar-button {
+      width: 100%;
+      justify-content: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .button.primary {
+      background: var(--blue);
+      color: #ffffff;
+      border-color: var(--blue);
+    }
+
+    .button.destructive {
+      color: var(--red);
+      border-color: rgba(224, 51, 46, 0.38);
+      background: #ffffff;
+    }
+
+    .button.ghost {
+      background: transparent;
+    }
+
+    .section-label {
+      margin: 18px 0 9px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .project-row,
+    .active-row,
+    .empty-box {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      margin-bottom: 10px;
+    }
+
+    .active-row {
+      background: var(--blue-soft);
+      border-color: rgba(8, 105, 247, 0.35);
+    }
+
+    .project-name {
+      font-weight: 700;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+
+    .project-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--subtle);
+    }
+
+    .status-dot.live { background: var(--green); }
+    .status-dot.blue { background: var(--blue); }
+
+    .sidebar-footer {
+      margin-top: 34px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      display: grid;
+      gap: 8px;
+    }
+
+    .middle,
+    .detail {
+      background: var(--panel);
+      padding: 24px;
+      min-width: 0;
+    }
+
+    .middle {
+      border-right: 1px solid var(--line);
+    }
+
+    .detail {
+      background: #fbfcfd;
+    }
+
+    .project-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .project-title {
+      font-size: 20px;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+
+    .path {
+      color: var(--muted);
+      margin-top: 4px;
+      overflow-wrap: anywhere;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      color: var(--muted);
+      align-items: center;
+      white-space: nowrap;
+    }
+
+    .surface {
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: 0 5px 18px rgba(26, 32, 44, 0.04);
+      margin-bottom: 14px;
+    }
+
+    .surface.soft {
+      background: var(--surface-soft);
+      box-shadow: none;
+    }
+
+    .hero-card {
+      min-height: 290px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .hero-card .brand-mark {
+      margin: 0 auto 16px;
+      width: 44px;
+      height: 44px;
+    }
+
+    .hero-title {
+      font-size: 24px;
+      font-weight: 760;
+      margin-bottom: 8px;
+    }
+
+    .hero-copy {
+      max-width: 430px;
+      color: var(--muted);
+      margin: 0 auto 18px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .metric {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--surface-soft);
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .metric-value {
+      font-size: 18px;
+      font-weight: 760;
+    }
+
+    .memory-text {
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .next-action {
+      margin-top: 12px;
+      padding: 11px;
+      border-radius: 8px;
+      background: var(--orange-soft);
+      border: 1px solid rgba(217, 108, 22, 0.22);
+    }
+
+    .next-action strong {
+      display: block;
+      color: #9a4b10;
+      font-size: 12px;
+      margin-bottom: 3px;
+    }
+
+    .session-row,
+    .history-row {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .session-row:last-child,
+    .history-row:last-child {
+      border-bottom: 0;
+    }
+
+    .time {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 26px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--surface-soft);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tag.green {
+      color: #117739;
+      background: var(--green-soft);
+      border-color: rgba(23, 163, 74, 0.22);
+    }
+
+    .tag.orange {
+      color: #9a4b10;
+      background: var(--orange-soft);
+      border-color: rgba(217, 108, 22, 0.22);
+    }
+
+    .tag.red {
+      color: #ad211d;
+      background: var(--red-soft);
+      border-color: rgba(224, 51, 46, 0.20);
+    }
+
+    .input,
+    .textarea,
+    .select {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--muted);
+      padding: 11px 12px;
+      min-height: 38px;
+    }
+
+    .textarea {
+      min-height: 118px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    .field label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+
+    .split-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .block-card {
+      padding: 18px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+    }
+
+    .block-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .timer {
+      font-size: 34px;
+      font-weight: 760;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+
+    .timer-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .progress {
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #e6eaf0;
+      margin: 16px 0 10px;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--blue);
+    }
+
+    .progress.green span { background: var(--green); }
+    .progress.orange span { background: var(--orange); }
+
+    .increment {
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .increment:last-child {
+      border-bottom: 0;
+    }
+
+    .snapshot-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .snapshot-section h3 {
+      margin-bottom: 6px;
+    }
+
+    .snapshot-section p,
+    .snapshot-section li {
+      color: var(--muted);
+    }
+
+    .snapshot-section ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .sheet-scrim {
+      position: relative;
+    }
+
+    .sheet {
+      position: absolute;
+      z-index: 2;
+      left: 50%;
+      top: 52%;
+      transform: translate(-50%, -50%);
+      width: 470px;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid var(--line-strong);
+      background: #ffffff;
+      box-shadow: 0 22px 70px rgba(20, 26, 37, 0.24);
+    }
+
+    .scrim {
+      position: absolute;
+      inset: 42px 0 0;
+      background: rgba(246, 248, 250, 0.68);
+      backdrop-filter: blur(2px);
+      z-index: 1;
+    }
+
+    .contract {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 16px;
+    }
+
+    .contract h3 {
+      margin-bottom: 10px;
+    }
+
+    .contract dl {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .contract dt {
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: var(--subtle);
+    }
+
+    .contract dd {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .contract code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .dependency-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .dependency-list span {
+      padding: 4px 7px;
+      border-radius: 6px;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 1280px) {
+      .mock-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .contract {
+        position: static;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .page {
+        padding: 22px 14px 44px;
+      }
+
+      .page-header,
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .window {
+        min-height: auto;
+      }
+
+      .sidebar,
+      .middle {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .mock-layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .split-row,
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="page-header">
+      <div>
+        <h1>Working Memory Snapshot App State Mockups</h1>
+        <p class="intro">
+          Static design reference for the local-first macOS app. Screens use the supplied visual direction while preserving the current data model, SwiftUI route state, SQLite repositories, observation boundaries, and LM Studio local API contracts.
+        </p>
+      </div>
+      <aside class="global-note">
+        <strong>Implementation note</strong>
+        These mockups do not add runtime dependencies. The production app remains native SwiftUI with SQLite, Keychain, and LM Studio local HTTP only.
+      </aside>
+    </header>
+
+    <nav class="index" aria-label="Mockup index">
+      <a href="#empty">01 Empty</a>
+      <a href="#picker">02 Add project</a>
+      <a href="#dashboard">03 Dashboard</a>
+      <a href="#start">04 Start</a>
+      <a href="#active">05 Active</a>
+      <a href="#paused">06 Paused</a>
+      <a href="#between">07 Between</a>
+      <a href="#ending">08 Ending</a>
+      <a href="#failed">09 Failed</a>
+      <a href="#snapshot">10 Snapshot</a>
+      <a href="#history">11 History</a>
+      <a href="#recovery">12 Recovery</a>
+      <a href="#recovery-lost">13 Missing folder</a>
+      <a href="#access-lost">14 Access lost</a>
+      <a href="#settings">15 Settings</a>
+      <a href="#settings-errors">16 Settings errors</a>
+    </nav>
+
+    <section id="empty" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>01. Empty Library</h2>
+          <p>Initial state after migration when no local project folders have been added.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <button class="sidebar-button">Add Project</button>
+              <div class="section-label">Projects</div>
+              <div class="empty-box" style="grid-template-columns:1fr;">
+                <div>
+                  <div class="project-name">No Projects</div>
+                  <div class="project-meta">Add a local project folder to begin.</div>
+                </div>
+              </div>
+              <div class="sidebar-footer"><div class="project-row" style="grid-template-columns:1fr;"><div class="project-name">Settings</div></div></div>
+            </aside>
+            <section class="middle">
+              <div class="surface hero-card">
+                <div>
+                  <div class="brand-mark">WM</div>
+                  <div class="hero-title">No project selected</div>
+                  <p class="hero-copy">Add a project folder to create the first Working Memory Snapshot.</p>
+                  <button class="button primary">Add Project</button>
+                </div>
+              </div>
+            </section>
+            <section class="detail">
+              <div class="surface hero-card">
+                <div>
+                  <div class="hero-title">Project memory appears here</div>
+                  <p class="hero-copy">The app stays empty until a user-selected folder defines the local privacy boundary.</p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd><code>projects.isEmpty</code> after migration.</dd>
+            <dt>Data</dt><dd>No `projects`, `sessions`, `events`, `snapshots`, `pomodoro_blocks`, or `work_increments` rows.</dd>
+            <dt>Services</dt><dd>SQLite migration and project list only.</dd>
+            <dt>Next</dt><dd>Add Project opens `NSOpenPanel`.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="picker" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>02. Add Project Picker</h2>
+          <p>Native folder selection creates a project row and establishes the observation boundary.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window sheet-scrim">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <h2>Choose a project folder</h2>
+            <p class="memory-text" style="margin-top:8px;">Select the local folder that bounds sessions, file observation, and Git evidence.</p>
+            <div class="surface soft" style="margin-top:18px;">
+              <div class="project-name">wms-m6-smoke-visible</div>
+              <div class="project-meta">~/Documents/wms-m6-smoke-visible</div>
+            </div>
+            <div class="button-row">
+              <button class="button primary">Open</button>
+              <button class="button">Cancel</button>
+            </div>
+          </div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <button class="sidebar-button">Add Project</button>
+              <div class="section-label">Projects</div>
+              <div class="empty-box" style="grid-template-columns:1fr;"><div><div class="project-name">No Projects</div><div class="project-meta">Add a local project folder to begin.</div></div></div>
+            </aside>
+            <section class="middle"></section>
+            <section class="detail"></section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>User activates Add Project.</dd>
+            <dt>Data</dt><dd>New `Project` name defaults to selected folder name. `root_path` persists locally.</dd>
+            <dt>Services</dt><dd>`NSOpenPanel`, `ProjectRepository.createProject(at:)`, SQLite unique path index.</dd>
+            <dt>Failure</dt><dd>Duplicate path or inaccessible folder surfaces as project alert.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="dashboard" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>03. Project Dashboard With Latest Memory</h2>
+          <p>Default return state when the project has completed sessions and no active session.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <button class="sidebar-button">New Session</button>
+              <div class="section-label">Projects</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Last session Jun 26, 5:05 PM</div></div><span class="status-dot blue"></span></div>
+              <div class="project-row"><div class="icon-mark" style="color:var(--green);background:var(--green-soft);">P</div><div><div class="project-name">wms-m3-test-project</div><div class="project-meta">4 sessions</div></div><span class="status-dot"></span></div>
+              <div class="project-row"><div class="icon-mark" style="color:var(--orange);background:var(--orange-soft);">P</div><div><div class="project-name">Working Memory</div><div class="project-meta">12 sessions</div></div><span class="status-dot"></span></div>
+              <button class="sidebar-button">Add Project</button>
+              <div class="sidebar-footer"><div class="project-row" style="grid-template-columns:1fr;"><div class="project-name">Settings</div></div><div class="project-row" style="grid-template-columns:1fr;"><div class="project-name">Focus Mode</div></div></div>
+            </aside>
+            <section class="middle">
+              <div class="project-header">
+                <div><div class="project-title">wms-m6-smoke-visible</div><div class="path">~/Documents/wms-m6-smoke-visible</div></div>
+                <span class="status-dot live"></span>
+              </div>
+              <div class="metrics">
+                <div class="metric"><div class="metric-label">Sessions</div><div class="metric-value">3</div></div>
+                <div class="metric"><div class="metric-label">Blocks</div><div class="metric-value">11</div></div>
+                <div class="metric"><div class="metric-label">Last</div><div class="metric-value">5:05</div></div>
+              </div>
+              <div class="surface">
+                <div class="section-label" style="margin-top:0;">Session</div>
+                <p>Create a working-memory boundary for this project.</p>
+                <div class="button-row"><button class="button primary">Start Session</button></div>
+              </div>
+              <div class="surface">
+                <div class="section-label" style="margin-top:0;">Latest Memory</div>
+                <p>Validated the dogfood checklist and narrowed the remaining issue to the final eval pass.</p>
+                <div class="next-action"><strong>Start here</strong>Review README changes and run final eval pass.</div>
+                <div class="button-row"><button class="button">View Snapshot</button></div>
+              </div>
+              <div class="section-label">Previous Sessions</div>
+              <div class="surface">
+                <div class="session-row"><div class="time">5:05 PM</div><div><strong>M6 real snapshot integration</strong><div class="project-meta">5 blocks</div></div><div class="project-meta">Completed</div></div>
+                <div class="session-row"><div class="time">Yesterday</div><div><strong>Codex evaluation harness iteration</strong><div class="project-meta">4 blocks</div></div><div class="project-meta">Completed</div></div>
+              </div>
+            </section>
+            <section class="detail">
+              <div class="project-header">
+                <div><div class="project-title">wms-m6-smoke-visible</div><div class="path">~/Documents/wms-m6-smoke-visible</div></div>
+                <div class="toolbar"><span>Light</span><span>Focus</span><span class="tag">ZK</span></div>
+              </div>
+              <div class="surface hero-card">
+                <div>
+                  <div class="brand-mark">WM</div>
+                  <div class="hero-title">No active session</div>
+                  <p class="hero-copy">Start a new session to capture decisions, blockers, and what you plan to do next.</p>
+                  <button class="button primary">Start Session</button>
+                </div>
+              </div>
+              <div class="surface">
+                <div class="split-row">
+                  <div><h3>Latest Mission</h3><p class="memory-text">Validate the M7 dogfood checklist and refine the model eval harness.</p></div>
+                  <div><h3>Next Action</h3><p class="memory-text">Review README changes and run final eval pass.</p></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>Selected project has no active session and at least one latest snapshot.</dd>
+            <dt>Data</dt><dd>`Project`, latest completed `WorkSession`, latest `Snapshot`, sessions, blocks, events.</dd>
+            <dt>Repositories</dt><dd><div class="dependency-list"><span>ProjectRepository</span><span>SessionRepository</span><span>SnapshotRepository</span><span>PomodoroBlockRepository</span><span>EventRepository</span></div></dd>
+            <dt>Next</dt><dd>Start session, view snapshot, select historical session.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="start" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>04. Start New Session</h2>
+          <p>Mission entry creates the session and Block 1 when the project folder is accessible.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Active</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Preparing new session...</div></div><span class="tag">...</span></div>
+              <div class="section-label">Projects</div>
+              <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Last session today</div></div><span class="status-dot live"></span></div>
+              <div class="project-row"><div class="icon-mark" style="color:var(--green);background:var(--green-soft);">P</div><div><div class="project-name">wms-m3-test-project</div><div class="project-meta">4 sessions</div></div><span class="status-dot"></span></div>
+            </aside>
+            <section class="middle">
+              <div class="project-header"><div><div class="project-title">wms-m6-smoke-visible</div><div class="path">~/Documents/wms-m6-smoke-visible</div></div><span class="status-dot live"></span></div>
+              <div class="surface"><h3>Latest Memory</h3><p class="memory-text">Validate the M7 dogfood checklist and refine the model eval harness.</p></div>
+              <div class="surface"><h3>Previous Sessions</h3><div class="session-row"><div class="time">Today</div><div><strong>M6 real snapshot integration</strong></div><div class="project-meta">5 blocks</div></div></div>
+            </section>
+            <section class="detail">
+              <div class="project-header"><div><div class="project-title">wms-m6-smoke-visible</div><div class="path">~/Documents/wms-m6-smoke-visible</div></div></div>
+              <div class="surface">
+                <h2>Start New Session</h2>
+                <div class="field" style="margin-top:22px;"><label>Mission</label><div class="textarea">What are you trying to make true?</div></div>
+                <div class="surface soft">
+                  <div class="split-row">
+                    <div><h3>Block 1</h3><p class="memory-text">Created automatically with a 20 minute default duration.</p></div>
+                    <div><h3>Observed sources</h3><div class="tag-row"><span class="tag">Git</span><span class="tag">Files</span><span class="tag">Active apps</span></div></div>
+                  </div>
+                </div>
+                <div class="button-row"><button class="button primary">Start Session</button><button class="button">Cancel</button></div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd><code>SessionFlow.starting(project.id)</code>.</dd>
+            <dt>Data</dt><dd>Draft `mission`, selected `Project`, no active session.</dd>
+            <dt>Writes</dt><dd>`sessions` active row plus `pomodoro_blocks` Block 1.</dd>
+            <dt>Services</dt><dd>Access check, `SessionRepository.createActiveSession`, `PomodoroBlockRepository.createNextBlock`, `ObservationCoordinator.startObserving`.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="active" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>05. Active Session With Active Block</h2>
+          <p>Observation runs only here, while a user-entered block summary and increments stay manual.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Active</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Block 2 active</div></div><span class="status-dot live"></span></div>
+              <div class="section-label">Projects</div>
+              <div class="project-row"><div class="icon-mark" style="color:var(--green);background:var(--green-soft);">P</div><div><div class="project-name">wms-m3-test-project</div><div class="project-meta">4 sessions</div></div><span class="status-dot"></span></div>
+            </aside>
+            <section class="middle">
+              <div class="project-header"><div><div class="project-title">wms-m6-smoke-visible</div><div class="path">~/Documents/wms-m6-smoke-visible</div></div><span class="status-dot live"></span></div>
+              <div class="surface">
+                <div class="section-label" style="margin-top:0;">Active Session</div>
+                <h3>Validate the snapshot integration and close the README follow-up.</h3>
+                <div class="tag-row"><span class="tag green">Session in progress</span><span class="tag">1 block completed</span><span class="tag">Block 2</span></div>
+                <div class="progress"><span style="width:62%;"></span></div>
+                <div class="button-row"><button class="button primary">Continue Session</button><button class="button">End Session</button></div>
+              </div>
+              <div class="surface"><h3>Observed context</h3><p class="memory-text">3 files changed, Git repository, Codex, Xcode, Terminal.</p></div>
+            </section>
+            <section class="detail">
+              <div class="project-header"><div><div class="project-title">Active Session</div><div class="path">Started 4:21 PM</div></div><div class="timer">12:24</div></div>
+              <div class="block-card">
+                <div class="block-top">
+                  <div><div class="section-label" style="margin-top:0;">Pomodoro Block 2</div><h2>Review README changes and run final eval pass.</h2><div class="tag-row"><span class="tag green">Focus Time</span></div></div>
+                  <div><div class="timer">07:36</div><div class="timer-label">remaining</div></div>
+                </div>
+                <div class="progress green"><span style="width:62%;"></span></div>
+                <div class="project-meta">12m elapsed - 20m total</div>
+                <div class="field" style="margin-top:16px;"><label>Block summary</label><div class="input">What changed during this block?</div></div>
+                <div class="button-row"><button class="button">Pause</button><button class="button primary">Complete Block</button><button class="button">Take Break</button></div>
+              </div>
+              <div class="surface">
+                <h3>Current Block - Work Increments</h3>
+                <div class="increment"><div class="time">4:32</div><div><strong>README scope clarified</strong><div class="project-meta">Keep the dogfood checklist separate from the quickstart.</div></div><span class="tag green">Decision</span></div>
+                <div class="tag-row"><span class="tag">Note</span><span class="tag green">Decision</span><span class="tag orange">Blocker</span></div>
+              </div>
+              <div class="surface"><h3>Observed Context</h3><p class="memory-text">Git repository, 3 changed paths, Codex, Xcode, Terminal.</p></div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>`activeSession.projectID == selectedProject.id` and `activeBlock.status == active`.</dd>
+            <dt>Data</dt><dd>`WorkSession`, open `PomodoroBlock`, block `WorkIncrement`, live `ObservationSessionSummary`.</dd>
+            <dt>Services</dt><dd>FSEvents, Git, and active app observation scoped to this session.</dd>
+            <dt>Privacy</dt><dd>No screenshots, clipboard, browser history, messages, keystrokes, or file contents.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="paused" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>06. Paused Block</h2>
+          <p>The session remains active, but the current block preserves remaining time.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Active</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Block 2 paused</div></div><span class="tag orange">Paused</span></div>
+            </aside>
+            <section class="middle">
+              <div class="surface"><div class="section-label" style="margin-top:0;">Active Session</div><h3>Validate the snapshot integration and close the README follow-up.</h3><div class="progress orange"><span style="width:48%;"></span></div><div class="tag-row"><span class="tag orange">Paused</span><span class="tag">Block 2</span></div></div>
+            </section>
+            <section class="detail">
+              <div class="project-header"><div><div class="project-title">Active Session</div><div class="path">Started 4:21 PM</div></div><div class="timer">09:42</div></div>
+              <div class="block-card">
+                <div class="block-top">
+                  <div><div class="section-label" style="margin-top:0;">Pomodoro Block 2</div><h2>Review README changes and run final eval pass.</h2><div class="tag-row"><span class="tag orange">Paused</span></div></div>
+                  <div><div class="timer">10:18</div><div class="timer-label">remaining</div></div>
+                </div>
+                <div class="progress orange"><span style="width:48%;"></span></div>
+                <div class="project-meta">Pause time is tracked separately from elapsed focus time.</div>
+                <div class="button-row"><button class="button primary">Resume</button><button class="button">Complete Block</button><button class="button destructive">End Session</button></div>
+              </div>
+              <div class="surface"><h3>Current Block - Work Increments</h3><p class="memory-text">Manual increments remain attached to the block while it is paused.</p></div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>`activeBlock.status == paused`.</dd>
+            <dt>Data</dt><dd>`paused_at` plus `accumulated_pause_seconds` preserve remaining time.</dd>
+            <dt>Writes</dt><dd>`PomodoroBlockRepository.pauseBlock` and `resumeBlock`.</dd>
+            <dt>Next</dt><dd>Resume, complete block, end session, or cancel session.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="between" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>07. Between Blocks</h2>
+          <p>Block completion does not end the session. The next step is either start another block or end with a brain dump.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Active</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Between blocks</div></div><span class="status-dot live"></span></div>
+            </aside>
+            <section class="middle">
+              <div class="surface"><div class="section-label" style="margin-top:0;">Active Session</div><h3>Validate the snapshot integration and close the README follow-up.</h3><div class="tag-row"><span class="tag green">2 blocks completed</span><span class="tag">Session still active</span></div><div class="button-row"><button class="button primary">Continue Session</button><button class="button">End Session</button></div></div>
+              <div class="surface"><h3>Latest block summary</h3><p class="memory-text">README scope clarified. Eval pass still needs one final run.</p></div>
+            </section>
+            <section class="detail">
+              <div class="project-header"><div><div class="project-title">Between Blocks</div><div class="path">The session is still active.</div></div></div>
+              <div class="surface hero-card">
+                <div>
+                  <div class="brand-mark" style="color:var(--green);background:var(--green-soft);">OK</div>
+                  <div class="hero-title">Focus Block 2 complete</div>
+                  <p class="hero-copy">Capture a next-block intention, take a break, or end the session with a brain dump.</p>
+                  <div class="button-row" style="justify-content:center;"><button class="button primary">Start Next Block</button><button class="button">Take Break</button><button class="button destructive">End Session</button></div>
+                </div>
+              </div>
+              <div class="surface"><label class="project-name">Next block intention</label><div class="input" style="margin-top:8px;">Run final eval pass and record any failure reason.</div></div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>Active session has no open block after complete block or take break.</dd>
+            <dt>Data</dt><dd>Completed/interrupted `pomodoro_blocks`, optional block summaries.</dd>
+            <dt>Writes</dt><dd>Start next creates the next `block_index`; end interrupts any open block first.</dd>
+            <dt>Schema note</dt><dd>No stored planned total block count, so "2 of 4" should not ship without schema/product approval.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="ending" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>08. End Session Brain Dump And Local Generation</h2>
+          <p>The brain dump is saved before model generation, and local generation progress is explicit.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Active</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Ending session...</div></div><span class="tag orange">Saving</span></div>
+            </aside>
+            <section class="middle">
+              <div class="surface"><h3>Session Summary</h3><p class="memory-text">Mission: Validate snapshot integration and close the README follow-up.</p><div class="tag-row"><span class="tag">2 blocks</span><span class="tag">3 files</span><span class="tag">Git</span></div></div>
+            </section>
+            <section class="detail">
+              <div class="project-header"><div><div class="project-title">What is still in your head?</div><div class="path">Include decisions, surprises, blockers, and what you would do next.</div></div></div>
+              <div class="textarea" style="min-height:210px;color:var(--text);">README scope is clear. Decision: keep the dogfood checklist separate from quickstart. Still need one final eval pass after README edits. If the eval fails, capture the failing case before changing PromptBuilder.</div>
+              <div class="button-row"><button class="button primary">Generate Working Memory Snapshot</button><button class="button">Return to Session</button></div>
+              <div class="surface soft" style="margin-top:16px;"><div class="tag-row"><span class="tag">Creating your Working Memory Snapshot locally...</span><span class="tag">LM Studio</span><span class="tag">Prompt v1</span></div></div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd><code>SessionFlow.ending(session.id)</code>, then `isWorking` during submit.</dd>
+            <dt>Writes</dt><dd>Interrupt open block, save brain dump, insert final events, mark session completed.</dd>
+            <dt>Local API</dt><dd><code>POST {baseURL}/chat/completions</code> after compaction and prompt build.</dd>
+            <dt>Failure rule</dt><dd>Session and brain dump survive every model failure.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="failed" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>09. Snapshot Generation Failed</h2>
+          <p>A completed session remains retryable when LM Studio is unreachable or returns invalid JSON.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Projects</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Snapshot needs attention</div></div><span class="tag red">Retry</span></div>
+            </aside>
+            <section class="middle">
+              <div class="project-header"><div><div class="project-title">wms-m6-smoke-visible</div><div class="path">~/Documents/wms-m6-smoke-visible</div></div></div>
+              <div class="surface">
+                <h3>Snapshot generation needs attention.</h3>
+                <p class="memory-text">The session and brain dump are saved. Start LM Studio, check Settings, and retry local generation.</p>
+                <div class="button-row"><button class="button primary">Retry Snapshot</button><button class="button">Open Settings</button></div>
+              </div>
+              <div class="surface soft"><h3>Saved brain dump</h3><p class="memory-text">Decision: keep dogfood checklist separate from quickstart. Run final eval pass next.</p></div>
+            </section>
+            <section class="detail">
+              <div class="surface hero-card">
+                <div>
+                  <div class="brand-mark" style="color:var(--red);background:var(--red-soft);">!</div>
+                  <div class="hero-title">Model response was not accepted</div>
+                  <p class="hero-copy">Nothing was lost. The saved session can retry generation after the local model setting is fixed.</p>
+                  <button class="button primary">Retry Snapshot</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>`failedSnapshotSession != nil` for the selected project.</dd>
+            <dt>Data</dt><dd>Completed `WorkSession` with persisted `brain_dump`; no valid replacement snapshot.</dd>
+            <dt>Errors</dt><dd>No model selected, server unreachable, unauthorized, invalid envelope, invalid snapshot JSON.</dd>
+            <dt>Retry</dt><dd>Calls the same `SnapshotGenerator.generateSnapshot` path and `saveOrReplaceSnapshot` on success.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="snapshot" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>10. Snapshot Detail</h2>
+          <p>One-screen memory artifact with supported decisions and neutral empty states.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Projects</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Resume Brief available</div></div><span class="status-dot blue"></span></div>
+            </aside>
+            <section class="middle">
+              <div class="surface"><h3>Latest Memory</h3><p class="memory-text">Validated the dogfood checklist and narrowed the remaining issue to the final eval pass.</p><div class="next-action"><strong>Start here</strong>Run the final eval pass and capture any failing case before changing prompts.</div></div>
+            </section>
+            <section class="detail">
+              <div class="project-header"><div><div class="project-title">Working Memory Snapshot</div><div class="path">Generated locally with qwen2.5-coder-14b-instruct</div></div></div>
+              <div class="snapshot-grid">
+                <div class="snapshot-section surface"><h3>What changed</h3><p>The README scope is now separated from the dogfood checklist, and the only remaining validation is the final eval pass.</p></div>
+                <div class="snapshot-section surface"><h3>Decisions</h3><ul><li>Keep the dogfood checklist separate from the quickstart.</li><li>Capture a failing eval case before changing PromptBuilder.</li></ul></div>
+                <div class="snapshot-section surface"><h3>Open loops</h3><ul><li>Run the final eval pass after README edits.</li></ul></div>
+                <div class="snapshot-section surface"><h3>Next action</h3><p>Run the final eval pass and record the first failing case if it does not pass.</p></div>
+                <div class="snapshot-section surface"><h3>Resume Brief</h3><p>You clarified the README scope and kept dogfood guidance out of the quickstart. The model path should not change until the final eval pass runs. Start by running that pass, then capture any failure before editing PromptBuilder.</p></div>
+              </div>
+              <div class="button-row"><button class="button primary">Start New Session</button><button class="button">Back to Project</button></div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>`ProjectDetailViewModel.presentedSnapshot != nil`.</dd>
+            <dt>Data</dt><dd>`snapshots` row with JSON-decoded decisions/open loops arrays.</dd>
+            <dt>Generation</dt><dd>Valid output only from strict schema. Empty arrays render neutral copy.</dd>
+            <dt>Next</dt><dd>Start new session if no active session, or back to project.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="history" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>11. Historical Session Detail</h2>
+          <p>Read-only reconstruction of a completed session from snapshots, blocks, increments, and observed events.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Projects</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Historical session selected</div></div><span class="status-dot blue"></span></div>
+            </aside>
+            <section class="middle">
+              <div class="section-label">Today</div>
+              <div class="surface">
+                <div class="history-row"><div class="time">5:05 PM</div><div><strong>M6 real snapshot integration</strong><div class="project-meta">5 blocks - 1h 38m</div><div class="project-meta">Next: Review README changes and run final eval pass.</div></div><span class="tag">Selected</span></div>
+                <div class="history-row"><div class="time">2:14 PM</div><div><strong>Codex evaluation harness iteration</strong><div class="project-meta">4 blocks</div></div><span class="tag">Completed</span></div>
+              </div>
+            </section>
+            <section class="detail">
+              <div class="project-header"><div><div class="project-title">Session Detail</div><div class="path">wms-m6-smoke-visible</div></div><button class="button">Back</button></div>
+              <div class="surface"><h3>Session Summary</h3><p class="project-name" style="margin-top:8px;">M6 real snapshot integration</p><div class="project-meta">Jun 26, 5:05 PM - 1h 38m - Completed</div></div>
+              <div class="surface"><h3>Working Memory Snapshot</h3><p class="memory-text">Validated the dogfood checklist and narrowed the remaining issue to the final eval pass.</p><div class="next-action"><strong>Next action</strong>Review README changes and run final eval pass.</div><div class="button-row"><button class="button">View Full Snapshot</button></div></div>
+              <div class="surface"><h3>Pomodoro Blocks</h3><div class="increment"><div class="time">1</div><div><strong>Audit prompt inclusion</strong><div class="project-meta">Summary: block increments appear in prompt digest.</div></div><span class="tag green">Completed</span></div><div class="increment"><div class="time">2</div><div><strong>README scope pass</strong><div class="project-meta">Decision: keep checklist separate.</div></div><span class="tag green">Completed</span></div></div>
+              <div class="surface"><h3>Observed Context</h3><div class="tag-row"><span class="tag">Git: 2 events</span><span class="tag">Files: 3</span><span class="tag">Apps: Codex, Xcode, Terminal</span></div></div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>`selectedSessionID` points to a non-active session.</dd>
+            <dt>Data</dt><dd>`WorkSession`, optional `Snapshot`, blocks, increments by block, events by session.</dd>
+            <dt>Read-only</dt><dd>No generation or observation starts from history detail.</dd>
+            <dt>Variations</dt><dd>Cancelled sessions show no snapshot; completed sessions can show missing snapshot.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="recovery" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>12. Recovery Sheet, Folder Accessible</h2>
+          <p>App relaunch finds an active session and asks the user how to continue.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window sheet-scrim">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <h2>A session was active when the app closed.</h2>
+            <div class="surface soft" style="margin-top:18px;">
+              <div class="split-row"><div><div class="metric-label">Project</div><strong>wms-m6-smoke-visible</strong></div><div><div class="metric-label">Started</div><strong>4:21 PM</strong></div></div>
+              <div style="margin-top:12px;"><div class="metric-label">Mission</div><strong>Validate snapshot integration and close the README follow-up.</strong></div>
+            </div>
+            <div class="button-row"><button class="button primary">Resume Session</button><button class="button">End Session</button><button class="button destructive">Cancel Session</button></div>
+          </div>
+          <div class="app">
+            <aside class="sidebar"><div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div></aside>
+            <section class="middle"></section>
+            <section class="detail"></section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>`SessionRepository.activeSession()` returns a session at launch.</dd>
+            <dt>Data</dt><dd>Active `WorkSession`, `Project`, ensured Block 1 for legacy active sessions.</dd>
+            <dt>Services</dt><dd>Observation restarts only after Resume Session.</dd>
+            <dt>Dismissal</dt><dd>Interactive dismissal disabled; user must resume, end, or cancel.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="recovery-lost" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>13. Recovery Sheet, Missing Folder</h2>
+          <p>Resume is blocked until the selected project folder boundary is restored.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window sheet-scrim">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="scrim"></div>
+          <div class="sheet">
+            <h2>A session was active when the app closed.</h2>
+            <div class="surface soft" style="margin-top:16px;"><div class="metric-label">Mission</div><strong>Validate snapshot integration and close the README follow-up.</strong></div>
+            <div class="surface" style="border-color:rgba(217,108,22,0.32);background:var(--orange-soft);">
+              <h3>This project folder is no longer accessible.</h3>
+              <p class="memory-text">Choose the folder again before resuming observation.</p>
+            </div>
+            <div class="button-row"><button class="button">Resume Session</button><button class="button">End Session</button><button class="button primary">Choose Folder Again</button><button class="button destructive">Cancel Session</button></div>
+          </div>
+          <div class="app">
+            <aside class="sidebar"><div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div></aside>
+            <section class="middle"></section>
+            <section class="detail"></section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>Active session exists, but `FileManager` says `Project.rootPath` is unreadable.</dd>
+            <dt>Blocked</dt><dd>Resume Session is disabled.</dd>
+            <dt>Restore</dt><dd>`ProjectRepository.updateProjectRoot(id:to:)` after native folder picker selection.</dd>
+            <dt>Privacy</dt><dd>Observation does not restart until the folder boundary is restored.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="access-lost" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>14. Project Folder Access Lost</h2>
+          <p>The project remains visible, but session starts are blocked until the folder is restored.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Projects</div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Folder missing</div></div><span class="tag orange">Access</span></div>
+            </aside>
+            <section class="middle">
+              <div class="project-header"><div><div class="project-title">wms-m6-smoke-visible</div><div class="path">~/Documents/wms-m6-smoke-visible</div></div></div>
+              <div class="surface" style="border-color:rgba(217,108,22,0.32);background:var(--orange-soft);">
+                <h3>This project folder is no longer accessible.</h3>
+                <p class="memory-text">Choose the folder again to restore access before starting or resuming observation.</p>
+                <div class="button-row"><button class="button primary">Choose Folder Again</button></div>
+              </div>
+              <div class="surface"><h3>Latest Memory</h3><p class="memory-text">Existing snapshots remain readable because they are stored in SQLite.</p></div>
+            </section>
+            <section class="detail">
+              <div class="surface hero-card">
+                <div>
+                  <div class="brand-mark" style="color:var(--orange);background:var(--orange-soft);">P</div>
+                  <div class="hero-title">Restore folder access</div>
+                  <p class="hero-copy">The saved project path cannot be read, so observation and new sessions are blocked.</p>
+                  <button class="button primary">Choose Folder Again</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>`ProjectAccessState.inaccessible` for selected project.</dd>
+            <dt>Data</dt><dd>Historical sessions and snapshots still read from SQLite.</dd>
+            <dt>Blocked</dt><dd>Start Session disabled because the observation boundary is invalid.</dd>
+            <dt>Next</dt><dd>Restore project root path through native picker.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="settings" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>15. Settings Ready</h2>
+          <p>Local LM Studio configuration, model discovery, and token storage.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="section-label">Projects</div>
+              <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Last session today</div></div><span class="status-dot live"></span></div>
+              <div class="sidebar-footer"><div class="active-row" style="grid-template-columns:1fr;"><div class="project-name">Settings</div></div></div>
+            </aside>
+            <section class="middle">
+              <div class="surface hero-card">
+                <div>
+                  <div class="brand-mark">S</div>
+                  <div class="hero-title">Settings</div>
+                  <p class="hero-copy">Configure local snapshot generation.</p>
+                </div>
+              </div>
+            </section>
+            <section class="detail">
+              <div class="project-header"><div><div class="project-title">Settings</div><div class="path">LM Studio</div></div></div>
+              <div class="surface">
+                <div class="field"><label>Base URL</label><div class="input">http://localhost:1234/v1</div></div>
+                <div class="field"><label>Synthesizer Model</label><div class="select">qwen2.5-coder-14b-instruct</div></div>
+                <div class="field"><label>API Token, optional</label><div class="input">********</div></div>
+                <div class="button-row"><button class="button">Test Connection</button><button class="button">Refresh Models</button><button class="button primary">Save</button></div>
+                <div class="tag-row"><span class="tag green">Connected. 3 models are available.</span><span class="tag">Settings saved.</span></div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>`selectedItem == .settings`.</dd>
+            <dt>Data</dt><dd>`lmstudio_base_url`, `lmstudio_synthesizer_model`, optional token in Keychain.</dd>
+            <dt>Model route</dt><dd><code>GET http://localhost:1234/v1/models</code>.</dd>
+            <dt>Save</dt><dd>Token never enters SQLite.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+
+    <section id="settings-errors" class="mock-section">
+      <div class="section-heading">
+        <div>
+          <h2>16. Settings Connection Problems</h2>
+          <p>Distinct local model states give the user a recoverable next step.</p>
+        </div>
+      </div>
+      <div class="mock-layout">
+        <div class="window">
+          <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
+          <div class="app">
+            <aside class="sidebar">
+              <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
+              <div class="sidebar-footer"><div class="active-row" style="grid-template-columns:1fr;"><div class="project-name">Settings</div></div></div>
+            </aside>
+            <section class="middle">
+              <div class="surface"><h3>Connection states</h3><p class="memory-text">Each state maps to a specific `LMStudioConnectionState` value.</p></div>
+            </section>
+            <section class="detail">
+              <div class="project-header"><div><div class="project-title">Settings</div><div class="path">LM Studio connection recovery</div></div></div>
+              <div class="surface" style="border-color:rgba(224,51,46,0.24);background:var(--red-soft);"><h3>LM Studio could not be reached.</h3><p class="memory-text">Start the local server, confirm the address in Settings, and try again.</p></div>
+              <div class="surface" style="border-color:rgba(217,108,22,0.30);background:var(--orange-soft);"><h3>Authentication is required or the token was rejected.</h3><p class="memory-text">Check the optional API token or disable authentication in LM Studio.</p></div>
+              <div class="surface"><h3>LM Studio is reachable, but no models are loaded.</h3><p class="memory-text">Load an instruct model in LM Studio, then refresh models.</p></div>
+              <div class="surface"><h3>The selected model is unavailable.</h3><p class="memory-text">Refresh the model list or choose another synthesizer model.</p></div>
+              <div class="surface" style="border-color:rgba(217,108,22,0.30);background:var(--orange-soft);"><h3>This server is not running on this Mac.</h3><p class="memory-text">Project evidence may leave this device if a non-loopback address is saved.</p></div>
+            </section>
+          </div>
+        </div>
+        <aside class="contract">
+          <h3>State contract</h3>
+          <dl>
+            <dt>Entry</dt><dd>`connectionState` is not idle/saved/success.</dd>
+            <dt>States</dt><dd>Invalid base URL, unreachable, unauthorized, no models, selected model unavailable, invalid response, server error.</dd>
+            <dt>Routes</dt><dd>Settings calls `GET {baseURL}/models`; snapshot generation later calls `POST {baseURL}/chat/completions`.</dd>
+            <dt>Privacy</dt><dd>Non-loopback base URLs require visible warning.</dd>
+          </dl>
+        </aside>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
