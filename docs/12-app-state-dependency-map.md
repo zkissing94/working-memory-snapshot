@@ -13,12 +13,21 @@ The companion static mockups live at:
 docs/mockups/app-state-mockups.html
 ```
 
+The mockups use a two-column exploration model:
+
+```text
+project sidebar -> single workspace
+```
+
+This is a static design artifact only. The current SwiftUI implementation still uses the source-level routing described later in this document; converting production code from three columns to two columns is a separate implementation task.
+
 ## Grounding Rules
 
 - The source of truth is the local SQLite data model, repository contracts, view-model state, and local LM Studio API boundary.
 - The screenshots are visual guidance for layout, density, hierarchy, and calm tone.
-- The screenshots show a planned total such as "Block 2 of 4". The current data model stores `block_index`, status, timing, intention, and summary, but does not store a target block count for a session. Current UI can truthfully render "Block 2" and "2 blocks completed"; showing "of 4" would require a new explicit product/schema decision.
+- The screenshots imply a planned total appended to the current block label. The current data model stores `block_index`, status, timing, intention, and summary, but does not store a target block count for a session. Current UI can truthfully render "Block 2" and "2 blocks completed"; showing a planned total would require a new explicit product/schema decision.
 - Pomodoro blocks are capture points inside a session. They do not end the session automatically, create scores, or enforce breaks.
+- The two-column mockups still treat Pomodoro blocks as first-class state: active and paused block timers, block summaries, manual note/decision/blocker increments, between-block state, historical block timelines, and prompt inclusion are all represented.
 - Observed context remains Git, project-relative files, and active applications only. No screenshots, clipboard, browser history, transcripts, keystrokes, or files outside the selected project.
 
 ## State Model
@@ -174,6 +183,8 @@ The app has no backend and no cloud API. "Routing" is split between SwiftUI navi
 
 ### SwiftUI route state
 
+This table describes the current app implementation. The static mockup file collapses these destinations into one visual workspace column for review; it does not change runtime routing.
+
 | Route owner | State | Detail destination |
 |---|---|---|
 | `ProjectsViewModel.selectedItem` | `.project(projectID)` | Project dashboard in middle column and project detail route in detail column |
@@ -221,3 +232,5 @@ The companion HTML mockups cover these states:
 16. Settings connection problems.
 
 States not shown as full screens in the mockup file are represented in the tables above when they are native alerts, transient loading states, or data-only variations of a rendered screen.
+
+All session-related mockups retain the Pomodoro block layer instead of flattening it into generic session metadata.
