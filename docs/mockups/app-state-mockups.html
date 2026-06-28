@@ -334,9 +334,13 @@
     .status-dot.blue { background: var(--blue); }
 
     .icon-mark.gear {
-      color: var(--muted);
+      color: #3e4652;
       background: #eef1f5;
-      border-color: var(--line);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233e4652' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12.22 2h-.44a2 2 0 0 0-2 1.82l-.06.66a2 2 0 0 1-2.9 1.57l-.58-.34a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.58.34a2 2 0 0 1 0 3.46l-.58.34a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.58-.34a2 2 0 0 1 2.9 1.57l.06.66a2 2 0 0 0 2 1.82h.44a2 2 0 0 0 2-1.82l.06-.66a2 2 0 0 1 2.9-1.57l.58.34a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.58-.34a2 2 0 0 1 0-3.46l.58-.34a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.58.34a2 2 0 0 1-2.9-1.57l-.06-.66a2 2 0 0 0-2-1.82Z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: 18px 18px;
+      border-color: var(--line-strong);
     }
 
     .settings-row {
@@ -790,7 +794,7 @@
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="empty-box" style="grid-template-columns:1fr;"><div><div class="project-name">No Projects</div><div class="project-meta">Add a local project folder to begin.</div></div></div>
-              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear">&#9881;</div><div class="project-name">Settings</div></div></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace narrow">
               <div class="hero-card" style="width:min(620px,100%);">
@@ -841,6 +845,7 @@
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="empty-box" style="grid-template-columns:1fr;"><div><div class="project-name">No Projects</div><div class="project-meta">Add a local project folder to begin.</div></div></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace"></section>
           </div>
@@ -874,7 +879,7 @@
               <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Last session Jun 26, 5:05 PM</div></div><span class="status-dot blue"></span></div>
               <div class="project-row"><div class="icon-mark" style="color:var(--green);background:var(--green-soft);">P</div><div><div class="project-name">wms-m3-test-project</div><div class="project-meta">4 sessions</div></div><span class="status-dot"></span></div>
               <div class="project-row"><div class="icon-mark" style="color:var(--orange);background:var(--orange-soft);">P</div><div><div class="project-name">Working Memory</div><div class="project-meta">12 sessions</div></div><span class="status-dot"></span></div>
-              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear">&#9881;</div><div class="project-name">Settings</div></div></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header">
@@ -940,6 +945,7 @@
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Last session today</div></div><span class="status-dot live"></span></div>
               <div class="project-row"><div class="icon-mark" style="color:var(--green);background:var(--green-soft);">P</div><div><div class="project-name">wms-m3-test-project</div><div class="project-meta">4 sessions</div></div><span class="status-dot"></span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header"><div><div class="project-title">Start New Session</div><div class="path">wms-m6-smoke-visible - ~/Documents/wms-m6-smoke-visible</div></div></div>
@@ -989,6 +995,7 @@
               <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Block 2 active</div></div><span class="status-dot live"></span></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="project-row"><div class="icon-mark" style="color:var(--green);background:var(--green-soft);">P</div><div><div class="project-name">wms-m3-test-project</div><div class="project-meta">4 sessions</div></div><span class="status-dot"></span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header">
@@ -1055,6 +1062,7 @@
               <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Block 2 paused</div></div><span class="tag orange">Paused</span></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Session in progress</div></div><span class="status-dot live"></span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header">
@@ -1106,6 +1114,7 @@
               <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Between blocks</div></div><span class="status-dot live"></span></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Session in progress</div></div><span class="status-dot live"></span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header"><div><div class="project-title">Focus Block 2 complete</div><div class="path">Session remains active - 2 blocks completed</div></div></div>
@@ -1159,6 +1168,7 @@
               <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Ending session...</div></div><span class="tag orange">Saving</span></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Session ending</div></div><span class="status-dot live"></span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header"><div><div class="project-title">What is still in your head?</div><div class="path">Include decisions, surprises, blockers, and what you would do next.</div></div></div>
@@ -1206,6 +1216,7 @@
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Snapshot needs attention</div></div><span class="tag red">Retry</span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header"><div><div class="project-title">Snapshot generation needs attention.</div><div class="path">The completed session and brain dump are saved locally.</div></div></div>
@@ -1248,6 +1259,7 @@
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Resume Brief available</div></div><span class="status-dot blue"></span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header"><div><div class="project-title">Working Memory Snapshot</div><div class="path">Generated locally with qwen2.5-coder-14b-instruct</div></div></div>
@@ -1292,6 +1304,7 @@
               <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Historical session selected</div></div><span class="status-dot blue"></span></div>
               <div class="section-label">Today</div>
               <div class="project-row"><div class="time">5:05</div><div><div class="project-name">M6 real snapshot integration</div><div class="project-meta">5 blocks</div></div><span class="tag">Selected</span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header"><div><div class="project-title">Session Detail</div><div class="path">Jun 26, 5:05 PM - 1h 38m - Completed</div></div><button class="button">Back</button></div>
@@ -1340,7 +1353,9 @@
             <div class="button-row"><button class="button primary">Resume Session</button><button class="button">End Session</button><button class="button destructive">Cancel Session</button></div>
           </div>
           <div class="app">
-            <aside class="sidebar"><div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div><div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div><div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Recovery available</div></div><span class="status-dot live"></span></div></aside>
+            <aside class="sidebar"><div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div><div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div><div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Recovery available</div></div><span class="status-dot live"></span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
+            </aside>
             <section class="workspace"></section>
           </div>
         </div>
@@ -1377,7 +1392,9 @@
             <div class="button-row"><button class="button">Resume Session</button><button class="button">End Session</button><button class="button primary">Restore Folder</button><button class="button destructive">Cancel Session</button></div>
           </div>
           <div class="app">
-            <aside class="sidebar"><div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div><div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div><div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Folder missing</div></div><span class="tag orange">Access</span></div></aside>
+            <aside class="sidebar"><div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div><div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div><div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Folder missing</div></div><span class="tag orange">Access</span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
+            </aside>
             <section class="workspace"></section>
           </div>
         </div>
@@ -1408,6 +1425,7 @@
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Folder missing</div></div><span class="tag orange">Access</span></div>
+              <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header"><div><div class="project-title">wms-m6-smoke-visible</div><div class="path">~/Documents/wms-m6-smoke-visible</div></div></div>
@@ -1447,7 +1465,7 @@
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Last session today</div></div><span class="status-dot live"></span></div>
-              <div class="sidebar-footer"><div class="active-row settings-row"><div class="icon-mark gear">&#9881;</div><div class="project-name">Settings</div></div></div>
+              <div class="sidebar-footer"><div class="active-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header"><div><div class="project-title">Settings</div><div class="path">LM Studio local generation</div></div></div>
@@ -1488,7 +1506,7 @@
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Last session today</div></div><span class="status-dot"></span></div>
-              <div class="sidebar-footer"><div class="active-row settings-row"><div class="icon-mark gear">&#9881;</div><div class="project-name">Settings</div></div></div>
+              <div class="sidebar-footer"><div class="active-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
             <section class="workspace">
               <div class="workspace-header"><div><div class="project-title">Settings</div><div class="path">LM Studio connection recovery</div></div></div>
