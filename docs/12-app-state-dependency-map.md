@@ -1,7 +1,7 @@
 # Working Memory Snapshot - App State And Dependency Map
 
 **Date:** 2026-06-28
-**Status:** Design reference for M8/M9 UI review
+**Status:** Design reference for M8/M9 UI review and 9b two-column implementation
 
 ## Purpose
 
@@ -19,7 +19,7 @@ The mockups use a two-column exploration model:
 project sidebar -> single workspace
 ```
 
-This is a static design artifact only. The current SwiftUI implementation still uses the source-level routing described later in this document; converting production code from three columns to two columns is a separate implementation task.
+This file began as a static design artifact. Branch `9b-two-column-app-structure` converts the production SwiftUI shell from three columns to this two-column model while preserving the same data, observation, and LM Studio boundaries.
 
 ## Grounding Rules
 
@@ -84,7 +84,7 @@ stateDiagram-v2
 | No project selected | `selectedItem == nil` or selected project missing | Native unavailable view | `projects` list | None beyond project repository load | Select project, add project, settings |
 | No projects | `projects.isEmpty` | Sidebar Projects header with `+`, plus empty-state Add Project action | `projects` table | `NSOpenPanel` when adding | Add project picker |
 | Project load error | Migration or repository load throws | Project error alert | Database initialization, migrations, project rows | SQLite through `Database` actor | Dismiss alert, retry by relaunch/reload |
-| Settings selected | `selectedItem == .settings` | Middle column settings summary, detail settings form | `app_settings`, Keychain token | `SettingsRepository`, `KeychainStore` | Select project, test/refresh/save settings |
+| Settings selected | `selectedItem == .settings` | Workspace settings form | `app_settings`, Keychain token | `SettingsRepository`, `KeychainStore` | Select project, test/refresh/save settings |
 
 ## Project States
 
@@ -183,18 +183,18 @@ The app has no backend and no cloud API. "Routing" is split between SwiftUI navi
 
 ### SwiftUI route state
 
-This table describes the current app implementation. The static mockup file collapses these destinations into one visual workspace column for review; it does not change runtime routing.
+This table describes the current app implementation. The production shell now collapses these destinations into one visual workspace column.
 
 | Route owner | State | Detail destination |
 |---|---|---|
-| `ProjectsViewModel.selectedItem` | `.project(projectID)` | Project dashboard in middle column and project detail route in detail column |
-| `ProjectsViewModel.selectedItem` | `.settings` | Settings summary in middle column and full settings form in detail column |
+| `ProjectsViewModel.selectedItem` | `.project(projectID)` | Project workspace route |
+| `ProjectsViewModel.selectedItem` | `.settings` | Settings workspace |
 | `ProjectDetailViewModel.presentedSnapshot` | Non-nil | `SnapshotDetailView` |
 | `SessionViewModel.flow` | `.starting(projectID)` | `StartSessionView` |
 | `SessionViewModel.flow` | `.ending(sessionID)` | `EndSessionView` |
 | `SessionViewModel.activeSession` | Matches selected project | `ActiveSessionView` |
 | `ProjectDetailViewModel.selectedSessionID` | Non-nil | `HistoricalSessionDetailView` |
-| Default | None of the above | `ProjectMemoryOverviewView` |
+| Default | None of the above | `ProjectDashboardView` |
 
 ### LM Studio HTTP routes
 

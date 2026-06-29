@@ -5,13 +5,13 @@
 Current handoff branch:
 
 ```text
-feature/m9-neuro-ergo-refactor
+9b-two-column-app-structure
 ```
 
 Current focus:
 
 ```text
-M8/M9 design review support - app state dependency map and static mockups
+M8/M9 app structure implementation - two-column workspace across mapped states
 ```
 
 Baseline:
@@ -83,8 +83,9 @@ Current implementation state:
 - Completing a block leaves the session active and allows a next block.
 - Taking a break leaves the session active with no open block.
 - Ending or cancelling a session interrupts any active or paused block before the existing brain-dump/cancel flow continues.
-- The main UI now uses a three-column structure: sidebar, project dashboard, and detail pane.
-- The project dashboard shows project metrics, active-session state, latest memory, and previous sessions grouped by date.
+- The main UI now uses a two-column structure: persistent project sidebar and single workspace.
+- The workspace route maps empty library, project dashboard, start session, active/paused/between-block session states, end-session brain dump, snapshot generation failure, snapshot detail, historical session detail, recovery sheets, project access loss, and settings into the right-hand column.
+- The project dashboard shows project metrics, latest memory, start-session action, and previous sessions grouped by date.
 - Historical session detail shows mission, timing, snapshot sections, block timeline, and observed context from existing Git/file/app events.
 - Snapshot evidence includes user-entered block summaries and manual increments below the brain dump and above passive evidence.
 - Message, transcript, clipboard, browser-history, screenshot, and keystroke observation remain excluded.
@@ -93,16 +94,16 @@ Current implementation state:
 
 ## Next milestone
 
-Next task after merging M8:
+Next task after merging the two-column app structure:
 
 ```text
-M8 manual dogfood review
+Manual dogfood review of the 16 mapped app states
 ```
 
 Expected prompt:
 
 ```text
-Launch the app and manually dogfood the session timeline and Pomodoro block flow against docs/02-ui-spec.md.
+Launch the app and manually dogfood the two-column workspace against docs/mockups/app-state-mockups.html.
 ```
 
 Optional post-MVP milestone:
@@ -111,10 +112,10 @@ Optional post-MVP milestone:
 M9 - Optional evidence-janitor model
 ```
 
-Expected M8 commit message:
+Expected commit message:
 
 ```text
-feat: add session timeline and pomodoro capture
+feat: implement two-column app structure
 ```
 
 ## Fresh chat startup

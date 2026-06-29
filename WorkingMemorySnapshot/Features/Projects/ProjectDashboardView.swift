@@ -8,8 +8,6 @@ struct ProjectDashboardView: View {
     let onEndSession: () -> Void
     let onViewSnapshot: () -> Void
     let onSelectSession: (WorkSession) -> Void
-    let onRestoreProjectAccess: () -> Void
-    let onRetrySnapshot: () -> Void
 
     private var activeSession: WorkSession? {
         guard sessionViewModel.activeSession?.projectID == project.id else {
@@ -29,10 +27,6 @@ struct ProjectDashboardView: View {
             VStack(alignment: .leading, spacing: 22) {
                 header
 
-                if projectDetailViewModel.projectAccessState.isInaccessible {
-                    accessRecovery
-                }
-
                 if let activeSession {
                     ActiveSessionDashboardCard(
                         session: activeSession,
@@ -47,18 +41,12 @@ struct ProjectDashboardView: View {
                     startSessionCard
                 }
 
-                if let failedSnapshotSession = sessionViewModel.failedSnapshotSession,
-                   failedSnapshotSession.projectID == project.id {
-                    snapshotFailureCard(failedSnapshotSession)
-                }
-
-                if let latestSnapshot = projectDetailViewModel.latestSnapshot {
-                    latestMemoryCard(latestSnapshot)
-                }
-
                 sessionTimeline
             }
-            .padding(24)
+            .padding(.horizontal, 42)
+            .padding(.vertical, 34)
+            .frame(maxWidth: 980, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle(project.name)
@@ -70,7 +58,7 @@ struct ProjectDashboardView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(project.name)
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.semibold)
                 .lineLimit(2)
                 .textSelection(.enabled)
@@ -103,31 +91,24 @@ struct ProjectDashboardView: View {
             .count
     }
 
-    private var accessRecovery: some View {
-        DashboardSurface {
-            VStack(alignment: .leading, spacing: 10) {
-                Label("This project folder is no longer accessible.", systemImage: "folder.badge.questionmark")
-                    .font(.headline)
-                Text("Choose the folder again to restore access before starting or resuming observation.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Button(action: onRestoreProjectAccess) {
-                    Label("Choose Folder Again", systemImage: "folder")
-                }
-            }
+    @ViewBuilder
+    private var startSessionCard: some View {
+        if let latestSnapshot = projectDetailViewModel.latestSnapshot {
+            latestMemoryCard(latestSnapshot)
+        } else {
+            firstSessionCard
         }
     }
 
-    private var startSessionCard: some View {
+    private var firstSessionCard: some View {
         DashboardSurface {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Session")
-                    .font(.caption)
+                Text("Start a new session")
+                    .font(.title3)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
                 Text("Create a working-memory boundary for this project.")
-                    .font(.body)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
                 Button(action: onStartSession) {
                     Label("Start Session", systemImage: "play.fill")
                 }
@@ -139,50 +120,45 @@ struct ProjectDashboardView: View {
 
     private func latestMemoryCard(_ snapshot: Snapshot) -> some View {
         DashboardSurface {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Latest Memory")
-                    .font(.caption)
+            VStack(alignment: .leading, spacing: 18) {
+                Text("Start a new session")
+                    .font(.title2)
                     .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
 
-                Text(snapshot.resumeBrief)
-                    .font(.callout)
-                    .lineLimit(5)
-                    .textSelection(.enabled)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Start here")
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Continue from")
                         .font(.caption)
+                        .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
                     Text(snapshot.nextAction)
                         .font(.headline)
                         .lineLimit(3)
                         .textSelection(.enabled)
                 }
 
-                Button(action: onViewSnapshot) {
-                    Label("View Snapshot", systemImage: "doc.text.magnifyingglass")
-                }
-            }
-        }
-    }
-
-    private func snapshotFailureCard(_ session: WorkSession) -> some View {
-        DashboardSurface {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Snapshot generation needs attention.")
-                    .font(.headline)
-                Text("The session and brain dump are saved. Start LM Studio, check Settings, and retry local generation.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Button(action: onRetrySnapshot) {
-                    Label("Retry Snapshot", systemImage: "arrow.clockwise")
-                }
-                if let endedAt = session.endedAt {
-                    Text("Session ended \(endedAt.formatted(date: .abbreviated, time: .shortened))")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Resume Brief")
                         .font(.caption)
+                        .fontWeight(.semibold)
                         .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                    Text(snapshot.resumeBrief)
+                        .font(.callout)
+                        .lineLimit(5)
+                        .textSelection(.enabled)
+                }
+
+                HStack(spacing: 12) {
+                    Button(action: onStartSession) {
+                        Label("Start Session", systemImage: "play.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!sessionViewModel.canStartSession || projectDetailViewModel.projectAccessState.isInaccessible)
+
+                    Button(action: onViewSnapshot) {
+                        Label("View Snapshot", systemImage: "doc.text.magnifyingglass")
+                    }
                 }
             }
         }
@@ -387,7 +363,7 @@ private struct SessionTimelineRow: View {
     }
 }
 
-private struct MetricPill: View {
+struct MetricPill: View {
     let title: String
     let value: String
 

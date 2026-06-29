@@ -20,79 +20,25 @@ struct ContentView: View {
                 activity: sidebarActivity
             )
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280)
-        } content: {
-            Group {
-                switch projectsViewModel.selectedItem {
-                case .project:
-                    if let project = projectsViewModel.selectedProject {
-                        ProjectDashboardView(
-                            project: project,
-                            sessionViewModel: sessionViewModel,
-                            projectDetailViewModel: projectDetailViewModel,
-                            onStartSession: {
-                                sessionViewModel.beginStartSession(for: project)
-                            },
-                            onEndSession: {
-                                sessionViewModel.beginEndingActiveSession()
-                            },
-                            onViewSnapshot: {
-                                projectDetailViewModel.presentLatestSnapshot()
-                            },
-                            onSelectSession: { session in
-                                projectDetailViewModel.selectSession(session)
-                            },
-                            onRestoreProjectAccess: {
-                                Task {
-                                    if let restoredProject = await projectsViewModel.restoreProjectAccessFromPicker(for: project) {
-                                        await projectDetailViewModel.checkProjectAccess(for: restoredProject)
-                                        await projectDetailViewModel.loadLatestSnapshot(for: restoredProject.id)
-                                        sessionViewModel.updateRecoveredProject(restoredProject)
-                                    }
-                                }
-                            },
-                            onRetrySnapshot: {
-                                Task {
-                                    await sessionViewModel.retrySnapshotGeneration()
-                                }
-                            }
-                        )
-                    } else {
-                        ContentUnavailableView(
-                            "No Project Selected",
-                            systemImage: "folder.badge.questionmark",
-                            description: Text("Select or add a project from the sidebar.")
-                        )
-                    }
-                case .settings:
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Settings", systemImage: "gearshape")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        Text("Configure local snapshot generation.")
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(28)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                case nil:
-                    ContentUnavailableView(
-                        "No Project Selected",
-                        systemImage: "folder.badge.questionmark",
-                        description: Text("Select or add a project from the sidebar.")
-                    )
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 320, ideal: 420)
         } detail: {
             switch projectsViewModel.selectedItem {
             case .settings:
                 SettingsView(viewModel: settingsViewModel)
             default:
-                ProjectDetailContainerView(
-                    project: projectsViewModel.selectedProject,
-                    projectsViewModel: projectsViewModel,
-                    sessionViewModel: sessionViewModel,
-                    projectDetailViewModel: projectDetailViewModel
-                )
+                if projectsViewModel.projects.isEmpty {
+                    EmptyLibraryWorkspaceView {
+                        Task {
+                            await projectsViewModel.addProjectFromPicker()
+                        }
+                    }
+                } else {
+                    ProjectDetailContainerView(
+                        project: projectsViewModel.selectedProject,
+                        projectsViewModel: projectsViewModel,
+                        sessionViewModel: sessionViewModel,
+                        projectDetailViewModel: projectDetailViewModel
+                    )
+                }
             }
         }
         .task {

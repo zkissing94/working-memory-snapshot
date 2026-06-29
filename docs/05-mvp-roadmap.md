@@ -305,9 +305,9 @@ Make sessions easier to scan and resume by adding a project dashboard, historica
 
 ### Deliverables
 
-- three-column `NavigationSplitView` structure
+- two-column `NavigationSplitView` structure with a persistent project sidebar and single workspace
 - card-like sidebar project rows with active project state and metadata
-- project dashboard with active session card, previous sessions grouped by date, and latest memory summary
+- project workspace with previous sessions grouped by date, latest memory summary, and route-specific session/detail states
 - active-session block surface with 20-minute countdown, pause/resume, complete block, next block, break, and end-session actions
 - `pomodoro_blocks` and `work_increments` tables
 - block and increment repositories

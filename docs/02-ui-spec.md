@@ -22,13 +22,12 @@ The selected project, active session, end-session form, snapshot, or settings.
 
 Do not create a tab bar, dashboard, or multi-level information architecture in v0.
 
-### Post-MVP M8 layout
+### Post-MVP M8/9 layout
 
-After M7 dogfooding, the app may expand into a three-column `NavigationSplitView` while preserving the same product loop:
+After M7 dogfooding, the app uses a simpler two-column `NavigationSplitView` while preserving the same product loop:
 
 - sidebar: active project, card-like project rows, lightweight project metadata, Settings
-- middle pane: selected project dashboard with project header, active session card, previous sessions grouped by date, and latest memory summary
-- detail pane: active session, selected historical session, project memory overview, snapshot, or settings
+- workspace: selected project dashboard, active session, selected historical session, latest memory, snapshot, access recovery, generation failure, or settings
 
 This is still not a generic productivity dashboard. The hierarchy is `Project -> Session -> Pomodoro Block -> Work Increment`, and every surface should help the user preserve or resume cognitive context.
 

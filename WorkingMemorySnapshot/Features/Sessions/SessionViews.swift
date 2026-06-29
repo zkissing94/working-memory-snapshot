@@ -9,6 +9,9 @@ struct StartSessionView: View {
             Header(project: project)
 
             VStack(alignment: .leading, spacing: 8) {
+                Text("Start New Session")
+                    .font(.largeTitle)
+                    .fontWeight(.semibold)
                 Text("Mission")
                     .font(.headline)
                 TextField(
@@ -18,6 +21,21 @@ struct StartSessionView: View {
                 )
                 .lineLimit(3, reservesSpace: true)
                 .textFieldStyle(.roundedBorder)
+            }
+
+            DashboardSurface {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "timer")
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 24)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Block 1 will start automatically")
+                            .font(.headline)
+                        Text("20 min focus capture. Observing after start: Git, files, and active apps.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
 
             HStack(spacing: 12) {
@@ -140,7 +158,7 @@ struct ActiveSessionView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(spacing: 8) {
-                        Text("Pomodoro Block \(block.blockIndex)")
+                        Text("Focus Block \(block.blockIndex)")
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
@@ -279,11 +297,11 @@ struct ActiveSessionView: View {
     private var workIncrementsSection: some View {
         DashboardSurface {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Current Block - Work Increments")
+                Text("Work Increments")
                     .font(.headline)
 
                 if viewModel.activeBlock == nil {
-                    Text("Start a block to capture notes, decisions, or blockers.")
+                    Text("Start a focus block to capture notes, decisions, or blockers.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 } else if viewModel.activeBlockIncrements.isEmpty {
@@ -354,7 +372,7 @@ struct ActiveSessionView: View {
     private var blocksInSessionSection: some View {
         DashboardSurface {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Blocks in This Session")
+                Text("Focus Blocks in This Session")
                     .font(.headline)
                 if viewModel.sessionBlocks.isEmpty {
                     Text("No blocks recorded yet.")
@@ -413,6 +431,33 @@ struct EndSessionView: View {
                     }
             }
 
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 14)], spacing: 14) {
+                DashboardSurface {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Block capture points")
+                            .font(.headline)
+                        HStack(spacing: 8) {
+                            MetricPill(title: "Blocks", value: "\(viewModel.sessionBlocks.count)")
+                            MetricPill(title: "Completed", value: "\(completedBlockCount)")
+                        }
+                        Text("Block summaries and manual increments are included below the brain dump in the prompt digest.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                DashboardSurface {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Observed context")
+                            .font(.headline)
+                        Text(viewModel.observationSummary.displayText)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                }
+            }
+
             HStack(spacing: 12) {
                 Button {
                     Task {
@@ -448,6 +493,10 @@ struct EndSessionView: View {
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var completedBlockCount: Int {
+        viewModel.sessionBlocks.filter { $0.status == .completed }.count
     }
 }
 
@@ -616,7 +665,7 @@ struct HistoricalSessionDetailView: View {
     private var blocksSection: some View {
         DashboardSurface {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Pomodoro Blocks")
+                Text("Focus Block Timeline")
                     .font(.headline)
                 if blocks.isEmpty {
                     Text("No focus blocks were recorded for this session.")

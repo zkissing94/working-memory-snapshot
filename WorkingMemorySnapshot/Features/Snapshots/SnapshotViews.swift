@@ -13,28 +13,42 @@ struct SnapshotDetailView: View {
             VStack(alignment: .leading, spacing: 26) {
                 header
 
-                SnapshotTextSection(
-                    title: "What changed",
-                    text: snapshot.whatChanged
-                )
-                SnapshotListSection(
-                    title: "Decisions",
-                    items: snapshot.decisions,
-                    emptyText: "No supported decisions were identified."
-                )
-                SnapshotListSection(
-                    title: "Open loops",
-                    items: snapshot.openLoops,
-                    emptyText: "No open loops were identified."
-                )
-                SnapshotTextSection(
-                    title: "Next action",
-                    text: snapshot.nextAction
-                )
-                SnapshotTextSection(
-                    title: "Resume Brief",
-                    text: snapshot.resumeBrief
-                )
+                DashboardSurface {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Prompt evidence")
+                            .font(.headline)
+                        HStack(spacing: 8) {
+                            MetricPill(title: "Decisions", value: "\(snapshot.decisions.count)")
+                            MetricPill(title: "Open loops", value: "\(snapshot.openLoops.count)")
+                            MetricPill(title: "Prompt", value: snapshot.promptVersion)
+                        }
+                    }
+                }
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 14)], spacing: 14) {
+                    SnapshotTextSection(
+                        title: "What changed",
+                        text: snapshot.whatChanged
+                    )
+                    SnapshotListSection(
+                        title: "Decisions",
+                        items: snapshot.decisions,
+                        emptyText: "No supported decisions were identified."
+                    )
+                    SnapshotListSection(
+                        title: "Open loops",
+                        items: snapshot.openLoops,
+                        emptyText: "No open loops were identified."
+                    )
+                    SnapshotTextSection(
+                        title: "Next action",
+                        text: snapshot.nextAction
+                    )
+                    SnapshotTextSection(
+                        title: "Resume Brief",
+                        text: snapshot.resumeBrief
+                    )
+                }
 
                 HStack(spacing: 12) {
                     Button(action: onStartNewSession) {
@@ -51,9 +65,10 @@ struct SnapshotDetailView: View {
                 }
             }
             .padding(32)
-            .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: 980, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 
     private var header: some View {
@@ -96,11 +111,13 @@ private struct SnapshotTextSection: View {
     let text: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
-            Text(text)
-                .textSelection(.enabled)
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.headline)
+                Text(text)
+                    .textSelection(.enabled)
+            }
         }
     }
 }
@@ -111,21 +128,23 @@ private struct SnapshotListSection: View {
     let emptyText: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.headline)
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.headline)
 
-            if items.isEmpty {
-                Text(emptyText)
-                    .foregroundStyle(.secondary)
-            } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(items, id: \.self) { item in
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                            Text("-")
-                                .foregroundStyle(.secondary)
-                            Text(item)
-                                .textSelection(.enabled)
+                if items.isEmpty {
+                    Text(emptyText)
+                        .foregroundStyle(.secondary)
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(items, id: \.self) { item in
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text("-")
+                                    .foregroundStyle(.secondary)
+                                Text(item)
+                                    .textSelection(.enabled)
+                            }
                         }
                     }
                 }
