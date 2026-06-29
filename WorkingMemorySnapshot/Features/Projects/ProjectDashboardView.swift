@@ -391,16 +391,6 @@ private struct SessionTimelineRow: View {
     }
 }
 
-private struct ProjectRootPathLink: View {
-    let path: String
-
-    var body: some View {
-        Text(path)
-            .foregroundStyle(.secondary)
-            .textSelection(.enabled)
-    }
-}
-
 struct MetricPill: View {
     let title: String
     let value: String
