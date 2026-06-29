@@ -88,7 +88,6 @@ struct ActiveSessionView: View {
                 }
                 if viewModel.activeBlock?.status != .paused {
                     sessionInspectorDisclosure
-                    sessionControls
                 }
             }
             .padding(28)
@@ -181,39 +180,6 @@ struct ActiveSessionView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
-
-                Spacer()
-
-                HStack(spacing: 8) {
-                    Button {
-                        isShowingBlockCompletionInput = true
-                    } label: {
-                        Label("Complete Block", systemImage: "checkmark")
-                            .labelStyle(.iconOnly)
-                            .font(.title3)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.green)
-                    .disabled(viewModel.isWorking || isShowingBlockCompletionInput)
-                    .help("Complete Block")
-                    .accessibilityLabel("Complete Block")
-
-                    Button {
-                        Task {
-                            await viewModel.pauseCurrentBlock()
-                        }
-                    } label: {
-                        Label("Pause", systemImage: "pause.fill")
-                            .labelStyle(.iconOnly)
-                            .font(.title3)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.orange)
-                    .disabled(viewModel.isWorking)
-                    .help("Pause")
-                    .accessibilityLabel("Pause")
-
-                }
             }
 
             if isShowingBlockCompletionInput {
@@ -288,8 +254,8 @@ struct ActiveSessionView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.blue)
                     .disabled(viewModel.isWorking)
-                    .help("Resume")
-                    .accessibilityLabel("Resume")
+                    .help("Resume Focus Block")
+                    .accessibilityLabel("Resume Focus Block")
 
                     Button {
                         Task {
@@ -303,7 +269,7 @@ struct ActiveSessionView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.green)
                     .disabled(viewModel.isWorking)
-                    .help("Complete Block")
+                    .help("Complete Focus Block")
                     .accessibilityLabel("Complete Block")
 
                     Button(role: .destructive) {
@@ -315,8 +281,8 @@ struct ActiveSessionView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.red)
                     .disabled(viewModel.isWorking)
-                    .help("End Session")
-                    .accessibilityLabel("End Session")
+                    .help("Complete Session")
+                    .accessibilityLabel("Complete Session")
                     .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
                 }
             }
@@ -441,36 +407,82 @@ struct ActiveSessionView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                Picker("Kind", selection: $incrementKind) {
+                Picker("", selection: $incrementKind) {
                     ForEach(WorkIncrementKind.allCases, id: \.self) { kind in
                         Text(kind.displayName).tag(kind)
                     }
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
 
-                TextField("Add a note, decision, or blocker", text: $incrementTitle)
+                TextField("Add a title", text: $incrementTitle)
                     .textFieldStyle(.roundedBorder)
                 RichTextField(
                     "Detail (optional)",
                     text: $incrementDetail
                 )
 
-                Button {
-                    let kind = incrementKind
-                    let title = incrementTitle
-                    let detail = incrementDetail
-                    Task {
-                        await viewModel.addIncrement(kind: kind, title: title, detail: detail)
-                        if viewModel.errorMessage == nil {
-                            incrementTitle = ""
-                            incrementDetail = ""
-                            incrementKind = .note
+                HStack(alignment: .center) {
+                    Button {
+                        let kind = incrementKind
+                        let title = incrementTitle
+                        let detail = incrementDetail
+                        Task {
+                            await viewModel.addIncrement(kind: kind, title: title, detail: detail)
+                            if viewModel.errorMessage == nil {
+                                incrementTitle = ""
+                                incrementDetail = ""
+                                incrementKind = .note
+                            }
                         }
+                    } label: {
+                        Label("Add Increment", systemImage: "plus")
                     }
-                } label: {
-                    Label("Add Increment", systemImage: "plus")
+                    .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
+
+                    Spacer()
+
+                    Button {
+                        isShowingBlockCompletionInput = true
+                    } label: {
+                        Label("Complete Block", systemImage: "checkmark")
+                            .labelStyle(.iconOnly)
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.green)
+                    .disabled(viewModel.activeBlock == nil || viewModel.isWorking || isShowingBlockCompletionInput)
+                    .help("Complete Focus Block")
+                    .accessibilityLabel("Complete Block")
+
+                    Button {
+                        Task {
+                            await viewModel.pauseCurrentBlock()
+                        }
+                    } label: {
+                        Label("Pause", systemImage: "pause.fill")
+                            .labelStyle(.iconOnly)
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.orange)
+                    .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
+                    .help("Pause Block")
+                    .accessibilityLabel("Pause")
+
+                    Button(role: .destructive) {
+                        viewModel.beginEndingActiveSession()
+                    } label: {
+                        Label("End Session", systemImage: "xmark")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red)
+                    .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
+                    .help("Complete Session")
+                    .accessibilityLabel("End Session")
+                    .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
                 }
-                .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
             }
         }
     }
@@ -501,33 +513,6 @@ struct ActiveSessionView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
-        }
-    }
-
-    @ViewBuilder
-    private var sessionControls: some View {
-        HStack(spacing: 12) {
-            if viewModel.activeBlock?.status != .paused {
-                Button {
-                    viewModel.beginEndingActiveSession()
-                } label: {
-                    Label("End Session", systemImage: "stop")
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.isWorking)
-                .accessibilityLabel("End Session")
-                .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
-            }
-
-            Button(role: .destructive) {
-                Task {
-                    await viewModel.cancelActiveSession()
-                }
-            } label: {
-                Label("Cancel Session", systemImage: "xmark.circle")
-            }
-            .disabled(viewModel.isWorking)
-            .accessibilityHint("Cancel this session without generating a snapshot.")
         }
     }
 
@@ -1355,20 +1340,18 @@ private struct ObservedContextFact: View {
 
 private struct IncrementRow: View {
     let increment: WorkIncrement
-    @State private var isExpanded = false
 
     var body: some View {
         if let detail = increment.detail, !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            DisclosureGroup(isExpanded: $isExpanded) {
+            VStack(alignment: .leading, spacing: 4) {
+                incrementHeader
                 Text(detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-            } label: {
-                incrementHeader
+                    .padding(.leading, 64)
             }
-            .animation(.default, value: isExpanded)
             .padding(.vertical, 8)
         } else {
             incrementHeader
