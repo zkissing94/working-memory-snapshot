@@ -354,6 +354,10 @@ struct ProjectSidebarView: View {
                 .scaledToFit()
                 .frame(width: 40, height: 40)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+                }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Working Memory")
@@ -512,18 +516,12 @@ struct ProjectSidebarView: View {
                             .font(.caption)
                             .foregroundStyle(activity.kind.textStyle)
                             .lineLimit(1)
-                    } else {
-                        Text(project.rootPath)
-                            .font(.caption)
+                } else {
+                    if let metadataText = metadataText(for: project.id) {
+                        Text(metadataText)
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
-                            .truncationMode(.middle)
-
-                        if let metadataText = metadataText(for: project.id) {
-                            Text(metadataText)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
                         }
                     }
                 }
@@ -810,12 +808,6 @@ private struct ProjectSidebarRow: View {
                         .foregroundStyle(activity.kind.textStyle)
                         .lineLimit(1)
                 } else {
-                    Text(project.rootPath)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-
                     if let metadataText {
                         Text(metadataText)
                             .font(.caption2)

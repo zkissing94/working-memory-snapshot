@@ -1072,12 +1072,10 @@ private struct Header: View {
                 .font(.largeTitle)
                 .fontWeight(.semibold)
                 .textSelection(.enabled)
-            Text(project.rootPath)
+            ProjectRootPathLink(path: project.rootPath)
                 .font(.callout)
-                .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .textSelection(.enabled)
         }
     }
 }

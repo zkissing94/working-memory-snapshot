@@ -1,3 +1,5 @@
+import Foundation
+import AppKit
 import SwiftUI
 
 struct ProjectDetailContainerView: View {
@@ -253,7 +255,11 @@ private struct ProjectAccessLostWorkspaceView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                WorkspaceHeader(title: project.name, subtitle: project.rootPath)
+                WorkspaceHeader(
+                    title: project.name,
+                    subtitle: "Project Root",
+                    path: project.rootPath
+                )
 
                 DashboardSurface {
                     VStack(alignment: .leading, spacing: 10) {
@@ -401,6 +407,13 @@ private struct SnapshotFailureWorkspaceView: View {
 private struct WorkspaceHeader: View {
     let title: String
     let subtitle: String
+    let path: String?
+
+    init(title: String, subtitle: String, path: String? = nil) {
+        self.title = title
+        self.subtitle = subtitle
+        self.path = path
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -409,12 +422,50 @@ private struct WorkspaceHeader: View {
                 .fontWeight(.semibold)
                 .lineLimit(2)
                 .textSelection(.enabled)
-            Text(subtitle)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .truncationMode(.middle)
-                .textSelection(.enabled)
+
+            if let path {
+                ProjectRootPathLink(path: path, displayText: subtitle)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+            } else {
+                Text(subtitle)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .textSelection(.enabled)
+            }
         }
+    }
+}
+
+struct ProjectRootPathLink: View {
+    let path: String
+    let displayText: String
+
+    init(path: String, displayText: String = "Project Root") {
+        self.path = path
+        self.displayText = displayText
+    }
+
+    var body: some View {
+        Text(displayText)
+            .underline()
+            .contentShape(Rectangle())
+            .highPriorityGesture(
+                TapGesture().onEnded {
+                    openProjectPath()
+                }
+            )
+        .help(path)
+        .foregroundStyle(.blue)
+        .lineLimit(2)
+        .truncationMode(.middle)
+    }
+
+    private func openProjectPath() {
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
     }
 }
