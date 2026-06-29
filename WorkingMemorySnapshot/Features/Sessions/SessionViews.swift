@@ -71,6 +71,7 @@ struct ActiveSessionView: View {
     let session: WorkSession
     @ObservedObject var viewModel: SessionViewModel
     @State private var blockSummary = ""
+    @State private var isShowingBlockCompletionInput = false
     @State private var nextBlockIntention = ""
     @State private var incrementKind: WorkIncrementKind = .note
     @State private var incrementTitle = ""
@@ -80,7 +81,9 @@ struct ActiveSessionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 pomodoroBlockCard
-                workIncrementsSection
+                if viewModel.activeBlock?.status != .active {
+                    workIncrementsSection
+                }
                 sessionInspectorDisclosure
                 sessionControls
             }
@@ -89,6 +92,14 @@ struct ActiveSessionView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .onChange(of: viewModel.activeBlock?.id) { _, _ in
+            resetBlockCompletionInput()
+        }
+        .onChange(of: viewModel.activeBlock?.status) { _, status in
+            if status != .active {
+                resetBlockCompletionInput()
+            }
+        }
     }
 
     private var pomodoroBlockCard: some View {
@@ -158,56 +169,105 @@ struct ActiveSessionView: View {
                     .tint(.green)
             }
 
-            HStack(spacing: 8) {
-                Text("\(DurationFormatter.shortString(from: block.elapsedSeconds())) elapsed")
-                Text("·")
-                Text("\(DurationFormatter.shortString(from: block.plannedDurationSeconds)) total")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            HStack(alignment: .center, spacing: 12) {
+                HStack(spacing: 8) {
+                    Text("\(DurationFormatter.shortString(from: block.elapsedSeconds())) elapsed")
+                    Text("·")
+                    Text("\(DurationFormatter.shortString(from: block.plannedDurationSeconds)) total")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Block summary")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextField("What changed during this block?", text: $blockSummary, axis: .vertical)
-                    .lineLimit(2, reservesSpace: true)
-                    .textFieldStyle(.roundedBorder)
+                Spacer()
+
+                HStack(spacing: 8) {
+                    Button {
+                        isShowingBlockCompletionInput = true
+                    } label: {
+                        Label("Complete Block", systemImage: "checkmark.circle")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.isWorking || isShowingBlockCompletionInput)
+                    .help("Complete Block")
+                    .accessibilityLabel("Complete Block")
+
+                    Button {
+                        Task {
+                            await viewModel.pauseCurrentBlock()
+                        }
+                    } label: {
+                        Label("Pause", systemImage: "pause.fill")
+                            .labelStyle(.iconOnly)
+                    }
+                    .disabled(viewModel.isWorking)
+                    .help("Pause")
+                    .accessibilityLabel("Pause")
+
+                    Button {
+                        let summary = isShowingBlockCompletionInput ? blockSummary : ""
+                        Task {
+                            await viewModel.completeCurrentBlock(summary: summary)
+                            resetBlockCompletionInput()
+                        }
+                    } label: {
+                        Label("Take Break", systemImage: "cup.and.saucer")
+                            .labelStyle(.iconOnly)
+                    }
+                    .disabled(viewModel.isWorking)
+                    .help("Take Break")
+                    .accessibilityLabel("Take Break")
+                }
             }
 
-            HStack(spacing: 12) {
+            if isShowingBlockCompletionInput {
+                blockCompletionInput
+            }
+
+            Divider()
+
+            workIncrementsContent
+        }
+    }
+
+    private var blockCompletionInput: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Complete Block")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+
+            TextField("What changed during this block?", text: $blockSummary, axis: .vertical)
+                .lineLimit(2, reservesSpace: true)
+                .textFieldStyle(.roundedBorder)
+
+            HStack(spacing: 10) {
+                Button("Cancel") {
+                    resetBlockCompletionInput()
+                }
+                .disabled(viewModel.isWorking)
+
                 Button {
                     let summary = blockSummary
                     Task {
                         await viewModel.completeCurrentBlock(summary: summary)
-                        blockSummary = ""
+                        resetBlockCompletionInput()
                     }
                 } label: {
-                    Label("Complete Block", systemImage: "checkmark.circle")
+                    Label("Save and Complete", systemImage: "checkmark")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(viewModel.isWorking)
-
-                Button {
-                    Task {
-                        await viewModel.pauseCurrentBlock()
-                    }
-                } label: {
-                    Label("Pause", systemImage: "pause.fill")
-                }
-                .disabled(viewModel.isWorking)
-
-                Button {
-                    let summary = blockSummary
-                    Task {
-                        await viewModel.completeCurrentBlock(summary: summary)
-                        blockSummary = ""
-                    }
-                } label: {
-                    Label("Take Break", systemImage: "cup.and.saucer")
-                }
-                .disabled(viewModel.isWorking)
             }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.secondary.opacity(0.16))
         }
     }
 
@@ -346,62 +406,66 @@ struct ActiveSessionView: View {
 
     private var workIncrementsSection: some View {
         DashboardSurface {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Work Increments")
-                    .font(.headline)
+            workIncrementsContent
+        }
+    }
 
-                if viewModel.activeBlock == nil {
-                    Text("Start a focus block to capture notes, decisions, or blockers.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                } else if viewModel.activeBlockIncrements.isEmpty {
-                    Text("No manual increments yet.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                } else {
-                    VStack(spacing: 0) {
-                        ForEach(viewModel.activeBlockIncrements) { increment in
-                            IncrementRow(increment: increment)
-                            if increment.id != viewModel.activeBlockIncrements.last?.id {
-                                Divider()
-                            }
+    private var workIncrementsContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Work Increments")
+                .font(.headline)
+
+            if viewModel.activeBlock == nil {
+                Text("Start a focus block to capture notes, decisions, or blockers.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else if viewModel.activeBlockIncrements.isEmpty {
+                Text("No manual increments yet.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(viewModel.activeBlockIncrements) { increment in
+                        IncrementRow(increment: increment)
+                        if increment.id != viewModel.activeBlockIncrements.last?.id {
+                            Divider()
                         }
                     }
                 }
+            }
 
-                Divider()
+            Divider()
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Picker("Kind", selection: $incrementKind) {
-                        ForEach(WorkIncrementKind.allCases, id: \.self) { kind in
-                            Text(kind.displayName).tag(kind)
-                        }
+            VStack(alignment: .leading, spacing: 10) {
+                Picker("Kind", selection: $incrementKind) {
+                    ForEach(WorkIncrementKind.allCases, id: \.self) { kind in
+                        Text(kind.displayName).tag(kind)
                     }
-                    .pickerStyle(.segmented)
-
-                    TextField("Add a note, decision, or blocker", text: $incrementTitle)
-                        .textFieldStyle(.roundedBorder)
-                    TextField("Detail (optional)", text: $incrementDetail, axis: .vertical)
-                        .lineLimit(2, reservesSpace: true)
-                        .textFieldStyle(.roundedBorder)
-
-                    Button {
-                        let kind = incrementKind
-                        let title = incrementTitle
-                        let detail = incrementDetail
-                        Task {
-                            await viewModel.addIncrement(kind: kind, title: title, detail: detail)
-                            if viewModel.errorMessage == nil {
-                                incrementTitle = ""
-                                incrementDetail = ""
-                                incrementKind = .note
-                            }
-                        }
-                    } label: {
-                        Label("Add Increment", systemImage: "plus")
-                    }
-                    .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
                 }
+                .pickerStyle(.segmented)
+
+                TextField("Add a note, decision, or blocker", text: $incrementTitle)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Detail (optional)", text: $incrementDetail, axis: .vertical)
+                    .lineLimit(2, reservesSpace: true)
+                    .textFieldStyle(.roundedBorder)
+
+                Button {
+                    let kind = incrementKind
+                    let title = incrementTitle
+                    let detail = incrementDetail
+                    Task {
+                        await viewModel.addIncrement(kind: kind, title: title, detail: detail)
+                        if viewModel.errorMessage == nil {
+                            incrementTitle = ""
+                            incrementDetail = ""
+                            incrementKind = .note
+                        }
+                    }
+                } label: {
+                    Label("Add Increment", systemImage: "plus")
+                }
+                .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
             }
         }
     }
@@ -528,6 +592,11 @@ struct ActiveSessionView: View {
 
     private func progress(for block: PomodoroBlock, at date: Date) -> Double {
         min(1, Double(block.elapsedSeconds(at: date)) / Double(max(1, block.plannedDurationSeconds)))
+    }
+
+    private func resetBlockCompletionInput() {
+        blockSummary = ""
+        isShowingBlockCompletionInput = false
     }
 }
 
