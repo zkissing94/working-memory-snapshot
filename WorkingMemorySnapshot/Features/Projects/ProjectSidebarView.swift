@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 enum ProjectSidebarActivityKind: Equatable {
@@ -350,7 +349,7 @@ struct ProjectSidebarView: View {
 
     private var brandHeader: some View {
         HStack(spacing: 12) {
-            Image(nsImage: NSApp.applicationIconImage)
+            Image("WorkingMemoryIcon")
                 .resizable()
                 .scaledToFit()
                 .frame(width: 40, height: 40)
