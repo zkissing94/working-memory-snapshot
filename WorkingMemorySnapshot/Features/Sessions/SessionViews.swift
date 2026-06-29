@@ -293,7 +293,7 @@ struct ActiveSessionView: View {
             .buttonStyle(.plain)
             .foregroundStyle(.blue)
             .disabled(viewModel.isWorking)
-            .help("Resume Focus Block")
+            .fastTooltip("Resume Focus Block")
             .accessibilityLabel("Resume Focus Block")
 
             Button {
@@ -308,7 +308,7 @@ struct ActiveSessionView: View {
             .buttonStyle(.plain)
             .foregroundStyle(.green)
             .disabled(viewModel.isWorking)
-            .help("Complete Focus Block")
+            .fastTooltip("Complete Focus Block")
             .accessibilityLabel("Complete Focus Block")
 
             Button(role: .destructive) {
@@ -320,7 +320,7 @@ struct ActiveSessionView: View {
             .buttonStyle(.plain)
             .foregroundStyle(.red)
             .disabled(viewModel.isWorking)
-            .help("Complete Session")
+            .fastTooltip("Complete Session")
             .accessibilityLabel("Complete Session")
             .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
         }
@@ -442,7 +442,7 @@ struct ActiveSessionView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.green)
                     .disabled(viewModel.activeBlock == nil || viewModel.isWorking || isShowingBlockCompletionInput)
-                    .help("Complete Focus Block")
+                    .fastTooltip("Complete Focus Block")
                     .accessibilityLabel("Complete Focus Block")
 
                     Button {
@@ -457,7 +457,7 @@ struct ActiveSessionView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.orange)
                     .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
-                    .help("Pause Block")
+                    .fastTooltip("Pause Block")
                     .accessibilityLabel("Pause Block")
 
                     Button(role: .destructive) {
@@ -469,7 +469,7 @@ struct ActiveSessionView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.red)
                     .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
-                    .help("Complete Session")
+                    .fastTooltip("Complete Session")
                     .accessibilityLabel("Complete Session")
                     .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
                 }
@@ -585,6 +585,73 @@ struct ActiveSessionView: View {
     }
 }
 
+private struct FastTooltipModifier: ViewModifier {
+    let text: String
+    let delay: TimeInterval
+
+    @State private var isShowingTooltip = false
+    @State private var scheduledWorkItem: DispatchWorkItem?
+
+    init(_ text: String, delayFactor: Double = 0.7, baseDelay: TimeInterval = 0.5) {
+        self.text = text
+        self.delay = baseDelay * delayFactor
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .bottom) {
+                if isShowingTooltip {
+                    Text(text)
+                        .font(.caption2)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: true, vertical: true)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .foregroundStyle(.white)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color.black.opacity(0.9))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
+                        )
+                        .padding(.top, 6)
+                        .offset(y: 24.2)
+                        .allowsHitTesting(false)
+                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 2)
+                        .transition(.opacity)
+                        .zIndex(1)
+                }
+            }
+            .onAppear {
+                isShowingTooltip = false
+            }
+            .onDisappear {
+                scheduledWorkItem?.cancel()
+                isShowingTooltip = false
+            }
+            .onHover { hovering in
+                scheduledWorkItem?.cancel()
+                if hovering {
+                    let workItem = DispatchWorkItem {
+                        isShowingTooltip = true
+                    }
+                    scheduledWorkItem = workItem
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+                } else {
+                    isShowingTooltip = false
+                }
+            }
+    }
+}
+
+private extension View {
+    func fastTooltip(_ text: String, delayFactor: Double = 0.7, baseDelay: TimeInterval = 0.5) -> some View {
+        modifier(FastTooltipModifier(text, delayFactor: delayFactor, baseDelay: baseDelay))
+    }
+}
+
 private struct RichTextField: View {
     let placeholder: String
     @Binding var text: String
@@ -612,7 +679,7 @@ private struct RichTextField: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.primary)
-                    .help("Bold")
+                    .fastTooltip("Bold")
 
                     Button {
                         formatter.toggleItalic()
@@ -621,7 +688,7 @@ private struct RichTextField: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.primary)
-                    .help("Italic")
+                    .fastTooltip("Italic")
 
                     Button {
                         formatter.insertBullet()
@@ -630,7 +697,7 @@ private struct RichTextField: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.primary)
-                    .help("Insert bullets")
+                    .fastTooltip("Insert bullets")
                 }
             }
             .padding(.horizontal, 8)
