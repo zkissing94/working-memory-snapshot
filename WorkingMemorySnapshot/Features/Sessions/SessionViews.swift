@@ -79,62 +79,10 @@ struct ActiveSessionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Active Session")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        Text("Started \(session.startedAt.formatted(date: .omitted, time: .shortened))")
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
-
-                    Spacer()
-
-                    TimelineView(.periodic(from: session.startedAt, by: 1)) { context in
-                        Text(elapsedString(from: session.startedAt, to: context.date))
-                            .font(.system(.title2, design: .monospaced))
-                            .monospacedDigit()
-                    }
-                }
-
                 pomodoroBlockCard
                 workIncrementsSection
-
-                DashboardSurface {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Session Mission")
-                            .font(.headline)
-                        Text(session.mission)
-                            .font(.body)
-                            .textSelection(.enabled)
-                    }
-                }
-
-                observedContextSection
-                blocksInSessionSection
-
-                HStack(spacing: 12) {
-                    Button {
-                        viewModel.beginEndingActiveSession()
-                    } label: {
-                        Label("End Session", systemImage: "stop")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(viewModel.isWorking)
-                    .accessibilityLabel("End Session")
-                    .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
-
-                    Button(role: .destructive) {
-                        Task {
-                            await viewModel.cancelActiveSession()
-                        }
-                    } label: {
-                        Label("Cancel Session", systemImage: "xmark.circle")
-                    }
-                    .disabled(viewModel.isWorking)
-                    .accessibilityHint("Cancel this session without generating a snapshot.")
-                }
+                sessionInspectorDisclosure
+                sessionControls
             }
             .padding(28)
             .frame(maxWidth: 900, alignment: .leading)
@@ -153,7 +101,16 @@ struct ActiveSessionView: View {
         }
     }
 
+    @ViewBuilder
     private func activeBlockContent(_ block: PomodoroBlock) -> some View {
+        if block.status == .paused {
+            pausedBlockContent(block)
+        } else {
+            activeFocusBlockContent(block)
+        }
+    }
+
+    private func activeFocusBlockContent(_ block: PomodoroBlock) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 7) {
@@ -163,15 +120,15 @@ struct ActiveSessionView: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
-                        Text(block.status == .paused ? "Paused" : "Focus Time")
+                        Text("Focus Time")
                             .font(.caption2)
                             .fontWeight(.semibold)
-                            .foregroundStyle(block.status == .paused ? .orange : .green)
+                            .foregroundStyle(.green)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
                             .background(
                                 Capsule()
-                                    .fill((block.status == .paused ? Color.orange : Color.green).opacity(0.12))
+                                    .fill(Color.green.opacity(0.12))
                             )
                     }
 
@@ -220,19 +177,6 @@ struct ActiveSessionView: View {
 
             HStack(spacing: 12) {
                 Button {
-                    Task {
-                        if block.status == .paused {
-                            await viewModel.resumeCurrentBlock()
-                        } else {
-                            await viewModel.pauseCurrentBlock()
-                        }
-                    }
-                } label: {
-                    Label(block.status == .paused ? "Resume" : "Pause", systemImage: block.status == .paused ? "play.fill" : "pause.fill")
-                }
-                .disabled(viewModel.isWorking)
-
-                Button {
                     let summary = blockSummary
                     Task {
                         await viewModel.completeCurrentBlock(summary: summary)
@@ -245,6 +189,15 @@ struct ActiveSessionView: View {
                 .disabled(viewModel.isWorking)
 
                 Button {
+                    Task {
+                        await viewModel.pauseCurrentBlock()
+                    }
+                } label: {
+                    Label("Pause", systemImage: "pause.fill")
+                }
+                .disabled(viewModel.isWorking)
+
+                Button {
                     let summary = blockSummary
                     Task {
                         await viewModel.completeCurrentBlock(summary: summary)
@@ -254,6 +207,103 @@ struct ActiveSessionView: View {
                     Label("Take Break", systemImage: "cup.and.saucer")
                 }
                 .disabled(viewModel.isWorking)
+            }
+        }
+    }
+
+    private func pausedBlockContent(_ block: PomodoroBlock) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Label("Paused checkpoint", systemImage: "pause.circle")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange)
+                .textCase(.uppercase)
+
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("Focus Block \(block.blockIndex)")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    Text(block.intention ?? session.mission)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .lineLimit(3)
+                        .textSelection(.enabled)
+
+                    Text("Ready whenever you are.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 12)
+
+                TimelineView(.periodic(from: block.pausedAt ?? block.startedAt, by: 1)) { context in
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("Time remaining")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(DurationFormatter.timerString(from: block.remainingSeconds(at: context.date)))
+                            .font(.system(.title, design: .monospaced))
+                            .monospacedDigit()
+                        Text("of \(DurationFormatter.timerString(from: block.plannedDurationSeconds))")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            TimelineView(.periodic(from: block.startedAt, by: 1)) { context in
+                ProgressView(value: progress(for: block, at: context.date))
+                    .tint(.orange)
+            }
+
+            Text("Paused time is tracked separately from elapsed focus time.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            pausedResumeContext
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Capture notes")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("What changed during this block?", text: $blockSummary, axis: .vertical)
+                    .lineLimit(2, reservesSpace: true)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            HStack(spacing: 12) {
+                Button {
+                    Task {
+                        await viewModel.resumeCurrentBlock()
+                    }
+                } label: {
+                    Label("Resume", systemImage: "play.fill")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.isWorking)
+
+                Button {
+                    let summary = blockSummary
+                    Task {
+                        await viewModel.completeCurrentBlock(summary: summary)
+                        blockSummary = ""
+                    }
+                } label: {
+                    Label("Complete Block", systemImage: "checkmark.circle")
+                }
+                .disabled(viewModel.isWorking)
+
+                Button(role: .destructive) {
+                    viewModel.beginEndingActiveSession()
+                } label: {
+                    Label("End Session", systemImage: "stop")
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isWorking)
+                .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
             }
         }
     }
@@ -356,29 +406,82 @@ struct ActiveSessionView: View {
         }
     }
 
-    private var observedContextSection: some View {
-        DashboardSurface {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Observed Context")
-                    .font(.headline)
-                Text(viewModel.observationSummary.displayText)
+    private var pausedResumeContext: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+
+            Text("Resume Context")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+
+            if let lastIncrement = viewModel.activeBlockIncrements.last {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(lastIncrement.title)
+                        .font(.callout.weight(.semibold))
+                    HStack(spacing: 6) {
+                        Text(lastIncrement.kind.displayName)
+                        Text("·")
+                        Text(lastIncrement.occurredAt.formatted(date: .omitted, time: .shortened))
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("No manual increments captured yet. Resume from the block objective above.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
             }
         }
     }
 
-    private var blocksInSessionSection: some View {
-        DashboardSurface {
+    @ViewBuilder
+    private var sessionControls: some View {
+        HStack(spacing: 12) {
+            if viewModel.activeBlock?.status != .paused {
+                Button {
+                    viewModel.beginEndingActiveSession()
+                } label: {
+                    Label("End Session", systemImage: "stop")
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(viewModel.isWorking)
+                .accessibilityLabel("End Session")
+                .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
+            }
+
+            Button(role: .destructive) {
+                Task {
+                    await viewModel.cancelActiveSession()
+                }
+            } label: {
+                Label("Cancel Session", systemImage: "xmark.circle")
+            }
+            .disabled(viewModel.isWorking)
+            .accessibilityHint("Cancel this session without generating a snapshot.")
+        }
+    }
+
+    private var sessionInspectorDisclosure: some View {
+        DisclosureGroup {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Focus Blocks in This Session")
-                    .font(.headline)
-                if viewModel.sessionBlocks.isEmpty {
-                    Text("No blocks recorded yet.")
-                        .font(.callout)
+                inspectorSection(title: "State Contract", text: inspectorStateContract)
+                inspectorSection(title: "Observed Context", text: viewModel.observationSummary.displayText)
+                inspectorSection(
+                    title: "Services",
+                    text: "FSEvents, Git, and active app observation stay scoped to this active session."
+                )
+                inspectorSection(
+                    title: "Privacy",
+                    text: "No screenshots, clipboard, browser history, messages, keystrokes, or file contents."
+                )
+
+                if !viewModel.sessionBlocks.isEmpty {
+                    Divider()
+                    Text("Focus Blocks")
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                } else {
+                        .textCase(.uppercase)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
                         ForEach(viewModel.sessionBlocks) { block in
                             BlockChip(block: block)
@@ -386,24 +489,45 @@ struct ActiveSessionView: View {
                     }
                 }
             }
+            .padding(.top, 10)
+        } label: {
+            Label("Open Inspector", systemImage: "sidebar.right")
+                .font(.callout.weight(.semibold))
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.secondary.opacity(0.16))
+        }
+    }
+
+    private func inspectorSection(title: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+            Text(text)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+        }
+    }
+
+    private var inspectorStateContract: String {
+        guard let activeBlock = viewModel.activeBlock else {
+            return "The session is active and currently between focus blocks."
+        }
+
+        return "activeSession.projectID matches the selected project and activeBlock.status is \(activeBlock.status.rawValue)."
     }
 
     private func progress(for block: PomodoroBlock, at date: Date) -> Double {
         min(1, Double(block.elapsedSeconds(at: date)) / Double(max(1, block.plannedDurationSeconds)))
-    }
-
-    private func elapsedString(from startDate: Date, to endDate: Date) -> String {
-        let elapsedSeconds = max(0, Int(endDate.timeIntervalSince(startDate)))
-        let hours = elapsedSeconds / 3_600
-        let minutes = (elapsedSeconds % 3_600) / 60
-        let seconds = elapsedSeconds % 60
-
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
-        }
-
-        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 

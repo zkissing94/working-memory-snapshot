@@ -18,6 +18,7 @@ struct ContentView: View {
             ProjectSidebarView(
                 viewModel: projectsViewModel,
                 activity: sidebarActivity,
+                currentSessionSummary: currentSessionSummary,
                 canStartSessionForProject: { projectID in
                     guard
                         let project = projectsViewModel.projects.first(where: { $0.id == projectID })
@@ -135,6 +136,14 @@ struct ContentView: View {
             failedSnapshotSession: sessionViewModel.failedSnapshotSession,
             selectedProjectID: projectsViewModel.selectedProject?.id,
             selectedProjectAccessState: projectDetailViewModel.projectAccessState
+        )
+    }
+
+    private var currentSessionSummary: CurrentSessionSummary? {
+        CurrentSessionSummary.current(
+            activeSession: sessionViewModel.activeSession,
+            activeBlock: sessionViewModel.activeBlock,
+            sessionBlocks: sessionViewModel.sessionBlocks
         )
     }
 

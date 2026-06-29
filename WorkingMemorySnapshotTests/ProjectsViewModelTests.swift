@@ -246,6 +246,110 @@ final class ProjectsViewModelTests: XCTestCase {
         )
     }
 
+    func testCurrentSessionSummaryIsHiddenWithoutActiveSession() {
+        let projectID = UUID()
+        let completedSession = makeWorkSession(projectID: projectID, status: .completed)
+
+        XCTAssertNil(
+            CurrentSessionSummary.current(
+                activeSession: nil,
+                activeBlock: nil,
+                sessionBlocks: []
+            )
+        )
+        XCTAssertNil(
+            CurrentSessionSummary.current(
+                activeSession: completedSession,
+                activeBlock: nil,
+                sessionBlocks: []
+            )
+        )
+    }
+
+    func testCurrentSessionSummaryFormatsActiveBlockTruthfully() throws {
+        let projectID = UUID()
+        let sessionStart = Date(timeIntervalSince1970: 1_000)
+        let now = sessionStart.addingTimeInterval(180)
+        let session = makeWorkSession(projectID: projectID, startedAt: sessionStart)
+        let completedBlock = makePomodoroBlock(
+            sessionID: session.id,
+            blockIndex: 1,
+            status: .completed,
+            startedAt: sessionStart
+        )
+        let activeBlock = makePomodoroBlock(
+            sessionID: session.id,
+            blockIndex: 2,
+            status: .active,
+            startedAt: sessionStart.addingTimeInterval(60)
+        )
+
+        let summary = try XCTUnwrap(
+            CurrentSessionSummary.current(
+                activeSession: session,
+                activeBlock: activeBlock,
+                sessionBlocks: [completedBlock, activeBlock]
+            )
+        )
+
+        XCTAssertEqual(summary.status, .active)
+        XCTAssertEqual(summary.statusText, "Active")
+        XCTAssertEqual(summary.elapsedSessionTimeText(at: now), "03:00")
+        XCTAssertEqual(summary.blockRemainingTimeText(at: now), "18:00")
+        XCTAssertEqual(summary.blockProgressText, "Block 2 · 1 completed")
+        XCTAssertEqual(summary.visibleBlockIndicators.map(\.status), [.completed, .active])
+    }
+
+    func testCurrentSessionSummaryFormatsPausedBlockTruthfully() throws {
+        let projectID = UUID()
+        let sessionStart = Date(timeIntervalSince1970: 2_000)
+        let now = sessionStart.addingTimeInterval(900)
+        let session = makeWorkSession(projectID: projectID, startedAt: sessionStart)
+        let completedBlock = makePomodoroBlock(
+            sessionID: session.id,
+            blockIndex: 1,
+            status: .completed,
+            startedAt: sessionStart
+        )
+        let pausedBlock = makePomodoroBlock(
+            sessionID: session.id,
+            blockIndex: 2,
+            status: .paused,
+            startedAt: sessionStart,
+            pausedAt: sessionStart.addingTimeInterval(600)
+        )
+
+        let summary = try XCTUnwrap(
+            CurrentSessionSummary.current(
+                activeSession: session,
+                activeBlock: pausedBlock,
+                sessionBlocks: [completedBlock, pausedBlock]
+            )
+        )
+
+        XCTAssertEqual(summary.status, .paused)
+        XCTAssertEqual(summary.statusText, "Paused")
+        XCTAssertEqual(summary.elapsedSessionTimeText(at: now), "15:00")
+        XCTAssertEqual(summary.blockRemainingTimeText(at: now), "10:00")
+        XCTAssertEqual(summary.blockProgressText, "Block 2 · 1 completed")
+        XCTAssertEqual(summary.visibleBlockIndicators.map(\.status), [.completed, .paused])
+    }
+
+    func testActiveProjectRowMessageStaysSecondaryToCurrentSessionSummary() {
+        let projectID = UUID()
+
+        XCTAssertEqual(
+            ProjectSidebarActivity(projectID: projectID, message: "Block 2 active", kind: .activeBlock)
+                .projectRowMessage,
+            "Current session"
+        )
+        XCTAssertEqual(
+            ProjectSidebarActivity(projectID: projectID, message: "Block 2 paused", kind: .pausedBlock)
+                .projectRowMessage,
+            "Current session"
+        )
+    }
+
     private func makeHarness() throws -> (
         database: Database,
         migrator: DatabaseMigrator,
@@ -287,9 +391,10 @@ final class ProjectsViewModelTests: XCTestCase {
     private func makeWorkSession(
         id: UUID = UUID(),
         projectID: UUID,
-        status: SessionStatus = .active
+        status: SessionStatus = .active,
+        startedAt: Date = Date()
     ) -> WorkSession {
-        let now = Date()
+        let now = startedAt
         return WorkSession(
             id: id,
             projectID: projectID,
@@ -307,9 +412,11 @@ final class ProjectsViewModelTests: XCTestCase {
         id: UUID = UUID(),
         sessionID: UUID,
         blockIndex: Int,
-        status: PomodoroBlockStatus
+        status: PomodoroBlockStatus,
+        startedAt: Date = Date(),
+        pausedAt: Date? = nil
     ) -> PomodoroBlock {
-        let now = Date()
+        let now = startedAt
         return PomodoroBlock(
             id: id,
             sessionID: sessionID,
@@ -319,7 +426,7 @@ final class ProjectsViewModelTests: XCTestCase {
             summary: nil,
             status: status,
             startedAt: now,
-            pausedAt: status == .paused ? now : nil,
+            pausedAt: status == .paused ? (pausedAt ?? now) : nil,
             accumulatedPauseSeconds: 0,
             endedAt: status == .completed || status == .interrupted ? now : nil,
             createdAt: now,

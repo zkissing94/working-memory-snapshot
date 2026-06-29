@@ -17,6 +17,15 @@ struct ProjectSidebarActivity: Equatable {
     let message: String
     let kind: ProjectSidebarActivityKind
 
+    var projectRowMessage: String {
+        switch kind {
+        case .activeBlock, .pausedBlock:
+            "Current session"
+        default:
+            message
+        }
+    }
+
     static func current(
         flow: SessionFlow,
         activeSession: WorkSession?,
@@ -108,9 +117,176 @@ struct ProjectSidebarActivity: Equatable {
     }
 }
 
+enum CurrentSessionSummaryStatus: Equatable {
+    case active
+    case paused
+
+    var label: String {
+        switch self {
+        case .active:
+            "Active"
+        case .paused:
+            "Paused"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .active:
+            "timer"
+        case .paused:
+            "pause.circle"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .active:
+            Color(red: 0.08, green: 0.50, blue: 0.30)
+        case .paused:
+            Color(red: 0.72, green: 0.42, blue: 0.10)
+        }
+    }
+
+    var softFill: Color {
+        tint.opacity(0.12)
+    }
+}
+
+enum CurrentSessionBlockIndicatorStatus: Equatable {
+    case active
+    case paused
+    case completed
+    case interrupted
+
+    var tint: Color {
+        switch self {
+        case .active:
+            Color(red: 0.08, green: 0.50, blue: 0.30)
+        case .paused:
+            Color(red: 0.72, green: 0.42, blue: 0.10)
+        case .completed:
+            Color(red: 0.08, green: 0.58, blue: 0.28)
+        case .interrupted:
+            Color(nsColor: .tertiaryLabelColor)
+        }
+    }
+}
+
+struct CurrentSessionBlockIndicator: Equatable, Identifiable {
+    let id: PomodoroBlock.ID
+    let blockIndex: Int
+    let status: CurrentSessionBlockIndicatorStatus
+}
+
+struct CurrentSessionSummary: Equatable {
+    private static let maximumVisibleIndicators = 8
+
+    let projectID: Project.ID
+    let sessionStartedAt: Date
+    let mission: String
+    let status: CurrentSessionSummaryStatus
+    let activeBlock: PomodoroBlock?
+    let blocks: [PomodoroBlock]
+
+    static func current(
+        activeSession: WorkSession?,
+        activeBlock: PomodoroBlock?,
+        sessionBlocks: [PomodoroBlock]
+    ) -> CurrentSessionSummary? {
+        guard let activeSession, activeSession.status == .active else {
+            return nil
+        }
+
+        let normalizedBlocks = normalizedBlocks(activeBlock: activeBlock, sessionBlocks: sessionBlocks)
+        return CurrentSessionSummary(
+            projectID: activeSession.projectID,
+            sessionStartedAt: activeSession.startedAt,
+            mission: activeSession.mission,
+            status: activeBlock?.status == .paused ? .paused : .active,
+            activeBlock: activeBlock,
+            blocks: normalizedBlocks
+        )
+    }
+
+    var statusText: String {
+        status.label
+    }
+
+    var completedBlockCount: Int {
+        blocks.filter { $0.status == .completed }.count
+    }
+
+    var blockProgressText: String {
+        if let activeBlock {
+            return "Block \(activeBlock.blockIndex) · \(completedBlockCount) completed"
+        }
+
+        if blocks.isEmpty {
+            return "No blocks yet"
+        }
+
+        return "\(completedBlockCount) completed · \(blocks.count) recorded"
+    }
+
+    var visibleBlockIndicators: [CurrentSessionBlockIndicator] {
+        blocks.prefix(Self.maximumVisibleIndicators).map { block in
+            CurrentSessionBlockIndicator(
+                id: block.id,
+                blockIndex: block.blockIndex,
+                status: indicatorStatus(for: block.status)
+            )
+        }
+    }
+
+    var remainingBlockIndicatorCount: Int {
+        max(0, blocks.count - Self.maximumVisibleIndicators)
+    }
+
+    func elapsedSessionTimeText(at date: Date) -> String {
+        DurationFormatter.elapsedTimerString(from: Int(date.timeIntervalSince(sessionStartedAt)))
+    }
+
+    func blockRemainingTimeText(at date: Date) -> String? {
+        guard let activeBlock else {
+            return nil
+        }
+
+        return DurationFormatter.timerString(from: activeBlock.remainingSeconds(at: date))
+    }
+
+    private static func normalizedBlocks(
+        activeBlock: PomodoroBlock?,
+        sessionBlocks: [PomodoroBlock]
+    ) -> [PomodoroBlock] {
+        var blocksByID: [PomodoroBlock.ID: PomodoroBlock] = [:]
+        for block in sessionBlocks {
+            blocksByID[block.id] = block
+        }
+        if let activeBlock {
+            blocksByID[activeBlock.id] = activeBlock
+        }
+        return blocksByID.values.sorted { $0.blockIndex < $1.blockIndex }
+    }
+
+    private func indicatorStatus(for status: PomodoroBlockStatus) -> CurrentSessionBlockIndicatorStatus {
+        switch status {
+        case .active:
+            .active
+        case .paused:
+            .paused
+        case .completed:
+            .completed
+        case .interrupted:
+            .interrupted
+        }
+    }
+}
+
 struct ProjectSidebarView: View {
     @ObservedObject var viewModel: ProjectsViewModel
     let activity: ProjectSidebarActivity?
+    let currentSessionSummary: CurrentSessionSummary?
     let canStartSessionForProject: (Project.ID) -> Bool
     let canPauseSessionForProject: (Project.ID) -> Bool
     let onStartSession: (Project) -> Void
@@ -129,13 +305,10 @@ struct ProjectSidebarView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if let activityProject, let activity {
-                        sidebarSection("Active")
-                        projectRowButton(
-                            for: activityProject,
-                            activity: activity,
-                            isSelected: viewModel.selectedItem == .project(activityProject.id)
-                        )
+                    if let currentSessionSummary {
+                        CurrentSessionSummaryView(summary: currentSessionSummary) {
+                            viewModel.selectProject(id: currentSessionSummary.projectID)
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -147,7 +320,7 @@ struct ProjectSidebarView: View {
                             ForEach(listedProjects) { project in
                                 projectRowButton(
                                     for: project,
-                                    activity: nil,
+                                    activity: activity?.projectID == project.id ? activity : nil,
                                     isSelected: viewModel.selectedItem == .project(project.id)
                                 )
                             }
@@ -293,18 +466,8 @@ struct ProjectSidebarView: View {
         .accessibilityHint("Configure local snapshot generation.")
     }
 
-    private var activityProject: Project? {
-        guard let activity else {
-            return nil
-        }
-        return viewModel.projects.first { $0.id == activity.projectID }
-    }
-
     private var listedProjects: [Project] {
-        guard let activityProjectID = activity?.projectID else {
-            return viewModel.projects
-        }
-        return viewModel.projects.filter { $0.id != activityProjectID }
+        viewModel.projects
     }
 
     private func sidebarSection(_ title: String) -> some View {
@@ -346,7 +509,7 @@ struct ProjectSidebarView: View {
                         }
 
                     if let activity {
-                        Text(activity.message)
+                        Text(activity.projectRowMessage)
                             .font(.caption)
                             .foregroundStyle(activity.kind.textStyle)
                             .lineLimit(1)
@@ -499,6 +662,111 @@ private struct SidebarWidthPreferenceKey: PreferenceKey {
     }
 }
 
+private struct CurrentSessionSummaryView: View {
+    let summary: CurrentSessionSummary
+    let onViewSession: () -> Void
+
+    var body: some View {
+        TimelineView(.periodic(from: summary.sessionStartedAt, by: 1)) { timeline in
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Label(summary.statusText, systemImage: summary.status.systemImage)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(summary.status.tint)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 6)
+                }
+
+                HStack(alignment: .top, spacing: 10) {
+                    compactMetric(
+                        label: "Elapsed",
+                        value: summary.elapsedSessionTimeText(at: timeline.date)
+                    )
+
+                    if let remaining = summary.blockRemainingTimeText(at: timeline.date) {
+                        compactMetric(label: "Block", value: remaining)
+                    }
+                }
+
+                Text(summary.mission)
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(alignment: .center, spacing: 8) {
+                    Text(summary.blockProgressText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 4)
+
+                    CurrentSessionBlockIndicators(summary: summary)
+                }
+
+                Button(action: onViewSession) {
+                    Label("View session", systemImage: "arrow.right")
+                        .font(.caption.weight(.semibold))
+                        .labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(summary.status.tint)
+                .accessibilityHint("Open the project for the active session.")
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(summary.status.softFill)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(summary.status.tint.opacity(0.24), lineWidth: 1)
+            }
+            .accessibilityElement(children: .contain)
+        }
+    }
+
+    private func compactMetric(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(.caption, design: .monospaced).weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct CurrentSessionBlockIndicators: View {
+    let summary: CurrentSessionSummary
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(summary.visibleBlockIndicators) { indicator in
+                Circle()
+                    .fill(indicator.status.tint)
+                    .frame(width: 7, height: 7)
+                    .accessibilityLabel("Block \(indicator.blockIndex)")
+            }
+
+            if summary.remainingBlockIndicatorCount > 0 {
+                Text("+\(summary.remainingBlockIndicatorCount)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Block progress")
+    }
+}
+
 private struct ProjectSidebarRow: View {
     let project: Project
     let metadata: ProjectSidebarMetadata?
@@ -538,7 +806,7 @@ private struct ProjectSidebarRow: View {
                 }
 
                 if let activity {
-                    Text(activity.message)
+                    Text(activity.projectRowMessage)
                         .font(.caption)
                         .foregroundStyle(activity.kind.textStyle)
                         .lineLimit(1)

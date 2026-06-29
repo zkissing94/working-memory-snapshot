@@ -391,6 +391,16 @@ private struct SessionTimelineRow: View {
     }
 }
 
+private struct ProjectRootPathLink: View {
+    let path: String
+
+    var body: some View {
+        Text(path)
+            .foregroundStyle(.secondary)
+            .textSelection(.enabled)
+    }
+}
+
 struct MetricPill: View {
     let title: String
     let value: String
@@ -441,6 +451,19 @@ struct DashboardSurface<Content: View>: View {
 }
 
 enum DurationFormatter {
+    static func elapsedTimerString(from seconds: Int) -> String {
+        let clampedSeconds = max(0, seconds)
+        let hours = clampedSeconds / 3_600
+        let minutes = (clampedSeconds % 3_600) / 60
+        let seconds = clampedSeconds % 60
+
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+
     static func shortString(from seconds: Int) -> String {
         let clampedSeconds = max(0, seconds)
         let hours = clampedSeconds / 3_600
