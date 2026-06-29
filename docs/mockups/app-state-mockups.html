@@ -799,6 +799,354 @@
       font-weight: 620;
     }
 
+    .session-compact {
+      margin: -2px 0 14px;
+      padding: 12px;
+      border: 1px solid rgba(8, 105, 247, 0.22);
+      border-radius: 8px;
+      background: rgba(234, 242, 255, 0.64);
+    }
+
+    .session-compact-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .session-compact-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 760;
+      text-transform: uppercase;
+    }
+
+    .session-compact-value {
+      margin-top: 2px;
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .session-goal-line {
+      display: -webkit-box;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+
+    .session-link {
+      display: inline-block;
+      margin-top: 10px;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+    .active-focus-workspace {
+      position: relative;
+      display: flex;
+      min-height: 608px;
+      flex-direction: column;
+      padding: 0;
+      background: #f8fafc;
+    }
+
+    .active-focus-content {
+      width: min(900px, 100%);
+      margin: 0 auto;
+      padding: 30px 38px 18px;
+    }
+
+    .focus-workbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .focus-room {
+      padding: 30px 32px;
+      border: 1px solid rgba(8, 105, 247, 0.22);
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: 0 22px 54px rgba(25, 31, 42, 0.10);
+      margin-bottom: 24px;
+    }
+
+    .focus-card-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .focus-kicker {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .focus-title {
+      margin-top: 8px;
+      font-size: 25px;
+      line-height: 1.2;
+      font-weight: 720;
+    }
+
+    .focus-mode {
+      display: inline-flex;
+      margin-top: 14px;
+      padding: 5px 10px;
+      border: 1px solid rgba(23, 163, 74, 0.20);
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: #117739;
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .focus-timer {
+      color: var(--text);
+      font-size: 66px;
+      font-weight: 760;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      text-align: right;
+    }
+
+    .focus-timer-label {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+
+    .focus-progress-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      margin-top: 26px;
+    }
+
+    .focus-progress-row .progress {
+      margin: 0;
+      height: 10px;
+    }
+
+    .focus-elapsed {
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .focus-actions {
+      align-items: center;
+      margin-top: 26px;
+    }
+
+    .focus-actions .button.primary {
+      min-width: 158px;
+      min-height: 42px;
+      font-size: 14px;
+    }
+
+    .button.text {
+      min-height: 34px;
+      padding: 8px 4px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--muted);
+      box-shadow: none;
+    }
+
+    .timeline-panel {
+      margin-bottom: 22px;
+    }
+
+    .timeline-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: baseline;
+      margin-bottom: 6px;
+    }
+
+    .timeline-header a {
+      font-size: 12px;
+      font-weight: 650;
+      text-decoration: none;
+    }
+
+    .increment-timeline {
+      position: relative;
+      display: grid;
+      margin-top: 4px;
+      padding-left: 22px;
+    }
+
+    .increment-timeline::before {
+      position: absolute;
+      top: 13px;
+      bottom: 13px;
+      left: 6px;
+      width: 1px;
+      background: var(--line);
+      content: "";
+    }
+
+    .timeline-item {
+      position: relative;
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding: 11px 0;
+      border-bottom: 1px solid rgba(223, 227, 232, 0.72);
+    }
+
+    .timeline-item:last-child {
+      border-bottom: 0;
+    }
+
+    .timeline-item::before {
+      position: absolute;
+      top: 17px;
+      left: -20px;
+      width: 9px;
+      height: 9px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 0 1px rgba(8, 105, 247, 0.20);
+      content: "";
+    }
+
+    .timeline-title {
+      font-weight: 680;
+    }
+
+    .timeline-copy {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .capture-box {
+      margin-top: 14px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(223, 227, 232, 0.78);
+    }
+
+    .capture-input {
+      min-height: 56px;
+      padding: 14px;
+      border: 1px solid rgba(203, 210, 218, 0.82);
+      border-radius: 10px;
+      background: #ffffff;
+      color: var(--muted);
+    }
+
+    .capture-helper {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .active-status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      min-height: 42px;
+      padding: 0 24px;
+      border-top: 1px solid rgba(223, 227, 232, 0.78);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status-left,
+    .status-shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .status-mode {
+      color: var(--text);
+      font-weight: 720;
+    }
+
+    .key {
+      padding: 2px 6px;
+      border: 1px solid var(--line-strong);
+      border-radius: 5px;
+      background: var(--surface-soft);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+    }
+
+    .inspector-toggle {
+      position: static;
+    }
+
+    .inspector-toggle summary {
+      list-style: none;
+      cursor: default;
+    }
+
+    .inspector-toggle summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .inspector-drawer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 42px;
+      z-index: 4;
+      width: 316px;
+      padding: 20px;
+      border-left: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.97);
+      box-shadow: -18px 0 46px rgba(25, 31, 42, 0.12);
+      overflow: auto;
+    }
+
+    .inspector-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .inspector-section {
+      padding: 13px 0;
+      border-top: 1px solid rgba(223, 227, 232, 0.78);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .inspector-section h4 {
+      margin: 0 0 6px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
     .block-card {
       border-color: rgba(8, 105, 247, 0.20);
     }
@@ -960,7 +1308,10 @@
       .workspace-header,
       .grid-2,
       .grid-3,
-      .block-top {
+      .block-top,
+      .focus-card-header,
+      .focus-progress-row,
+      .timeline-item {
         grid-template-columns: 1fr;
       }
 
@@ -970,8 +1321,27 @@
       }
 
       .timer,
-      .timer-label {
+      .timer-label,
+      .focus-timer,
+      .focus-timer-label {
         text-align: left;
+      }
+
+      .active-focus-content {
+        padding: 24px 18px 18px;
+      }
+
+      .focus-room {
+        padding: 24px 20px;
+      }
+
+      .session-compact-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .inspector-drawer {
+        left: 0;
+        width: auto;
       }
     }
   </style>
@@ -1214,63 +1584,116 @@
           <p>Observation runs only here, while block summaries and increments stay manual.</p>
         </div>
       </div>
-      <div class="mock-layout">
+      <div class="mock-layout single">
         <div class="window">
           <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
           <div class="app">
             <aside class="sidebar">
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="section-label">Active</div>
-              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Block 2 active</div></div><span class="status-dot live"></span></div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Focus Time</div></div><span class="status-dot live"></span></div>
+              <div class="session-compact">
+                <div class="session-compact-grid">
+                  <div><div class="session-compact-label">Elapsed</div><div class="session-compact-value">12:24</div></div>
+                  <div><div class="session-compact-label">Blocks</div><div class="session-compact-value">2 of 4</div></div>
+                </div>
+                <div class="session-goal-line">Validate the snapshot integration and close the README follow-up.</div>
+                <a href="#" class="session-link">View session</a>
+              </div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
               <div class="project-row"><div class="icon-mark" style="color:var(--green);background:var(--green-soft);">P</div><div><div class="project-name">wms-m3-test-project</div><div class="project-meta">4 sessions</div></div><span class="status-dot"></span></div>
+              <div class="project-row"><div class="icon-mark" style="color:var(--orange);background:var(--orange-soft);">P</div><div><div class="project-name">Working Memory</div><div class="project-meta">12 sessions</div></div><span class="status-dot"></span></div>
               <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
-            <section class="workspace">
-              <div class="workspace-header">
-                <div><div class="project-title">Active Session</div><div class="path">Started 4:21 PM - wms-m6-smoke-visible</div></div>
-                <div><div class="timer">12:24</div><div class="timer-label">session elapsed</div></div>
-              </div>
-              <div class="surface">
-                <div class="section-label" style="margin-top:0;">Session Goal</div>
-                <h2>Validate the snapshot integration and close the README follow-up.</h2>
-                <div class="tag-row"><span class="tag green">Session in progress</span><span class="tag">1 block completed</span><span class="tag">Block 2</span></div>
-              </div>
-              <div class="block-card">
-                <div class="block-top">
-                  <div><div class="section-label" style="margin-top:0;">Focus Block 2</div><h2>Review README changes and run final eval pass.</h2><div class="tag-row"><span class="tag green">Focus Time</span></div></div>
-                  <div><div class="timer">07:36</div><div class="timer-label">remaining</div></div>
+            <section class="workspace active-focus-workspace">
+              <div class="active-focus-content">
+                <div class="focus-workbar">
+                  <div>wms-m6-smoke-visible &middot; started 4:21 PM</div>
+                  <details class="inspector-toggle">
+                    <summary class="button">Open Inspector</summary>
+                    <aside class="inspector-drawer" aria-label="Active session inspector">
+                      <div class="inspector-header">
+                        <h3>Inspector</h3>
+                        <button class="button">Close</button>
+                      </div>
+                      <div class="inspector-section">
+                        <h4>State Contract</h4>
+                        <p><code>activeSession.projectID == selectedProject.id</code> and <code>activeBlock.status == active</code>.</p>
+                      </div>
+                      <div class="inspector-section">
+                        <h4>Observed Context</h4>
+                        <p>Git repository, 3 changed paths, Codex, Xcode, Terminal.</p>
+                      </div>
+                      <div class="inspector-section">
+                        <h4>Services</h4>
+                        <p>FSEvents, Git, and active app observation are scoped to this session.</p>
+                      </div>
+                      <div class="inspector-section">
+                        <h4>Privacy</h4>
+                        <p>No screenshots, clipboard, browser history, messages, keystrokes, or file contents.</p>
+                      </div>
+                    </aside>
+                  </details>
                 </div>
-                <div class="progress green"><span style="width:62%;"></span></div>
-                <div class="project-meta">12m elapsed - 20m total</div>
-                <div class="field" style="margin-top:16px;"><label>Block summary</label><div class="input">What changed during this block?</div></div>
-                <div class="button-row"><button class="button">Pause</button><button class="button primary">Complete Block</button><button class="button">Take Break</button></div>
-              </div>
-              <div class="grid-2">
-                <div class="surface">
-                  <h3>Current Block - Work Increments</h3>
-                  <div class="increment"><div class="time">4:32</div><div><strong>README scope clarified</strong><div class="project-meta">Keep the dogfood checklist separate from the quickstart.</div></div><span class="tag green">Decision</span></div>
-                  <div class="tag-row"><span class="tag">Note</span><span class="tag green">Decision</span><span class="tag orange">Blocker</span></div>
+
+                <div class="focus-room">
+                  <div class="focus-card-header">
+                    <div>
+                      <div class="focus-kicker">Focus Block 2 of 4</div>
+                      <h2 class="focus-title">Review README changes and run final eval pass.</h2>
+                      <span class="focus-mode">Focus Time</span>
+                    </div>
+                    <div aria-live="polite">
+                      <div class="focus-timer">07:36</div>
+                      <div class="focus-timer-label">remaining</div>
+                    </div>
+                  </div>
+                  <div class="focus-progress-row">
+                    <div class="progress green" aria-label="Block progress"><span style="width:62%;"></span></div>
+                    <div class="focus-elapsed">12m elapsed / 20m total</div>
+                  </div>
+                  <div class="button-row focus-actions">
+                    <button class="button primary">Complete Block</button>
+                    <button class="button">Pause</button>
+                    <button class="button text">Skip Block</button>
+                  </div>
                 </div>
-                <div class="surface">
-                  <h3>Observed Context</h3>
-                  <p class="muted" style="margin-top:8px;">Git repository, 3 changed paths, Codex, Xcode, Terminal.</p>
-                  <div class="tag-row"><span class="tag">Git</span><span class="tag">3 files</span><span class="tag">3 apps</span></div>
+
+                <div class="timeline-panel">
+                  <div class="timeline-header">
+                    <h3>Work Increments</h3>
+                    <a href="#">View all</a>
+                  </div>
+                  <div class="increment-timeline" aria-label="Current block work increments">
+                    <div class="timeline-item">
+                      <div class="time">4:32</div>
+                      <div><div class="timeline-title">README scope clarified</div><div class="timeline-copy">Keep the dogfood checklist separate from the quickstart.</div></div>
+                      <span class="tag green">Decision</span>
+                    </div>
+                    <div class="timeline-item">
+                      <div class="time">4:36</div>
+                      <div><div class="timeline-title">Eval pass still needs one final run</div><div class="timeline-copy">Run the smoke command after checking generated snapshot copy.</div></div>
+                      <span class="tag">Note</span>
+                    </div>
+                    <div class="timeline-item">
+                      <div class="time">4:38</div>
+                      <div><div class="timeline-title">LM Studio retry copy needs review</div><div class="timeline-copy">Confirm failure state says the brain dump is already saved.</div></div>
+                      <span class="tag orange">Blocker</span>
+                    </div>
+                  </div>
+                  <div class="capture-box">
+                    <div class="capture-input">What changed during this block?</div>
+                    <div class="capture-helper">Notes are private to this session.</div>
+                  </div>
                 </div>
               </div>
-              <div class="button-row"><button class="button destructive">End Session</button><button class="button">Cancel Session</button></div>
+              <div class="active-status-bar">
+                <div class="status-left"><span class="status-mode">Focus Time</span><span>Block ends 4:41 PM</span></div>
+                <div class="status-shortcuts"><span><span class="key">Space</span> = Pause/Resume</span><span><span class="key">Enter</span> = Complete</span></div>
+              </div>
             </section>
           </div>
         </div>
-        <aside class="contract">
-          <h3>State contract</h3>
-          <dl>
-            <dt>Entry</dt><dd>`activeSession.projectID == selectedProject.id` and `activeBlock.status == active`.</dd>
-            <dt>Data</dt><dd>`WorkSession`, open `PomodoroBlock`, block `WorkIncrement`, live `ObservationSessionSummary`.</dd>
-            <dt>Services</dt><dd>FSEvents, Git, and active app observation scoped to this session.</dd>
-            <dt>Privacy</dt><dd>No screenshots, clipboard, browser history, messages, keystrokes, or file contents.</dd>
-          </dl>
-        </aside>
       </div>
     </section>
 

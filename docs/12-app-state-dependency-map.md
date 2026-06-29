@@ -25,7 +25,7 @@ This is a static design artifact only. The current SwiftUI implementation still 
 
 - The source of truth is the local SQLite data model, repository contracts, view-model state, and local LM Studio API boundary.
 - The screenshots are visual guidance for layout, density, hierarchy, and calm tone.
-- The screenshots imply a planned total appended to the current block label. The current data model stores `block_index`, status, timing, intention, and summary, but does not store a target block count for a session. Current UI can truthfully render "Block 2" and "2 blocks completed"; showing a planned total would require a new explicit product/schema decision.
+- The active-session mockup intentionally shows review copy such as "Focus Block 2 of 4" and "2 of 4 blocks" to explore hierarchy. The current data model stores `block_index`, status, timing, intention, and summary, but does not store a target block count for a session. Production UI can truthfully render "Block 2" and "2 blocks completed"; shipping a planned total would require a new explicit product/schema decision.
 - Focus blocks are capture points inside a session. They do not end the session automatically, create scores, or enforce breaks. The current implementation names remain `PomodoroBlock`, `PomodoroBlockRepository`, and `pomodoro_blocks`.
 - The two-column mockups still treat Focus blocks as first-class state: active and paused block timers, block summaries, manual note/decision/blocker increments, between-block state, historical block timelines, and prompt inclusion are all represented.
 - Observed context remains Git, project-relative files, and active applications only. No screenshots, clipboard, browser history, transcripts, keystrokes, or files outside the selected project.
