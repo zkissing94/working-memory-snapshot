@@ -8,6 +8,8 @@ struct ProjectDashboardView: View {
     let onEndSession: () -> Void
     let onViewSnapshot: () -> Void
     let onSelectSession: (WorkSession) -> Void
+    @State private var isPreviousSessionListExpanded = false
+    @State private var expandedDayGroups = Set<String>()
 
     private var activeSession: WorkSession? {
         guard sessionViewModel.activeSession?.projectID == project.id else {
@@ -63,12 +65,10 @@ struct ProjectDashboardView: View {
                 .lineLimit(2)
                 .textSelection(.enabled)
 
-            Text(project.rootPath)
+            ProjectRootPathLink(path: project.rootPath)
                 .font(.caption)
-                .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .truncationMode(.middle)
-                .textSelection(.enabled)
 
             HStack(spacing: 8) {
                 MetricPill(title: "Sessions", value: "\(completedSessionCount)")
@@ -166,40 +166,68 @@ struct ProjectDashboardView: View {
 
     private var sessionTimeline: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Previous Sessions")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-
-            if previousSessions.isEmpty {
-                DashboardSurface {
-                    Text("Completed sessions will appear here.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                ForEach(groupedPreviousSessions, id: \.title) { group in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(group.title)
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                        ForEach(group.sessions) { session in
-                            SessionTimelineRow(
-                                session: session,
-                                snapshot: projectDetailViewModel.snapshot(for: session),
-                                blocks: projectDetailViewModel.blocks(for: session),
-                                isSelected: projectDetailViewModel.selectedSessionID == session.id,
-                                onSelect: {
-                                    onSelectSession(session)
+            DisclosureGroup(
+                isExpanded: $isPreviousSessionListExpanded,
+                content: {
+                    if previousSessions.isEmpty {
+                        DashboardSurface {
+                            Text("Completed sessions will appear here.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        ForEach(groupedPreviousSessions, id: \.title) { group in
+                            DisclosureGroup(
+                                isExpanded: binding(for: group.title),
+                                content: {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(group.sessions) { session in
+                                            SessionTimelineRow(
+                                                session: session,
+                                                snapshot: projectDetailViewModel.snapshot(for: session),
+                                                blocks: projectDetailViewModel.blocks(for: session),
+                                                isSelected: projectDetailViewModel.selectedSessionID == session.id,
+                                                onSelect: {
+                                                    onSelectSession(session)
+                                                }
+                                            )
+                                        }
+                                    }
+                                    .padding(.leading, 12)
+                                },
+                                label: {
+                                    Text(group.title)
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.secondary)
                                 }
                             )
+                            .padding(.leading, 12)
                         }
                     }
+                },
+            label: {
+                Text("Previous Sessions")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+            }
+        )
+        }
+    }
+
+    private func binding(for title: String) -> Binding<Bool> {
+        Binding(
+            get: { expandedDayGroups.contains(title) },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedDayGroups.insert(title)
+                } else {
+                    expandedDayGroups.remove(title)
                 }
             }
-        }
+        )
     }
 
     private var groupedPreviousSessions: [(title: String, sessions: [WorkSession])] {
