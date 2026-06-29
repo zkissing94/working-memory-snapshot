@@ -277,10 +277,6 @@ struct ActiveSessionView: View {
                 .foregroundStyle(.secondary)
 
             pausedResumeContext
-            HStack(alignment: .center) {
-                Spacer()
-                pausedBlockActionButtons
-            }
         }
     }
 
@@ -490,26 +486,31 @@ struct ActiveSessionView: View {
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
 
-            if let lastIncrement = viewModel.activeBlockIncrements.last {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(lastIncrement.title)
-                        .font(.callout.weight(.semibold))
-                    HStack(spacing: 6) {
-                        Text(lastIncrement.kind.displayName)
-                        Text("·")
-                        Text(lastIncrement.occurredAt.formatted(date: .omitted, time: .shortened))
+            HStack(alignment: .center, spacing: 12) {
+                if let lastIncrement = viewModel.activeBlockIncrements.last {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(lastIncrement.title)
+                            .font(.callout.weight(.semibold))
+                        HStack(spacing: 6) {
+                            Text(lastIncrement.kind.displayName)
+                            Text("·")
+                            Text(lastIncrement.occurredAt.formatted(date: .omitted, time: .shortened))
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Text("No manual increments captured yet. Resume from the block objective above.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            } else {
-                Text("No manual increments captured yet. Resume from the block objective above.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+
+                pausedBlockActionButtons
             }
         }
     }
-
     private var sessionInspectorDisclosure: some View {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 12) {
