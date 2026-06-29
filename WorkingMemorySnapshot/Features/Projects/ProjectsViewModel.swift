@@ -99,6 +99,48 @@ final class ProjectsViewModel: ObservableObject {
         }
     }
 
+    func deleteProject(_ project: Project) async {
+        do {
+            try await repository.deleteProject(id: project.id)
+            projects = try await repository.listProjects()
+            sidebarMetadata = try await loadSidebarMetadata(for: projects)
+
+            if case .project(let selectedProjectID) = selectedItem, selectedProjectID == project.id {
+                selectedItem = projects.isEmpty ? nil : .project(projects[0].id)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            projects = (try? await repository.listProjects()) ?? projects
+            sidebarMetadata = (try? await loadSidebarMetadata(for: projects)) ?? sidebarMetadata
+            if case .project(let selectedProjectID) = selectedItem,
+               !projects.contains(where: { $0.id == selectedProjectID }) {
+                selectedItem = projects.isEmpty ? nil : .project(projects[0].id)
+            }
+        }
+    }
+
+    func renameProject(_ project: Project, to name: String) async {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            errorMessage = "Project name cannot be empty."
+            return
+        }
+        guard trimmedName != project.name else {
+            return
+        }
+
+        do {
+            let renamedProject = try await repository.updateProjectName(id: project.id, to: trimmedName)
+            projects = try await repository.listProjects()
+            sidebarMetadata = try await loadSidebarMetadata(for: projects)
+            selectedItem = .project(renamedProject.id)
+        } catch {
+            errorMessage = error.localizedDescription
+            projects = (try? await repository.listProjects()) ?? projects
+            sidebarMetadata = (try? await loadSidebarMetadata(for: projects)) ?? sidebarMetadata
+        }
+    }
+
     func restoreProjectAccessFromPicker(for project: Project) async -> Project? {
         guard let url = ProjectFolderPicker.pickFolder(prompt: "Restore Access") else {
             return nil

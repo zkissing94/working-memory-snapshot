@@ -82,6 +82,30 @@ struct ProjectRepository {
         return project
     }
 
+    func updateProjectName(id: UUID, to name: String) async throws -> Project {
+        let now = try DateCoding.date(from: DateCoding.string(from: Date()))
+
+        let changedRows = try await database.executeReturningChanges("""
+        UPDATE projects
+        SET name = ?, updated_at = ?
+        WHERE id = ?
+        """) { statement in
+            try SQLiteValue.bind(name, to: statement, at: 1)
+            try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 2)
+            try SQLiteValue.bind(id.uuidString, to: statement, at: 3)
+        }
+
+        guard changedRows > 0 else {
+            throw ProjectRepositoryError.projectNotFound(id)
+        }
+
+        guard let project = try await project(for: id) else {
+            throw ProjectRepositoryError.projectNotFound(id)
+        }
+
+        return project
+    }
+
     func deleteProject(id: UUID) async throws {
         let changedRows = try await database.executeReturningChanges("""
         DELETE FROM projects

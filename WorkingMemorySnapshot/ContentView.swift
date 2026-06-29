@@ -17,7 +17,32 @@ struct ContentView: View {
         NavigationSplitView {
             ProjectSidebarView(
                 viewModel: projectsViewModel,
-                activity: sidebarActivity
+                activity: sidebarActivity,
+                canStartSessionForProject: { projectID in
+                    guard
+                        let project = projectsViewModel.projects.first(where: { $0.id == projectID })
+                    else {
+                        return false
+                    }
+                    return sessionViewModel.canStartSession && isReadableDirectory(at: project.rootPath)
+                },
+                canPauseSessionForProject: { projectID in
+                    guard let activeSession = sessionViewModel.activeSession else {
+                        return false
+                    }
+                    guard activeSession.projectID == projectID else {
+                        return false
+                    }
+                    return sessionViewModel.activeBlock?.status == .active
+                },
+                onStartSession: { project in
+                    sessionViewModel.beginStartSession(for: project)
+                },
+                onPauseSession: { _ in
+                    Task {
+                        await sessionViewModel.pauseCurrentBlock()
+                    }
+                }
             )
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280)
         } detail: {
@@ -111,6 +136,13 @@ struct ContentView: View {
             selectedProjectID: projectsViewModel.selectedProject?.id,
             selectedProjectAccessState: projectDetailViewModel.projectAccessState
         )
+    }
+
+    private func isReadableDirectory(at path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+            && isDirectory.boolValue
+            && FileManager.default.isReadableFile(atPath: path)
     }
 }
 

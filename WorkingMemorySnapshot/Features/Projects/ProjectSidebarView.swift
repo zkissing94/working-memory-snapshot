@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 enum ProjectSidebarActivityKind: Equatable {
@@ -110,6 +111,17 @@ struct ProjectSidebarActivity: Equatable {
 struct ProjectSidebarView: View {
     @ObservedObject var viewModel: ProjectsViewModel
     let activity: ProjectSidebarActivity?
+    let canStartSessionForProject: (Project.ID) -> Bool
+    let canPauseSessionForProject: (Project.ID) -> Bool
+    let onStartSession: (Project) -> Void
+    let onPauseSession: (Project) -> Void
+    @State private var isDeleteProjectPromptVisible = false
+    @State private var projectToDelete: Project?
+    @State private var renamingProjectID: Project.ID?
+    @State private var draftProjectName = ""
+    @State private var sidebarWidth: CGFloat = 0
+    @FocusState private var focusedRenamingProjectID: Project.ID?
+
 
     var body: some View {
         VStack(spacing: 0) {
@@ -154,19 +166,22 @@ struct ProjectSidebarView: View {
                 .padding(.vertical, 12)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .background(
+            GeometryReader { geometry in
+                Color.clear.preference(key: SidebarWidthPreferenceKey.self, value: geometry.size.width)
+            }
+        )
+        .onPreferenceChange(SidebarWidthPreferenceKey.self) { sidebarWidth = $0 }
         .navigationTitle("Projects")
     }
 
     private var brandHeader: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color.accentColor.opacity(0.12))
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
-            }
-            .frame(width: 38, height: 38)
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 40, height: 40)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Working Memory")
@@ -188,31 +203,82 @@ struct ProjectSidebarView: View {
         HStack {
             sidebarSection("Projects")
             Spacer(minLength: 8)
-            Button {
-                Task {
-                    await viewModel.addProjectFromPicker()
-                }
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 13, weight: .semibold))
-                    .frame(width: 26, height: 26)
-                    .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            HStack(spacing: 2) {
+                deleteButton
+                addProjectButton
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.accentColor)
-            .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
-            }
-            .disabled(viewModel.isLoading)
-            .help("Add Project")
-            .accessibilityLabel("Add Project")
-            .accessibilityHint("Choose a local project folder.")
+            .frame(width: max(54, sidebarWidth * 0.25), alignment: .trailing)
         }
+        .alert("Delete Project", isPresented: $isDeleteProjectPromptVisible) {
+            Button("Delete", role: .destructive) {
+                guard let projectToDelete else {
+                    return
+                }
+                Task {
+                    await viewModel.deleteProject(projectToDelete)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let projectToDelete {
+                Text("Delete \"\(projectToDelete.name)\" and all sessions, snapshots, and history for this project?")
+            } else {
+                Text("Delete this project?")
+            }
+        }
+    }
+
+    private var addProjectButton: some View {
+        Button {
+            Task {
+                await viewModel.addProjectFromPicker()
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 26, height: 26)
+                .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.accentColor)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+        }
+        .disabled(viewModel.isLoading)
+        .help("Add Project")
+        .accessibilityLabel("Add Project")
+        .accessibilityHint("Choose a local project folder.")
+    }
+
+    private var deleteButton: some View {
+        Button {
+            projectToDelete = viewModel.selectedProject
+            isDeleteProjectPromptVisible = projectToDelete != nil
+        } label: {
+            Image(systemName: "minus")
+                .font(.system(size: 13, weight: .semibold))
+                .frame(width: 26, height: 26)
+                .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.red)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
+        }
+        .disabled(viewModel.selectedProject == nil || viewModel.isLoading)
+        .help("Delete Project")
+        .accessibilityLabel("Delete Project")
+        .accessibilityHint("Delete the selected project.")
     }
 
     private var settingsButton: some View {
@@ -249,14 +315,69 @@ struct ProjectSidebarView: View {
             .tracking(0.8)
     }
 
+    @ViewBuilder
     private func projectRowButton(
         for project: Project,
         activity: ProjectSidebarActivity?,
         isSelected: Bool
     ) -> some View {
-        Button {
-            viewModel.selectProject(id: project.id)
-        } label: {
+        let isRenameLocked = renamingProjectID != nil && renamingProjectID != project.id
+
+        if renamingProjectID == project.id {
+            HStack(alignment: .top, spacing: 10) {
+                SidebarIcon(
+                    systemName: activity?.kind.iconSystemName ?? "folder",
+                    tint: activity?.kind.tint ?? Color(nsColor: .secondaryLabelColor),
+                    isSelected: isSelected
+                )
+
+                VStack(alignment: .leading, spacing: 5) {
+                    TextField("Project name", text: $draftProjectName, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(isSelected ? Color.accentColor : Color(nsColor: .labelColor))
+                        .lineLimit(1)
+                        .focused($focusedRenamingProjectID, equals: project.id)
+                        .onSubmit {
+                            commitRename(for: project)
+                        }
+                        .onExitCommand {
+                            cancelRename()
+                        }
+
+                    if let activity {
+                        Text(activity.message)
+                            .font(.caption)
+                            .foregroundStyle(activity.kind.textStyle)
+                            .lineLimit(1)
+                    } else {
+                        Text(project.rootPath)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+
+                        if let metadataText = metadataText(for: project.id) {
+                            Text(metadataText)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(rowBackground(isSelected: isSelected))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(rowStroke(isSelected: isSelected), lineWidth: 1)
+            }
+            .onAppear {
+                focusedRenamingProjectID = project.id
+            }
+            .contentShape(Rectangle())
+        } else {
             ProjectSidebarRow(
                 project: project,
                 metadata: viewModel.sidebarMetadata[project.id],
@@ -264,10 +385,117 @@ struct ProjectSidebarView: View {
                 isSelected: isSelected
             )
             .contentShape(Rectangle())
+            .onTapGesture {
+                selectProject(project)
+            }
+            .contextMenu {
+                Button {
+                    selectProject(project)
+                    beginRename(project)
+                } label: {
+                    Label("Rename", systemImage: "pencil")
+                }
+                .disabled(viewModel.isLoading || isRenameLocked)
+
+                Button(role: .destructive) {
+                    requestDelete(project)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .disabled(viewModel.isLoading || isRenameLocked)
+
+                Divider()
+
+                Button {
+                    selectProject(project)
+                    onStartSession(project)
+                } label: {
+                    Label("Start Session", systemImage: "play.fill")
+                }
+                .disabled(viewModel.isLoading || isRenameLocked || !canStartSessionForProject(project.id))
+
+                Button {
+                    selectProject(project)
+                    onPauseSession(project)
+                } label: {
+                    Label("Pause Session", systemImage: "pause.fill")
+                }
+                .disabled(viewModel.isLoading || isRenameLocked || !canPauseSessionForProject(project.id))
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(project.name)
-        .accessibilityHint(activity?.message ?? "Open this project.")
+    }
+
+    private func metadataText(for projectID: Project.ID) -> String? {
+        guard let metadata = viewModel.sidebarMetadata[projectID] else {
+            return nil
+        }
+
+        if let latest = metadata.latestCompletedSessionEndedAt {
+            return "Last: \(latest.formatted(date: .abbreviated, time: .shortened))"
+        }
+
+        return "\(metadata.sessionCount) sessions"
+    }
+
+    private func beginRename(_ project: Project) {
+        guard renamingProjectID == nil || renamingProjectID == project.id else {
+            return
+        }
+
+        selectProject(project)
+        draftProjectName = project.name
+        renamingProjectID = project.id
+    }
+
+    private func requestDelete(_ project: Project) {
+        guard renamingProjectID == nil || renamingProjectID == project.id else {
+            return
+        }
+
+        selectProject(project)
+        projectToDelete = project
+        isDeleteProjectPromptVisible = projectToDelete != nil
+    }
+
+    private func commitRename(for project: Project) {
+        let updatedName = draftProjectName
+        renamingProjectID = nil
+        focusedRenamingProjectID = nil
+        Task {
+            await viewModel.renameProject(project, to: updatedName)
+        }
+    }
+
+    private func cancelRename() {
+        renamingProjectID = nil
+        focusedRenamingProjectID = nil
+    }
+
+    private func selectProject(_ project: Project) {
+        if let renamingProjectID, renamingProjectID != project.id {
+            return
+        }
+
+        viewModel.selectProject(id: project.id)
+    }
+
+    private func rowBackground(isSelected: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(isSelected ? Color.accentColor.opacity(0.10) : Color(nsColor: .controlBackgroundColor))
+    }
+
+    private func rowStroke(isSelected: Bool) -> Color {
+        isSelected
+            ? Color.accentColor.opacity(0.32)
+            : Color(nsColor: .separatorColor).opacity(0.35)
+    }
+}
+
+private struct SidebarWidthPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
@@ -303,7 +531,10 @@ private struct ProjectSidebarRow: View {
                             .foregroundStyle(.secondary)
                             .help("Resume Brief available")
                             .accessibilityLabel("Resume Brief available")
+                    } else {
+                        Spacer(minLength: 4)
                     }
+
                 }
 
                 if let activity {

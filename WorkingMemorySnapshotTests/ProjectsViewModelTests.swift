@@ -59,6 +59,52 @@ final class ProjectsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.errorMessage, "That project is already in the list.")
     }
 
+    func testRenameProjectKeepsProjectReferenceIntact() async throws {
+        let harness = try makeHarness()
+        let viewModel = ProjectsViewModel(
+            repository: harness.repository,
+            sessionRepository: harness.sessionRepository,
+            snapshotRepository: harness.snapshotRepository,
+            migrator: harness.migrator
+        )
+        let folder = try makeTemporaryDirectory(named: "RenameProject")
+
+        await viewModel.loadProjects()
+        await viewModel.addProject(at: folder)
+        let originalProject = try XCTUnwrap(viewModel.selectedProject)
+        let originalID = originalProject.id
+        let originalRoot = originalProject.rootPath
+
+        await viewModel.renameProject(originalProject, to: "Renamed Project")
+
+        let renamedProject = try XCTUnwrap(viewModel.selectedProject)
+        XCTAssertEqual(renamedProject.id, originalID)
+        XCTAssertEqual(renamedProject.name, "Renamed Project")
+        XCTAssertEqual(renamedProject.rootPath, originalRoot)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testRenameProjectRejectsBlankName() async throws {
+        let harness = try makeHarness()
+        let viewModel = ProjectsViewModel(
+            repository: harness.repository,
+            sessionRepository: harness.sessionRepository,
+            snapshotRepository: harness.snapshotRepository,
+            migrator: harness.migrator
+        )
+        let folder = try makeTemporaryDirectory(named: "RejectRenameProject")
+
+        await viewModel.loadProjects()
+        await viewModel.addProject(at: folder)
+        let project = try XCTUnwrap(viewModel.selectedProject)
+
+        await viewModel.renameProject(project, to: "   ")
+
+        let currentProject = try XCTUnwrap(viewModel.selectedProject)
+        XCTAssertEqual(currentProject.name, project.name)
+        XCTAssertEqual(viewModel.errorMessage, "Project name cannot be empty.")
+    }
+
     func testProjectSidebarActivityDescribesSessionStates() {
         let projectID = UUID()
         let session = makeWorkSession(projectID: projectID)
