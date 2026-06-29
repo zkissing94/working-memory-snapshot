@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct StartSessionView: View {
@@ -186,10 +187,12 @@ struct ActiveSessionView: View {
                     Button {
                         isShowingBlockCompletionInput = true
                     } label: {
-                        Label("Complete Block", systemImage: "checkmark.circle")
+                        Label("Complete Block", systemImage: "checkmark")
                             .labelStyle(.iconOnly)
+                            .font(.title3)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.green)
                     .disabled(viewModel.isWorking || isShowingBlockCompletionInput)
                     .help("Complete Block")
                     .accessibilityLabel("Complete Block")
@@ -201,24 +204,14 @@ struct ActiveSessionView: View {
                     } label: {
                         Label("Pause", systemImage: "pause.fill")
                             .labelStyle(.iconOnly)
+                            .font(.title3)
                     }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.orange)
                     .disabled(viewModel.isWorking)
                     .help("Pause")
                     .accessibilityLabel("Pause")
 
-                    Button {
-                        let summary = isShowingBlockCompletionInput ? blockSummary : ""
-                        Task {
-                            await viewModel.completeCurrentBlock(summary: summary)
-                            resetBlockCompletionInput()
-                        }
-                    } label: {
-                        Label("Take Break", systemImage: "cup.and.saucer")
-                            .labelStyle(.iconOnly)
-                    }
-                    .disabled(viewModel.isWorking)
-                    .help("Take Break")
-                    .accessibilityLabel("Take Break")
                 }
             }
 
@@ -292,7 +285,8 @@ struct ActiveSessionView: View {
                         Label("Resume", systemImage: "play.fill")
                             .labelStyle(.iconOnly)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.blue)
                     .disabled(viewModel.isWorking)
                     .help("Resume")
                     .accessibilityLabel("Resume")
@@ -302,9 +296,11 @@ struct ActiveSessionView: View {
                             await viewModel.completeCurrentBlock()
                         }
                     } label: {
-                        Label("Complete Block", systemImage: "checkmark.circle")
+                        Label("Complete Block", systemImage: "checkmark")
                             .labelStyle(.iconOnly)
+                            .font(.title3)
                     }
+                    .buttonStyle(.plain)
                     .foregroundStyle(.green)
                     .disabled(viewModel.isWorking)
                     .help("Complete Block")
@@ -452,9 +448,10 @@ struct ActiveSessionView: View {
 
                 TextField("Add a note, decision, or blocker", text: $incrementTitle)
                     .textFieldStyle(.roundedBorder)
-                TextField("Detail (optional)", text: $incrementDetail, axis: .vertical)
-                    .lineLimit(2, reservesSpace: true)
-                    .textFieldStyle(.roundedBorder)
+                RichTextField(
+                    "Detail (optional)",
+                    text: $incrementDetail
+                )
 
                 Button {
                     let kind = incrementKind
@@ -603,6 +600,214 @@ struct ActiveSessionView: View {
     private func resetBlockCompletionInput() {
         blockSummary = ""
         isShowingBlockCompletionInput = false
+    }
+}
+
+private struct RichTextField: View {
+    let placeholder: String
+    @Binding var text: String
+    @StateObject private var formatter = RichTextFieldFormatter()
+
+    init(_ placeholder: String, text: Binding<String>) {
+        self.placeholder = placeholder
+        self._text = text
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Button {
+                    formatter.toggleBold()
+                } label: {
+                    Image(systemName: "bold")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary)
+                .help("Bold")
+
+                Button {
+                    formatter.insertBullet()
+                } label: {
+                    Image(systemName: "list.bullet")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.primary)
+                .help("Insert bullets")
+
+                Spacer()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.secondary.opacity(0.15))
+            }
+
+            ZStack(alignment: .topLeading) {
+                RichTextFieldRepresentable(text: $text, formatter: formatter)
+                    .frame(minHeight: 76)
+                    .font(.body)
+
+                if text.isEmpty {
+                    Text(placeholder)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 8)
+                        .allowsHitTesting(false)
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(Color.secondary.opacity(0.24))
+            }
+        }
+    }
+}
+
+private final class RichTextFieldFormatter: ObservableObject {
+    fileprivate weak var textView: NSTextView?
+
+    func toggleBold() {
+        guard let textView else {
+            return
+        }
+
+        let selection = textView.selectedRange()
+        let currentText = textView.string as NSString
+        let selectedText = currentText.substring(with: selection)
+        let replacement: String
+        let updatedSelection: NSRange
+
+        if selectedText.hasPrefix("**"), selectedText.hasSuffix("**"), selectedText.count >= 4 {
+            replacement = String(selectedText.dropFirst(2).dropLast(2))
+            updatedSelection = NSRange(location: selection.location, length: (replacement as NSString).length)
+        } else if selection.length == 0 {
+            replacement = "****"
+            updatedSelection = NSRange(location: selection.location + 2, length: 0)
+        } else {
+            replacement = "**\(selectedText)**"
+            updatedSelection = NSRange(location: selection.location + 2, length: selection.length)
+        }
+
+        textView.string = currentText.replacingCharacters(in: selection, with: replacement)
+        textView.setSelectedRange(updatedSelection)
+        textView.didChangeText()
+    }
+
+    func insertBullet() {
+        guard let textView else {
+            return
+        }
+
+        let storage = textView.textStorage ?? NSTextStorage(string: textView.string)
+        let fullString = storage.string as NSString
+        let selection = textView.selectedRange()
+        let lineRange = fullString.lineRange(for: selection)
+        let selectedText = fullString.substring(with: lineRange)
+        let lines = selectedText.split(separator: "\n", omittingEmptySubsequences: false)
+        var transformedLines: [String] = []
+        transformedLines.reserveCapacity(lines.count)
+
+        var didChangeSelection = false
+        var insertionOffset = 0
+
+        for line in lines {
+            if line.hasPrefix("• ") || line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                transformedLines.append(String(line))
+            } else {
+                transformedLines.append("• " + line)
+                if lineRange.location < selection.location {
+                    insertionOffset += 2
+                }
+                didChangeSelection = true
+            }
+            transformedLines.append("")
+        }
+        if !transformedLines.isEmpty {
+            transformedLines.removeLast()
+        }
+
+        let replacedText = transformedLines.joined(separator: "\n")
+        guard replacedText != selectedText else {
+            return
+        }
+
+        storage.replaceCharacters(in: lineRange, with: replacedText)
+        textView.textStorage?.setAttributedString(storage)
+        textView.didChangeText()
+
+        if didChangeSelection {
+            let newLocation = max(0, min(storage.length, selection.location + insertionOffset))
+            textView.setSelectedRange(NSRange(location: newLocation, length: 0))
+        }
+    }
+}
+
+private struct RichTextFieldRepresentable: NSViewRepresentable {
+    @Binding var text: String
+    let formatter: RichTextFieldFormatter
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let textView = NSTextView()
+        textView.delegate = context.coordinator
+        textView.isRichText = true
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.allowsUndo = true
+        textView.isAutomaticTextCompletionEnabled = true
+        textView.font = NSFont.preferredFont(forTextStyle: .body)
+        textView.drawsBackground = false
+        textView.backgroundColor = .clear
+        textView.textContainerInset = NSSize(width: 6, height: 6)
+        textView.string = text
+
+        let scrollView = NSScrollView()
+        scrollView.documentView = textView
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.borderType = .noBorder
+        scrollView.autohidesScrollers = true
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+
+        formatter.textView = textView
+
+        return scrollView
+    }
+
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        guard let textView = nsView.documentView as? NSTextView else {
+            return
+        }
+
+        if textView.string != text {
+            textView.string = text
+        }
+        formatter.textView = textView
+    }
+
+    class Coordinator: NSObject, NSTextViewDelegate {
+        var parent: RichTextFieldRepresentable
+
+        init(_ parent: RichTextFieldRepresentable) {
+            self.parent = parent
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else {
+                return
+            }
+            if parent.text != textView.string {
+                parent.text = textView.string
+            }
+        }
     }
 }
 
