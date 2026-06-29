@@ -172,16 +172,6 @@ struct ActiveSessionView: View {
                     .tint(.green)
             }
 
-            HStack(alignment: .center, spacing: 12) {
-                HStack(spacing: 8) {
-                    Text("\(DurationFormatter.shortString(from: block.elapsedSeconds())) elapsed")
-                    Text("·")
-                    Text("\(DurationFormatter.shortString(from: block.plannedDurationSeconds)) total")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-
             if isShowingBlockCompletionInput {
                 blockCompletionInput
             }
