@@ -614,56 +614,59 @@ private struct RichTextField: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Button {
-                    formatter.toggleBold()
-                } label: {
-                    Image(systemName: "bold")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.primary)
-                .help("Bold")
-
-                Button {
-                    formatter.insertBullet()
-                } label: {
-                    Image(systemName: "list.bullet")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.primary)
-                .help("Insert bullets")
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(placeholder)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.black)
 
                 Spacer()
+
+                HStack(spacing: 8) {
+                    Button {
+                        formatter.toggleBold()
+                    } label: {
+                        Image(systemName: "bold")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.primary)
+                    .help("Bold")
+
+                    Button {
+                        formatter.toggleItalic()
+                    } label: {
+                        Image(systemName: "italic")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.primary)
+                    .help("Italic")
+
+                    Button {
+                        formatter.insertBullet()
+                    } label: {
+                        Image(systemName: "list.bullet")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.primary)
+                    .help("Insert bullets")
+                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.secondary.opacity(0.15))
-            }
 
-            ZStack(alignment: .topLeading) {
-                RichTextFieldRepresentable(text: $text, formatter: formatter)
-                    .frame(minHeight: 76)
-                    .font(.body)
+            Divider()
+                .padding(.horizontal, 8)
+                .foregroundStyle(.secondary.opacity(0.16))
 
-                if text.isEmpty {
-                    Text(placeholder)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 8)
-                        .allowsHitTesting(false)
-                }
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(Color.secondary.opacity(0.24))
-            }
+            RichTextFieldRepresentable(text: $text, formatter: formatter)
+                .frame(minHeight: 76)
+                .font(.body)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 6)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.secondary.opacity(0.24))
         }
     }
 }
@@ -672,30 +675,50 @@ private final class RichTextFieldFormatter: ObservableObject {
     fileprivate weak var textView: NSTextView?
 
     func toggleBold() {
+        toggleFontTrait(.boldFontMask)
+    }
+
+    func toggleItalic() {
+        toggleFontTrait(.italicFontMask)
+    }
+
+    private func toggleFontTrait(_ trait: NSFontTraitMask) {
         guard let textView else {
             return
         }
 
         let selection = textView.selectedRange()
-        let currentText = textView.string as NSString
-        let selectedText = currentText.substring(with: selection)
-        let replacement: String
-        let updatedSelection: NSRange
-
-        if selectedText.hasPrefix("**"), selectedText.hasSuffix("**"), selectedText.count >= 4 {
-            replacement = String(selectedText.dropFirst(2).dropLast(2))
-            updatedSelection = NSRange(location: selection.location, length: (replacement as NSString).length)
-        } else if selection.length == 0 {
-            replacement = "****"
-            updatedSelection = NSRange(location: selection.location + 2, length: 0)
-        } else {
-            replacement = "**\(selectedText)**"
-            updatedSelection = NSRange(location: selection.location + 2, length: selection.length)
+        if selection.length == 0 {
+            let baseFont = (textView.typingAttributes[.font] as? NSFont)
+                ?? textView.font
+                ?? NSFont.preferredFont(forTextStyle: .body)
+            textView.typingAttributes[.font] = toggledFont(from: baseFont, trait: trait)
+            return
         }
 
-        textView.string = currentText.replacingCharacters(in: selection, with: replacement)
-        textView.setSelectedRange(updatedSelection)
+        guard let textStorage = textView.textStorage else {
+            return
+        }
+
+        textStorage.beginEditing()
+        textStorage.enumerateAttributes(in: selection, options: []) { attributes, range, _ in
+            let currentFont = (attributes[.font] as? NSFont)
+                ?? textView.font
+                ?? NSFont.preferredFont(forTextStyle: .body)
+            let updatedFont = toggledFont(from: currentFont, trait: trait)
+            textStorage.addAttribute(.font, value: updatedFont, range: range)
+        }
+        textStorage.endEditing()
         textView.didChangeText()
+        textView.setSelectedRange(selection)
+    }
+
+    private func toggledFont(from font: NSFont, trait: NSFontTraitMask) -> NSFont {
+        let fontManager = NSFontManager.shared
+        if fontManager.traits(of: font).contains(trait) {
+            return fontManager.convert(font, toNotHaveTrait: trait)
+        }
+        return fontManager.convert(font, toHaveTrait: trait)
     }
 
     func insertBullet() {
@@ -707,6 +730,28 @@ private final class RichTextFieldFormatter: ObservableObject {
         let fullString = storage.string as NSString
         let selection = textView.selectedRange()
         let lineRange = fullString.lineRange(for: selection)
+
+        if selection.length == 0 {
+            let lineTextRange = lineRangeWithoutLineBreak(from: lineRange, in: fullString)
+            let lineText = fullString.substring(with: lineTextRange)
+
+            if lineText.hasPrefix("• ") {
+                return
+            }
+
+            let leadingWhitespace = String(lineText.prefix(while: { $0 == " " || $0 == "\t" }))
+            let remainingText = String(lineText.dropFirst(leadingWhitespace.count))
+            let replacement = "\(leadingWhitespace)• \(remainingText)"
+
+            storage.replaceCharacters(in: lineTextRange, with: replacement)
+            textView.textStorage?.setAttributedString(storage)
+            textView.didChangeText()
+
+            let newCursorLocation = lineTextRange.location + (leadingWhitespace as NSString).length + 2
+            textView.setSelectedRange(NSRange(location: newCursorLocation, length: 0))
+            return
+        }
+
         let selectedText = fullString.substring(with: lineRange)
         let lines = selectedText.split(separator: "\n", omittingEmptySubsequences: false)
         var transformedLines: [String] = []
@@ -744,6 +789,22 @@ private final class RichTextFieldFormatter: ObservableObject {
             let newLocation = max(0, min(storage.length, selection.location + insertionOffset))
             textView.setSelectedRange(NSRange(location: newLocation, length: 0))
         }
+    }
+
+    private func lineRangeWithoutLineBreak(from lineRange: NSRange, in fullString: NSString) -> NSRange {
+        var end = lineRange.location + lineRange.length
+        if end > lineRange.location && end <= fullString.length {
+            let lastCharacterIndex = end - 1
+            let lastCharacter = fullString.character(at: lastCharacterIndex)
+            if lastCharacter == 10 {
+                end -= 1
+                if end > lineRange.location && fullString.character(at: end - 1) == 13 {
+                    end -= 1
+                }
+            }
+        }
+
+        return NSRange(location: lineRange.location, length: max(0, end - lineRange.location))
     }
 }
 
@@ -790,6 +851,7 @@ private struct RichTextFieldRepresentable: NSViewRepresentable {
         if textView.string != text {
             textView.string = text
         }
+
         formatter.textView = textView
     }
 
@@ -798,6 +860,65 @@ private struct RichTextFieldRepresentable: NSViewRepresentable {
 
         init(_ parent: RichTextFieldRepresentable) {
             self.parent = parent
+        }
+
+        func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString string: String?) -> Bool {
+            guard let string, string == "\n" || string == "\r" else {
+                return true
+            }
+
+            guard affectedCharRange.length == 0 else {
+                return true
+            }
+
+            let currentText = textView.string as NSString
+            let cursorLocation = affectedCharRange.location
+            guard cursorLocation <= currentText.length else {
+                return true
+            }
+
+            let lineRange = currentText.lineRange(for: NSRange(location: cursorLocation, length: 0))
+            let lineText = currentText.substring(with: NSRange(location: lineRange.location, length: cursorLocation - lineRange.location))
+            guard let prefix = bulletPrefix(from: lineText) else {
+                return true
+            }
+
+            let contentAfterPrefix = bulletContent(after: prefix, in: lineText)
+            guard !contentAfterPrefix.trimmingCharacters(in: .whitespaces).isEmpty else {
+                return true
+            }
+
+            let replacement = string + prefix
+            textView.textStorage?.replaceCharacters(in: affectedCharRange, with: replacement)
+            if let text = textView.textStorage?.string {
+                parent.text = text
+            }
+            textView.didChangeText()
+            let newCursor = cursorLocation + (replacement as NSString).length
+            textView.setSelectedRange(NSRange(location: newCursor, length: 0))
+            return false
+        }
+
+        private func bulletPrefix(from line: String) -> String? {
+            guard !line.isEmpty else {
+                return nil
+            }
+
+            let leadingWhitespace = line.prefix { $0 == " " || $0 == "\t" }
+            let remainderStart = line.dropFirst(leadingWhitespace.count)
+            guard remainderStart.hasPrefix("• ") else {
+                return nil
+            }
+
+            return String(leadingWhitespace) + "• "
+        }
+
+        private func bulletContent(after prefix: String, in line: String) -> String {
+            let contentStart = line.index(line.startIndex, offsetBy: prefix.count)
+            if contentStart > line.endIndex {
+                return ""
+            }
+            return String(line[contentStart..<line.endIndex])
         }
 
         func textDidChange(_ notification: Notification) {
