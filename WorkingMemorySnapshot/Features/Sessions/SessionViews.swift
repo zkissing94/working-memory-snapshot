@@ -77,6 +77,7 @@ struct ActiveSessionView: View {
     @State private var incrementKind: WorkIncrementKind = .note
     @State private var incrementTitle = ""
     @State private var incrementDetail = ""
+    @State private var isWorkIncrementsExpanded = true
 
     var body: some View {
         ScrollView {
@@ -220,8 +221,7 @@ struct ActiveSessionView: View {
             }
 
             Divider()
-
-            workIncrementsContent
+            workIncrementsContent()
         }
     }
 
@@ -408,15 +408,12 @@ struct ActiveSessionView: View {
 
     private var workIncrementsSection: some View {
         DashboardSurface {
-            workIncrementsContent
+            workIncrementsContent()
         }
     }
 
-    private var workIncrementsContent: some View {
+    private func workIncrementsContent() -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Work Increments")
-                .font(.headline)
-
             if viewModel.activeBlock == nil {
                 Text("Start a focus block to capture notes, decisions, or blockers.")
                     .font(.callout)
@@ -426,13 +423,18 @@ struct ActiveSessionView: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(viewModel.activeBlockIncrements) { increment in
-                        IncrementRow(increment: increment)
-                        if increment.id != viewModel.activeBlockIncrements.last?.id {
-                            Divider()
+                DisclosureGroup(isExpanded: $isWorkIncrementsExpanded) {
+                    VStack(spacing: 0) {
+                        ForEach(viewModel.activeBlockIncrements) { increment in
+                            IncrementRow(increment: increment)
+                            if increment.id != viewModel.activeBlockIncrements.last?.id {
+                                Divider()
+                            }
                         }
                     }
+                } label: {
+                    Text("Work Increments")
+                        .font(.headline)
                 }
             }
 
@@ -1271,6 +1273,7 @@ struct HistoricalSessionDetailView: View {
 private struct HistoricalBlockRow: View {
     let block: PomodoroBlock
     let increments: [WorkIncrement]
+    @State private var isIncrementsExpanded = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -1300,13 +1303,18 @@ private struct HistoricalBlockRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(increments) { increment in
-                        IncrementRow(increment: increment)
-                        if increment.id != increments.last?.id {
-                            Divider()
+                DisclosureGroup(isExpanded: $isIncrementsExpanded) {
+                    VStack(spacing: 0) {
+                        ForEach(increments) { increment in
+                            IncrementRow(increment: increment)
+                            if increment.id != increments.last?.id {
+                                Divider()
+                            }
                         }
                     }
+                } label: {
+                    Text("Work Increments")
+                        .font(.headline)
                 }
             }
         }
@@ -1347,8 +1355,39 @@ private struct ObservedContextFact: View {
 
 private struct IncrementRow: View {
     let increment: WorkIncrement
+    @State private var isExpanded = false
 
     var body: some View {
+        if let detail = increment.detail, !detail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            DisclosureGroup(isExpanded: $isExpanded) {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                incrementHeader
+            }
+            .animation(.default, value: isExpanded)
+            .padding(.vertical, 8)
+        } else {
+            incrementHeader
+                .padding(.vertical, 8)
+        }
+    }
+
+    private var kindColor: Color {
+        switch increment.kind {
+        case .note:
+            .blue
+        case .decision:
+            .green
+        case .blocker:
+            .orange
+        }
+    }
+
+    private var incrementHeader: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(increment.occurredAt.formatted(date: .omitted, time: .shortened))
                 .font(.caption)
@@ -1367,25 +1406,8 @@ private struct IncrementRow: View {
                         .padding(.vertical, 2)
                         .background(Capsule().fill(kindColor.opacity(0.12)))
                 }
-                if let detail = increment.detail {
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
             }
             Spacer()
-        }
-        .padding(.vertical, 8)
-    }
-
-    private var kindColor: Color {
-        switch increment.kind {
-        case .note:
-            .blue
-        case .decision:
-            .green
-        case .blocker:
-            .orange
         }
     }
 }
