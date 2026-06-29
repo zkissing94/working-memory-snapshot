@@ -273,10 +273,53 @@ struct ActiveSessionView: View {
 
     private func pausedBlockContent(_ block: PomodoroBlock) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("Paused checkpoint", systemImage: "pause.circle")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.orange)
-                .textCase(.uppercase)
+            HStack(alignment: .center) {
+                Label("Paused checkpoint", systemImage: "pause.circle")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .textCase(.uppercase)
+
+                Spacer()
+
+                HStack(spacing: 8) {
+                    Button {
+                        Task {
+                            await viewModel.resumeCurrentBlock()
+                        }
+                    } label: {
+                        Label("Resume", systemImage: "play.fill")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.isWorking)
+                    .help("Resume")
+                    .accessibilityLabel("Resume")
+
+                    Button {
+                        Task {
+                            await viewModel.completeCurrentBlock()
+                        }
+                    } label: {
+                        Label("Complete Block", systemImage: "checkmark.circle")
+                            .labelStyle(.iconOnly)
+                    }
+                    .disabled(viewModel.isWorking)
+                    .help("Complete Block")
+                    .accessibilityLabel("Complete Block")
+
+                    Button(role: .destructive) {
+                        viewModel.beginEndingActiveSession()
+                    } label: {
+                        Label("End Session", systemImage: "stop")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isWorking)
+                    .help("End Session")
+                    .accessibilityLabel("End Session")
+                    .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
+                }
+            }
 
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 7) {
@@ -324,47 +367,6 @@ struct ActiveSessionView: View {
                 .foregroundStyle(.secondary)
 
             pausedResumeContext
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Capture notes")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextField("What changed during this block?", text: $blockSummary, axis: .vertical)
-                    .lineLimit(2, reservesSpace: true)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            HStack(spacing: 12) {
-                Button {
-                    Task {
-                        await viewModel.resumeCurrentBlock()
-                    }
-                } label: {
-                    Label("Resume", systemImage: "play.fill")
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.isWorking)
-
-                Button {
-                    let summary = blockSummary
-                    Task {
-                        await viewModel.completeCurrentBlock(summary: summary)
-                        blockSummary = ""
-                    }
-                } label: {
-                    Label("Complete Block", systemImage: "checkmark.circle")
-                }
-                .disabled(viewModel.isWorking)
-
-                Button(role: .destructive) {
-                    viewModel.beginEndingActiveSession()
-                } label: {
-                    Label("End Session", systemImage: "stop")
-                }
-                .buttonStyle(.plain)
-                .disabled(viewModel.isWorking)
-                .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
-            }
         }
     }
 
