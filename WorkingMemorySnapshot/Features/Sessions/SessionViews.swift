@@ -229,52 +229,6 @@ struct ActiveSessionView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
                     .textCase(.uppercase)
-
-                Spacer()
-
-                HStack(spacing: 8) {
-                    Button {
-                        Task {
-                            await viewModel.resumeCurrentBlock()
-                        }
-                    } label: {
-                        Label("Resume", systemImage: "play.fill")
-                            .labelStyle(.iconOnly)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.blue)
-                    .disabled(viewModel.isWorking)
-                    .help("Resume Focus Block")
-                    .accessibilityLabel("Resume Focus Block")
-
-                    Button {
-                        Task {
-                            await viewModel.completeCurrentBlock()
-                        }
-                    } label: {
-                        Label("Complete Block", systemImage: "checkmark")
-                            .labelStyle(.iconOnly)
-                            .font(.title3)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.green)
-                    .disabled(viewModel.isWorking)
-                    .help("Complete Focus Block")
-                    .accessibilityLabel("Complete Block")
-
-                    Button(role: .destructive) {
-                        viewModel.beginEndingActiveSession()
-                    } label: {
-                        Label("End Session", systemImage: "xmark")
-                            .labelStyle(.iconOnly)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.red)
-                    .disabled(viewModel.isWorking)
-                    .help("Complete Session")
-                    .accessibilityLabel("Complete Session")
-                    .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
-                }
             }
 
             HStack(alignment: .top, spacing: 16) {
@@ -323,6 +277,56 @@ struct ActiveSessionView: View {
                 .foregroundStyle(.secondary)
 
             pausedResumeContext
+            HStack(alignment: .center) {
+                Spacer()
+                pausedBlockActionButtons
+            }
+        }
+    }
+
+    private var pausedBlockActionButtons: some View {
+        HStack(spacing: 8) {
+            Button {
+                Task {
+                    await viewModel.resumeCurrentBlock()
+                }
+            } label: {
+                Label("Resume Focus Block", systemImage: "play.fill")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.blue)
+            .disabled(viewModel.isWorking)
+            .help("Resume Focus Block")
+            .accessibilityLabel("Resume Focus Block")
+
+            Button {
+                Task {
+                    await viewModel.completeCurrentBlock()
+                }
+            } label: {
+                Label("Complete Focus Block", systemImage: "checkmark")
+                    .labelStyle(.iconOnly)
+                    .font(.title3)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.green)
+            .disabled(viewModel.isWorking)
+            .help("Complete Focus Block")
+            .accessibilityLabel("Complete Focus Block")
+
+            Button(role: .destructive) {
+                viewModel.beginEndingActiveSession()
+            } label: {
+                Label("Complete Session", systemImage: "xmark")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.red)
+            .disabled(viewModel.isWorking)
+            .help("Complete Session")
+            .accessibilityLabel("Complete Session")
+            .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
         }
     }
 
@@ -443,7 +447,7 @@ struct ActiveSessionView: View {
                     .foregroundStyle(.green)
                     .disabled(viewModel.activeBlock == nil || viewModel.isWorking || isShowingBlockCompletionInput)
                     .help("Complete Focus Block")
-                    .accessibilityLabel("Complete Block")
+                    .accessibilityLabel("Complete Focus Block")
 
                     Button {
                         Task {
@@ -458,7 +462,7 @@ struct ActiveSessionView: View {
                     .foregroundStyle(.orange)
                     .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
                     .help("Pause Block")
-                    .accessibilityLabel("Pause")
+                    .accessibilityLabel("Pause Block")
 
                     Button(role: .destructive) {
                         viewModel.beginEndingActiveSession()
@@ -470,7 +474,7 @@ struct ActiveSessionView: View {
                     .foregroundStyle(.red)
                     .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
                     .help("Complete Session")
-                    .accessibilityLabel("End Session")
+                    .accessibilityLabel("Complete Session")
                     .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
                 }
             }
