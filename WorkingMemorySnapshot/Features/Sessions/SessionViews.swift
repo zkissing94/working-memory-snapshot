@@ -432,29 +432,22 @@ struct EndSessionView: View {
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 14)], spacing: 14) {
-                DashboardSurface {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Block capture points")
-                            .font(.headline)
-                        HStack(spacing: 8) {
-                            MetricPill(title: "Blocks", value: "\(viewModel.sessionBlocks.count)")
-                            MetricPill(title: "Completed", value: "\(completedBlockCount)")
-                        }
-                        Text("Block summaries and manual increments are included below the brain dump in the prompt digest.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                endSessionStatCard("Block capture points") {
+                    HStack(spacing: 8) {
+                        MetricPill(title: "Blocks", value: "\(viewModel.sessionBlocks.count)")
+                        MetricPill(title: "Completed", value: "\(completedBlockCount)")
                     }
+                    Text("Block summaries and manual increments are included below the brain dump in the prompt digest.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
-                DashboardSurface {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Observed context")
-                            .font(.headline)
-                        Text(viewModel.observationSummary.displayText)
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
+                endSessionStatCard("Observed context") {
+                    Text(viewModel.observationSummary.displayText)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .lineLimit(6)
                 }
             }
 
@@ -497,6 +490,21 @@ struct EndSessionView: View {
 
     private var completedBlockCount: Int {
         viewModel.sessionBlocks.filter { $0.status == .completed }.count
+    }
+
+    @ViewBuilder
+    private func endSessionStatCard<T: View>(
+        _ title: String,
+        @ViewBuilder content: () -> T
+    ) -> some View {
+        DashboardSurface {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.headline)
+                content()
+            }
+            .frame(maxWidth: .infinity, minHeight: 124, alignment: .topLeading)
+        }
     }
 }
 
