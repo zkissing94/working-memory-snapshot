@@ -807,6 +807,11 @@
       background: rgba(234, 242, 255, 0.64);
     }
 
+    .session-compact.paused-summary {
+      border-color: rgba(217, 108, 22, 0.24);
+      background: rgba(255, 242, 232, 0.54);
+    }
+
     .session-compact-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -846,6 +851,27 @@
       text-decoration: none;
     }
 
+    .block-dots {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .block-dot {
+      width: 21px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--line-strong);
+    }
+
+    .block-dot.complete {
+      background: var(--blue);
+    }
+
+    .block-dot.paused {
+      background: var(--orange);
+    }
+
     .active-focus-workspace {
       position: relative;
       display: flex;
@@ -859,6 +885,10 @@
       width: min(900px, 100%);
       margin: 0 auto;
       padding: 30px 38px 18px;
+    }
+
+    .active-focus-content.paused-content {
+      width: min(960px, 100%);
     }
 
     .focus-workbar {
@@ -966,6 +996,207 @@
       background: transparent;
       color: var(--muted);
       box-shadow: none;
+    }
+
+    .button.danger-text {
+      min-height: 32px;
+      padding: 7px 4px;
+      border-color: transparent;
+      background: transparent;
+      color: var(--red);
+    }
+
+    .paused-status-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 12px;
+      padding: 5px 10px;
+      border: 1px solid rgba(217, 108, 22, 0.20);
+      border-radius: 999px;
+      background: rgba(255, 242, 232, 0.64);
+      color: #9a4b10;
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .pause-glyph {
+      display: inline-grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(217, 108, 22, 0.14);
+      color: #9a4b10;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .paused-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 230px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .paused-main {
+      display: grid;
+      gap: 16px;
+    }
+
+    .paused-focus-card,
+    .resume-context-card,
+    .capture-notes-card,
+    .break-helper-card {
+      padding: 20px;
+      border: 1px solid rgba(203, 210, 218, 0.72);
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: 0 14px 32px rgba(25, 31, 42, 0.07);
+    }
+
+    .paused-focus-card {
+      padding: 24px;
+    }
+
+    .paused-focus-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .paused-kicker {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .paused-objective {
+      margin-top: 7px;
+      font-size: 24px;
+      line-height: 1.22;
+      font-weight: 720;
+    }
+
+    .paused-support {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .remaining-timer {
+      text-align: right;
+    }
+
+    .remaining-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .remaining-value {
+      margin-top: 4px;
+      font-size: 35px;
+      font-weight: 760;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .remaining-total {
+      margin-top: 4px;
+      color: var(--subtle);
+      font-size: 12px;
+    }
+
+    .paused-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 22px;
+    }
+
+    .paused-actions .button.primary {
+      min-width: 124px;
+      min-height: 42px;
+      font-size: 14px;
+    }
+
+    .danger-action-line {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(223, 227, 232, 0.72);
+    }
+
+    .context-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .context-item {
+      padding: 13px;
+      border: 1px solid rgba(223, 227, 232, 0.86);
+      border-radius: 10px;
+      background: var(--surface-soft);
+    }
+
+    .context-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 780;
+      text-transform: uppercase;
+    }
+
+    .context-title {
+      margin-top: 6px;
+      font-weight: 720;
+    }
+
+    .context-detail {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .context-callout {
+      margin-top: 12px;
+      padding: 14px;
+      border: 1px solid rgba(8, 105, 247, 0.14);
+      border-radius: 10px;
+      background: rgba(234, 242, 255, 0.46);
+    }
+
+    .context-callout strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .notes-textarea {
+      min-height: 92px;
+      margin-top: 12px;
+      padding: 14px;
+      border: 1px solid rgba(203, 210, 218, 0.82);
+      border-radius: 10px;
+      background: #ffffff;
+      color: var(--muted);
+    }
+
+    .break-helper-card {
+      padding: 16px;
+      box-shadow: none;
+    }
+
+    .break-helper-card h3 {
+      font-size: 14px;
+    }
+
+    .break-helper-card p {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
     }
 
     .timeline-panel {
@@ -1311,7 +1542,10 @@
       .block-top,
       .focus-card-header,
       .focus-progress-row,
-      .timeline-item {
+      .timeline-item,
+      .paused-layout,
+      .paused-focus-header,
+      .context-grid {
         grid-template-columns: 1fr;
       }
 
@@ -1323,7 +1557,8 @@
       .timer,
       .timer-label,
       .focus-timer,
-      .focus-timer-label {
+      .focus-timer-label,
+      .remaining-timer {
         text-align: left;
       }
 
@@ -1704,48 +1939,125 @@
           <p>The session remains active, while the current block preserves remaining time.</p>
         </div>
       </div>
-      <div class="mock-layout">
+      <div class="mock-layout single">
         <div class="window">
           <div class="traffic"><span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span></div>
           <div class="app">
             <aside class="sidebar">
               <div class="brand"><div class="brand-mark">WM</div><div><div class="brand-title">Working Memory</div><div class="brand-subtitle">Snapshot</div></div></div>
               <div class="section-label">Active</div>
-              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Block 2 paused</div></div><span class="tag orange">Paused</span></div>
+              <div class="active-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Paused</div></div><span class="tag orange">Paused</span></div>
+              <div class="session-compact paused-summary">
+                <div class="session-compact-grid">
+                  <div><div class="session-compact-label">Remaining</div><div class="session-compact-value">10:18</div></div>
+                  <div><div class="session-compact-label">Progress</div><div class="session-compact-value">2 of 4 blocks</div></div>
+                </div>
+                <div class="block-dots" aria-label="Block progress">
+                  <span class="block-dot complete"></span><span class="block-dot paused"></span><span class="block-dot"></span><span class="block-dot"></span>
+                </div>
+                <a href="#" class="session-link">View session</a>
+              </div>
               <div class="sidebar-section-title"><div class="section-label">Projects</div><button class="sidebar-add" aria-label="Add project">+</button></div>
-              <div class="project-row"><div class="icon-mark">P</div><div><div class="project-name">wms-m6-smoke-visible</div><div class="project-meta">Session in progress</div></div><span class="status-dot live"></span></div>
+              <div class="project-row"><div class="icon-mark" style="color:var(--green);background:var(--green-soft);">P</div><div><div class="project-name">wms-m3-test-project</div><div class="project-meta">4 sessions</div></div><span class="status-dot"></span></div>
+              <div class="project-row"><div class="icon-mark" style="color:var(--orange);background:var(--orange-soft);">P</div><div><div class="project-name">Working Memory</div><div class="project-meta">12 sessions</div></div><span class="status-dot"></span></div>
               <div class="sidebar-footer"><div class="project-row settings-row"><div class="icon-mark gear" aria-hidden="true"></div><div class="project-name">Settings</div></div></div>
             </aside>
-            <section class="workspace">
-              <div class="workspace-header">
-                <div><div class="project-title">Active Session</div><div class="path">Started 4:21 PM - session still active</div></div>
-                <div><div class="timer">09:42</div><div class="timer-label">session elapsed</div></div>
-              </div>
-              <div class="block-card paused">
-                <div class="block-top">
-                  <div><div class="section-label" style="margin-top:0;">Focus Block 2</div><h2>Review README changes and run final eval pass.</h2><div class="tag-row"><span class="tag orange">Paused</span><span class="tag">1 block completed</span></div></div>
-                  <div><div class="timer">10:18</div><div class="timer-label">remaining</div></div>
+            <section class="workspace active-focus-workspace">
+              <div class="active-focus-content paused-content">
+                <div class="focus-workbar">
+                  <div>wms-m6-smoke-visible &middot; paused at 4:31 PM</div>
+                  <details class="inspector-toggle">
+                    <summary class="button">Open Inspector</summary>
+                    <aside class="inspector-drawer" aria-label="Paused block inspector">
+                      <div class="inspector-header">
+                        <h3>Inspector</h3>
+                        <button class="button">Close</button>
+                      </div>
+                      <div class="inspector-section">
+                        <h4>State Contract</h4>
+                        <p><code>activeBlock.status == paused</code>.</p>
+                      </div>
+                      <div class="inspector-section">
+                        <h4>Observed Context</h4>
+                        <p>Observation remains session-scoped; paused block notes attach to Block 2.</p>
+                      </div>
+                      <div class="inspector-section">
+                        <h4>Services</h4>
+                        <p><code>PomodoroBlockRepository.resumeBlock</code>, <code>completeBlock</code>, and the existing end-session flow.</p>
+                      </div>
+                      <div class="inspector-section">
+                        <h4>Privacy</h4>
+                        <p>No screenshots, clipboard, browser history, messages, keystrokes, or file contents.</p>
+                      </div>
+                    </aside>
+                  </details>
                 </div>
-                <div class="progress orange"><span style="width:48%;"></span></div>
-                <p class="muted">Pause time is tracked separately from elapsed focus time.</p>
-                <div class="button-row"><button class="button primary">Resume</button><button class="button">Complete Block</button><button class="button destructive">End Session</button></div>
+
+                <div class="paused-status-label"><span class="pause-glyph">II</span>Paused checkpoint</div>
+                <div class="paused-layout">
+                  <div class="paused-main">
+                    <div class="paused-focus-card">
+                      <div class="paused-focus-header">
+                        <div>
+                          <div class="paused-kicker">Focus Block 2 of 4</div>
+                          <h2 class="paused-objective">Review README changes and run final eval pass.</h2>
+                          <p class="paused-support">Ready whenever you are.</p>
+                        </div>
+                        <div class="remaining-timer" aria-live="polite">
+                          <div class="remaining-label">Time remaining</div>
+                          <div class="remaining-value">10:18</div>
+                          <div class="remaining-total">of 20:00</div>
+                        </div>
+                      </div>
+                      <div class="progress orange" aria-label="Paused block progress"><span style="width:48%;"></span></div>
+                      <p class="muted">Paused time is tracked separately from elapsed focus time.</p>
+                      <div class="paused-actions">
+                        <button class="button primary">Resume</button>
+                        <button class="button">Complete Block</button>
+                      </div>
+                      <div class="danger-action-line"><button class="button danger-text">End Session</button></div>
+                    </div>
+
+                    <div class="resume-context-card">
+                      <h3>Resume Context</h3>
+                      <div class="context-grid" style="margin-top:12px;">
+                        <div class="context-item">
+                          <div class="context-label">Last increment</div>
+                          <div class="context-title">README scope clarified</div>
+                          <div class="context-detail">4 minutes ago</div>
+                        </div>
+                        <div class="context-item">
+                          <div class="context-label">Next planned step</div>
+                          <div class="context-title">Run final evaluation</div>
+                          <div class="context-detail">Compare results and capture notes.</div>
+                        </div>
+                      </div>
+                      <div class="context-callout">
+                        <strong>What you were working on</strong>
+                        <p class="muted">You were validating the snapshot integration, keeping README scope separate from dogfood notes, and preparing one final eval pass before ending the session.</p>
+                      </div>
+                    </div>
+
+                    <div class="capture-notes-card">
+                      <h3>Capture Notes</h3>
+                      <div class="notes-textarea">What changed during this block?</div>
+                      <div class="capture-helper">Notes are private to this session.</div>
+                    </div>
+                  </div>
+
+                  <aside class="break-helper-card">
+                    <h3>Take a break</h3>
+                    <p>The block will stay paused. Resume when the next action is clear.</p>
+                  </aside>
+                </div>
               </div>
-              <div class="surface">
-                <h3>Current Block - Work Increments</h3>
-                <p class="muted" style="margin-top:8px;">Manual notes, decisions, and blockers remain attached to Block 2 while it is paused.</p>
+              <div class="active-status-bar">
+                <div class="status-left"><span class="status-mode">Focus Time</span><span>Block ends 4:41 PM after resume</span></div>
+                <div class="status-shortcuts"><span><span class="key">Space</span> = Pause/Resume</span><span><span class="key">Enter</span> = Complete</span></div>
               </div>
             </section>
           </div>
         </div>
-        <aside class="contract">
-          <h3>State contract</h3>
-          <dl>
-            <dt>Entry</dt><dd>`activeBlock.status == paused`.</dd>
-            <dt>Data</dt><dd>`paused_at` plus `accumulated_pause_seconds` preserve remaining time.</dd>
-            <dt>Writes</dt><dd>`PomodoroBlockRepository.pauseBlock` and `resumeBlock`.</dd>
-            <dt>Next</dt><dd>Resume, complete block, end session, or cancel session.</dd>
-          </dl>
-        </aside>
       </div>
     </section>
 
