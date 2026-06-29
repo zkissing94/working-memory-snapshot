@@ -81,11 +81,13 @@ struct ActiveSessionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 pomodoroBlockCard
-                if viewModel.activeBlock?.status != .active {
+                if viewModel.activeBlock?.status != .active && viewModel.activeBlock?.status != .paused {
                     workIncrementsSection
                 }
-                sessionInspectorDisclosure
-                sessionControls
+                if viewModel.activeBlock?.status != .paused {
+                    sessionInspectorDisclosure
+                    sessionControls
+                }
             }
             .padding(28)
             .frame(maxWidth: 900, alignment: .leading)
@@ -303,6 +305,7 @@ struct ActiveSessionView: View {
                         Label("Complete Block", systemImage: "checkmark.circle")
                             .labelStyle(.iconOnly)
                     }
+                    .foregroundStyle(.green)
                     .disabled(viewModel.isWorking)
                     .help("Complete Block")
                     .accessibilityLabel("Complete Block")
@@ -310,10 +313,11 @@ struct ActiveSessionView: View {
                     Button(role: .destructive) {
                         viewModel.beginEndingActiveSession()
                     } label: {
-                        Label("End Session", systemImage: "stop")
+                        Label("End Session", systemImage: "xmark")
                             .labelStyle(.iconOnly)
                     }
                     .buttonStyle(.plain)
+                    .foregroundStyle(.red)
                     .disabled(viewModel.isWorking)
                     .help("End Session")
                     .accessibilityLabel("End Session")
