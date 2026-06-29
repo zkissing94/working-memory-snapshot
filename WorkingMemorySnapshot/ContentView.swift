@@ -17,7 +17,7 @@ struct ContentView: View {
         NavigationSplitView {
             ProjectSidebarView(
                 viewModel: projectsViewModel,
-                activeProjectID: sessionViewModel.activeSession?.projectID
+                activity: sidebarActivity
             )
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280)
         } content: {
@@ -152,6 +152,19 @@ struct ContentView: View {
                 .interactiveDismissDisabled()
             }
         }
+    }
+
+    private var sidebarActivity: ProjectSidebarActivity? {
+        ProjectSidebarActivity.current(
+            flow: sessionViewModel.flow,
+            activeSession: sessionViewModel.activeSession,
+            activeBlock: sessionViewModel.activeBlock,
+            sessionBlocks: sessionViewModel.sessionBlocks,
+            recoveryContext: sessionViewModel.recoveryContext,
+            failedSnapshotSession: sessionViewModel.failedSnapshotSession,
+            selectedProjectID: projectsViewModel.selectedProject?.id,
+            selectedProjectAccessState: projectDetailViewModel.projectAccessState
+        )
     }
 }
 

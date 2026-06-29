@@ -59,6 +59,147 @@ final class ProjectsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.errorMessage, "That project is already in the list.")
     }
 
+    func testProjectSidebarActivityDescribesSessionStates() {
+        let projectID = UUID()
+        let session = makeWorkSession(projectID: projectID)
+        let activeBlock = makePomodoroBlock(sessionID: session.id, blockIndex: 2, status: .active)
+        let pausedBlock = makePomodoroBlock(sessionID: session.id, blockIndex: 3, status: .paused)
+        let completedBlock = makePomodoroBlock(sessionID: session.id, blockIndex: 1, status: .completed)
+
+        XCTAssertEqual(
+            ProjectSidebarActivity.current(
+                flow: .starting(projectID),
+                activeSession: nil,
+                activeBlock: nil,
+                sessionBlocks: [],
+                recoveryContext: nil,
+                failedSnapshotSession: nil,
+                selectedProjectID: nil,
+                selectedProjectAccessState: .unknown
+            ),
+            ProjectSidebarActivity(projectID: projectID, message: "Preparing session...", kind: .preparing)
+        )
+        XCTAssertEqual(
+            ProjectSidebarActivity.current(
+                flow: .idle,
+                activeSession: session,
+                activeBlock: activeBlock,
+                sessionBlocks: [activeBlock],
+                recoveryContext: nil,
+                failedSnapshotSession: nil,
+                selectedProjectID: nil,
+                selectedProjectAccessState: .unknown
+            ),
+            ProjectSidebarActivity(projectID: projectID, message: "Block 2 active", kind: .activeBlock)
+        )
+        XCTAssertEqual(
+            ProjectSidebarActivity.current(
+                flow: .idle,
+                activeSession: session,
+                activeBlock: pausedBlock,
+                sessionBlocks: [pausedBlock],
+                recoveryContext: nil,
+                failedSnapshotSession: nil,
+                selectedProjectID: nil,
+                selectedProjectAccessState: .unknown
+            ),
+            ProjectSidebarActivity(projectID: projectID, message: "Block 3 paused", kind: .pausedBlock)
+        )
+        XCTAssertEqual(
+            ProjectSidebarActivity.current(
+                flow: .idle,
+                activeSession: session,
+                activeBlock: nil,
+                sessionBlocks: [completedBlock],
+                recoveryContext: nil,
+                failedSnapshotSession: nil,
+                selectedProjectID: nil,
+                selectedProjectAccessState: .unknown
+            ),
+            ProjectSidebarActivity(projectID: projectID, message: "Between blocks", kind: .betweenBlocks)
+        )
+        XCTAssertEqual(
+            ProjectSidebarActivity.current(
+                flow: .ending(session.id),
+                activeSession: session,
+                activeBlock: activeBlock,
+                sessionBlocks: [activeBlock],
+                recoveryContext: nil,
+                failedSnapshotSession: nil,
+                selectedProjectID: nil,
+                selectedProjectAccessState: .unknown
+            ),
+            ProjectSidebarActivity(projectID: projectID, message: "Ending session...", kind: .ending)
+        )
+    }
+
+    func testProjectSidebarActivityDescribesRecoveryAccessAndSnapshotFailure() {
+        let project = makeProject()
+        let session = makeWorkSession(projectID: project.id)
+        let failedSession = makeWorkSession(projectID: project.id, status: .completed)
+
+        XCTAssertEqual(
+            ProjectSidebarActivity.current(
+                flow: .starting(UUID()),
+                activeSession: nil,
+                activeBlock: nil,
+                sessionBlocks: [],
+                recoveryContext: SessionRecoveryContext(
+                    session: session,
+                    project: project,
+                    isProjectFolderAccessible: true
+                ),
+                failedSnapshotSession: nil,
+                selectedProjectID: nil,
+                selectedProjectAccessState: .unknown
+            ),
+            ProjectSidebarActivity(projectID: project.id, message: "Recovery available", kind: .recovery)
+        )
+        XCTAssertEqual(
+            ProjectSidebarActivity.current(
+                flow: .idle,
+                activeSession: nil,
+                activeBlock: nil,
+                sessionBlocks: [],
+                recoveryContext: SessionRecoveryContext(
+                    session: session,
+                    project: project,
+                    isProjectFolderAccessible: false
+                ),
+                failedSnapshotSession: nil,
+                selectedProjectID: nil,
+                selectedProjectAccessState: .unknown
+            ),
+            ProjectSidebarActivity(projectID: project.id, message: "Folder missing", kind: .accessLost)
+        )
+        XCTAssertEqual(
+            ProjectSidebarActivity.current(
+                flow: .idle,
+                activeSession: nil,
+                activeBlock: nil,
+                sessionBlocks: [],
+                recoveryContext: nil,
+                failedSnapshotSession: nil,
+                selectedProjectID: project.id,
+                selectedProjectAccessState: .inaccessible
+            ),
+            ProjectSidebarActivity(projectID: project.id, message: "Folder missing", kind: .accessLost)
+        )
+        XCTAssertEqual(
+            ProjectSidebarActivity.current(
+                flow: .idle,
+                activeSession: nil,
+                activeBlock: nil,
+                sessionBlocks: [],
+                recoveryContext: nil,
+                failedSnapshotSession: failedSession,
+                selectedProjectID: nil,
+                selectedProjectAccessState: .unknown
+            ),
+            ProjectSidebarActivity(projectID: project.id, message: "Snapshot needs attention", kind: .snapshotFailed)
+        )
+    }
+
     private func makeHarness() throws -> (
         database: Database,
         migrator: DatabaseMigrator,
@@ -84,5 +225,59 @@ final class ProjectsViewModelTests: XCTestCase {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         temporaryURLs.append(url.deletingLastPathComponent())
         return url
+    }
+
+    private func makeProject(id: UUID = UUID()) -> Project {
+        let now = Date()
+        return Project(
+            id: id,
+            name: "Preview Project",
+            rootPath: "/tmp/preview-project",
+            createdAt: now,
+            updatedAt: now
+        )
+    }
+
+    private func makeWorkSession(
+        id: UUID = UUID(),
+        projectID: UUID,
+        status: SessionStatus = .active
+    ) -> WorkSession {
+        let now = Date()
+        return WorkSession(
+            id: id,
+            projectID: projectID,
+            mission: "Validate sidebar state.",
+            brainDump: nil,
+            startedAt: now,
+            endedAt: status == .active ? nil : now,
+            status: status,
+            createdAt: now,
+            updatedAt: now
+        )
+    }
+
+    private func makePomodoroBlock(
+        id: UUID = UUID(),
+        sessionID: UUID,
+        blockIndex: Int,
+        status: PomodoroBlockStatus
+    ) -> PomodoroBlock {
+        let now = Date()
+        return PomodoroBlock(
+            id: id,
+            sessionID: sessionID,
+            blockIndex: blockIndex,
+            plannedDurationSeconds: PomodoroBlock.defaultPlannedDurationSeconds,
+            intention: nil,
+            summary: nil,
+            status: status,
+            startedAt: now,
+            pausedAt: status == .paused ? now : nil,
+            accumulatedPauseSeconds: 0,
+            endedAt: status == .completed || status == .interrupted ? now : nil,
+            createdAt: now,
+            updatedAt: now
+        )
     }
 }
