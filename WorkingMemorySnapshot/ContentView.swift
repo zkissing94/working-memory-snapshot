@@ -72,6 +72,15 @@ struct ContentView: View {
             await sessionViewModel.loadActiveSessionForRecovery()
             await settingsViewModel.loadSettings()
         }
+        .onChange(of: sessionViewModel.activeSession) { _, newSession in
+            guard newSession == nil else {
+                return
+            }
+
+            Task {
+                await projectsViewModel.refreshSidebarMetadata()
+            }
+        }
         .alert("Project Error", isPresented: projectsViewModel.isShowingError) {
             Button("OK", role: .cancel) {
                 projectsViewModel.clearError()

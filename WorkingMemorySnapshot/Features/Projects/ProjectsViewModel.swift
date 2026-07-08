@@ -176,6 +176,14 @@ final class ProjectsViewModel: ObservableObject {
         selectedItem = .settings
     }
 
+    func refreshSidebarMetadata() async {
+        do {
+            sidebarMetadata = try await loadSidebarMetadata(for: projects)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     private func loadSidebarMetadata(for projects: [Project]) async throws -> [Project.ID: ProjectSidebarMetadata] {
         var values: [Project.ID: ProjectSidebarMetadata] = [:]
         for project in projects {
