@@ -56,8 +56,23 @@ private struct ProjectSessionRouteView: View {
     @ObservedObject var projectsViewModel: ProjectsViewModel
     @ObservedObject var sessionViewModel: SessionViewModel
     @ObservedObject var projectDetailViewModel: ProjectDetailViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        ZStack(alignment: .topLeading) {
+            routeContent
+                .id(route.presentationIdentity)
+                .transition(AppMotion.workspaceTransition(reduceMotion: reduceMotion))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .animation(
+            AppMotion.animation(.standard, reduceMotion: reduceMotion),
+            value: route.presentationIdentity
+        )
+    }
+
+    @ViewBuilder
+    private var routeContent: some View {
         switch route {
         case .snapshotDetail:
             snapshotDetail
@@ -210,7 +225,7 @@ struct EmptyLibraryWorkspaceView: View {
         VStack(spacing: 24) {
             Spacer(minLength: 24)
 
-            DashboardSurface {
+            DashboardSurface(style: .emphasized) {
                 VStack(alignment: .leading, spacing: 14) {
                     Image(systemName: "brain.head.profile")
                         .font(.system(size: 28, weight: .semibold))
@@ -240,7 +255,7 @@ struct EmptyLibraryWorkspaceView: View {
 
             Spacer()
         }
-        .padding(32)
+        .padding(AppVisualTokens.Spacing.workspaceWide)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Color(nsColor: .windowBackgroundColor))
     }
@@ -261,7 +276,7 @@ private struct ProjectAccessLostWorkspaceView: View {
                     path: project.rootPath
                 )
 
-                DashboardSurface {
+                DashboardSurface(style: .status(.warning)) {
                     VStack(alignment: .leading, spacing: 10) {
                         Label(
                             "This project folder is no longer accessible.",
@@ -282,7 +297,7 @@ private struct ProjectAccessLostWorkspaceView: View {
                 }
                 .tint(.orange)
 
-                DashboardSurface {
+                DashboardSurface(style: latestSnapshot == nil ? .soft : .emphasized) {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Latest Memory")
                             .font(.headline)
@@ -309,7 +324,7 @@ private struct ProjectAccessLostWorkspaceView: View {
                     }
                 }
             }
-            .padding(28)
+            .padding(AppVisualTokens.Spacing.workspace)
             .frame(maxWidth: 900, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
@@ -332,7 +347,7 @@ private struct SnapshotFailureWorkspaceView: View {
                     subtitle: "The completed session and brain dump are saved locally."
                 )
 
-                DashboardSurface {
+                DashboardSurface(style: .status(.error)) {
                     VStack(alignment: .leading, spacing: 12) {
                         Label("Model response was not accepted", systemImage: "exclamationmark.triangle")
                             .font(.headline)
@@ -355,7 +370,7 @@ private struct SnapshotFailureWorkspaceView: View {
                 .tint(.orange)
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 14)], spacing: 14) {
-                    DashboardSurface {
+                    DashboardSurface(style: .soft) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Saved brain dump")
                                 .font(.headline)
@@ -367,7 +382,7 @@ private struct SnapshotFailureWorkspaceView: View {
                         }
                     }
 
-                    DashboardSurface {
+                    DashboardSurface(style: .soft) {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Saved block context")
                                 .font(.headline)
@@ -383,7 +398,7 @@ private struct SnapshotFailureWorkspaceView: View {
                     }
                 }
             }
-            .padding(28)
+            .padding(AppVisualTokens.Spacing.workspace)
             .frame(maxWidth: 900, alignment: .leading)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }

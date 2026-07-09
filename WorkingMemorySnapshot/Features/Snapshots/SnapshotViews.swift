@@ -10,10 +10,15 @@ struct SnapshotDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
-                header
+            AppWorkspace(
+                maxWidth: AppVisualTokens.Layout.wideWorkspaceWidth,
+                horizontalPadding: AppVisualTokens.Spacing.workspaceWide,
+                verticalPadding: AppVisualTokens.Spacing.workspaceWide
+            ) {
+                VStack(alignment: .leading, spacing: 26) {
+                    header
 
-                DashboardSurface {
+                DashboardSurface(style: .soft) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Prompt evidence")
                             .font(.headline)
@@ -42,31 +47,31 @@ struct SnapshotDetailView: View {
                     )
                     SnapshotTextSection(
                         title: "Next action",
-                        text: snapshot.nextAction
+                        text: snapshot.nextAction,
+                        style: .emphasized
                     )
                     SnapshotTextSection(
                         title: "Resume Brief",
-                        text: snapshot.resumeBrief
+                        text: snapshot.resumeBrief,
+                        style: .soft
                     )
                 }
 
-                HStack(spacing: 12) {
-                    Button(action: onStartNewSession) {
-                        Label("Start New Session", systemImage: "play.fill")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!canStartSession)
-                    .accessibilityHint("Start a new session from this project.")
+                    HStack(spacing: 12) {
+                        Button(action: onStartNewSession) {
+                            Label("Start New Session", systemImage: "play.fill")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canStartSession)
+                        .accessibilityHint("Start a new session from this project.")
 
-                    Button(action: onBackToProject) {
-                        Label("Back to Project", systemImage: "chevron.left")
+                        Button(action: onBackToProject) {
+                            Label("Back to Project", systemImage: "chevron.left")
+                        }
+                        .accessibilityHint("Return to the project resume view.")
                     }
-                    .accessibilityHint("Return to the project resume view.")
                 }
             }
-            .padding(32)
-            .frame(maxWidth: 980, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color(nsColor: .windowBackgroundColor))
     }
@@ -109,9 +114,16 @@ struct SnapshotDetailView: View {
 private struct SnapshotTextSection: View {
     let title: String
     let text: String
+    let style: AppSurfaceStyle
+
+    init(title: String, text: String, style: AppSurfaceStyle = .standard) {
+        self.title = title
+        self.text = text
+        self.style = style
+    }
 
     var body: some View {
-        DashboardSurface {
+        DashboardSurface(style: style) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
                     .font(.headline)

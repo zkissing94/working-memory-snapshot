@@ -12,6 +12,7 @@ struct ContentView: View {
     @ObservedObject var sessionViewModel: SessionViewModel
     @ObservedObject var projectDetailViewModel: ProjectDetailViewModel
     @ObservedObject var settingsViewModel: SettingsViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationSplitView {
@@ -47,25 +48,16 @@ struct ContentView: View {
             )
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280)
         } detail: {
-            switch projectsViewModel.selectedItem {
-            case .settings:
-                SettingsView(viewModel: settingsViewModel)
-            default:
-                if projectsViewModel.projects.isEmpty {
-                    EmptyLibraryWorkspaceView {
-                        Task {
-                            await projectsViewModel.addProjectFromPicker()
-                        }
-                    }
-                } else {
-                    ProjectDetailContainerView(
-                        project: projectsViewModel.selectedProject,
-                        projectsViewModel: projectsViewModel,
-                        sessionViewModel: sessionViewModel,
-                        projectDetailViewModel: projectDetailViewModel
-                    )
-                }
+            ZStack(alignment: .topLeading) {
+                detailContent
+                    .id(detailRootIdentity)
+                    .transition(AppMotion.workspaceTransition(reduceMotion: reduceMotion))
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .animation(
+                AppMotion.animation(.standard, reduceMotion: reduceMotion),
+                value: detailRootIdentity
+            )
         }
         .task {
             await projectsViewModel.loadProjects()
@@ -156,6 +148,40 @@ struct ContentView: View {
                 )
                 .interactiveDismissDisabled(sessionViewModel.isWorking)
             }
+        }
+    }
+
+    @ViewBuilder
+    private var detailContent: some View {
+        switch projectsViewModel.selectedItem {
+        case .settings:
+            SettingsView(viewModel: settingsViewModel)
+        default:
+            if projectsViewModel.projects.isEmpty {
+                EmptyLibraryWorkspaceView {
+                    Task {
+                        await projectsViewModel.addProjectFromPicker()
+                    }
+                }
+            } else {
+                ProjectDetailContainerView(
+                    project: projectsViewModel.selectedProject,
+                    projectsViewModel: projectsViewModel,
+                    sessionViewModel: sessionViewModel,
+                    projectDetailViewModel: projectDetailViewModel
+                )
+            }
+        }
+    }
+
+    private var detailRootIdentity: String {
+        switch projectsViewModel.selectedItem {
+        case .settings:
+            "settings"
+        case .project(let projectID):
+            "project-\(projectID.uuidString)"
+        case nil:
+            projectsViewModel.projects.isEmpty ? "empty-library" : "no-project"
         }
     }
 

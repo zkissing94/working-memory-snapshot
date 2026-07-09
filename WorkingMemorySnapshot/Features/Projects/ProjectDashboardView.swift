@@ -10,6 +10,7 @@ struct ProjectDashboardView: View {
     let onSelectSession: (WorkSession) -> Void
     @State private var isPreviousSessionListExpanded = false
     @State private var expandedDayGroups = Set<String>()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var activeSession: WorkSession? {
         guard sessionViewModel.activeSession?.projectID == project.id else {
@@ -26,29 +27,31 @@ struct ProjectDashboardView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 22) {
-                header
+            AppWorkspace(
+                maxWidth: AppVisualTokens.Layout.wideWorkspaceWidth,
+                horizontalPadding: 42,
+                verticalPadding: 34
+            ) {
+                VStack(alignment: .leading, spacing: 22) {
+                    header
 
-                if let activeSession {
-                    ActiveSessionDashboardCard(
-                        session: activeSession,
-                        activeBlock: sessionViewModel.activeBlock,
-                        blocks: sessionViewModel.sessionBlocks,
-                        onContinue: {
-                            projectDetailViewModel.clearSelectedSession()
-                        },
-                        onEnd: onEndSession
-                    )
-                } else {
-                    startSessionCard
+                    if let activeSession {
+                        ActiveSessionDashboardCard(
+                            session: activeSession,
+                            activeBlock: sessionViewModel.activeBlock,
+                            blocks: sessionViewModel.sessionBlocks,
+                            onContinue: {
+                                projectDetailViewModel.clearSelectedSession()
+                            },
+                            onEnd: onEndSession
+                        )
+                    } else {
+                        startSessionCard
+                    }
+
+                    sessionTimeline
                 }
-
-                sessionTimeline
             }
-            .padding(.horizontal, 42)
-            .padding(.vertical, 34)
-            .frame(maxWidth: 980, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle(project.name)
@@ -101,7 +104,7 @@ struct ProjectDashboardView: View {
     }
 
     private var firstSessionCard: some View {
-        DashboardSurface {
+        DashboardSurface(style: .soft) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Start a new session")
                     .font(.title3)
@@ -119,7 +122,7 @@ struct ProjectDashboardView: View {
     }
 
     private func latestMemoryCard(_ snapshot: Snapshot) -> some View {
-        DashboardSurface {
+        DashboardSurface(style: .emphasized) {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Start a new session")
                     .font(.title2)
@@ -191,6 +194,7 @@ struct ProjectDashboardView: View {
                                                     onSelectSession(session)
                                                 }
                                             )
+                                            .transition(AppMotion.insertionTransition(reduceMotion: reduceMotion))
                                         }
                                     }
                                     .padding(.leading, 12)
@@ -213,6 +217,14 @@ struct ProjectDashboardView: View {
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
             }
+        )
+        .animation(
+            AppMotion.animation(.standard, reduceMotion: reduceMotion),
+            value: isPreviousSessionListExpanded
+        )
+        .animation(
+            AppMotion.animation(.standard, reduceMotion: reduceMotion),
+            value: expandedDayGroups
         )
         }
     }
@@ -261,7 +273,7 @@ private struct ActiveSessionDashboardCard: View {
     let onEnd: () -> Void
 
     var body: some View {
-        DashboardSurface {
+        DashboardSurface(style: .status(.accent)) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
                     Image(systemName: "play.fill")
@@ -271,11 +283,7 @@ private struct ActiveSessionDashboardCard: View {
                         .background(Circle().fill(Color.accentColor))
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Active Session")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
+                        AppStatusPill("Active Session", systemImage: "timer", tone: .accent)
                         Text(session.mission)
                             .font(.headline)
                             .lineLimit(3)
@@ -371,16 +379,8 @@ private struct SessionTimelineRow: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(nsColor: .controlBackgroundColor))
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.18), lineWidth: isSelected ? 1.5 : 1)
-            }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AppClickableRowButtonStyle(isSelected: isSelected))
     }
 
     private var durationText: String? {
@@ -407,36 +407,13 @@ struct MetricPill: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: AppVisualTokens.Radius.standard, style: .continuous)
                 .fill(Color(nsColor: .controlBackgroundColor))
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.secondary.opacity(0.15))
+            RoundedRectangle(cornerRadius: AppVisualTokens.Radius.standard, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.42))
         }
-    }
-}
-
-struct DashboardSurface<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(nsColor: .textBackgroundColor))
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.secondary.opacity(0.16))
-            }
-            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 }
 

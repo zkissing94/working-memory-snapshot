@@ -5,19 +5,19 @@
 Current handoff branch:
 
 ```text
-9b-two-column-app-structure
+feature/m13-ui-motion-polish
 ```
 
 Current focus:
 
 ```text
-M8/M9 app structure implementation - two-column workspace across mapped states
+M13 full-app native motion and visual polish - implementation and automated validation complete; exhaustive visual matrix pending
 ```
 
 Baseline:
 
 ```text
-main is at the completed M8 session timeline and Pomodoro capture implementation.
+The branch includes the completed focus-block alert milestone on top of the current main baseline.
 ```
 
 Completed milestones:
@@ -92,19 +92,24 @@ Current implementation state:
 - Message, transcript, clipboard, browser-history, screenshot, and keystroke observation remain excluded.
 - Automated M8 tests cover migration v6, block/increment repositories, session view-model block flow, snapshot prompt inclusion, compaction, and project-deletion cascades.
 - LM Studio is not required to compile or launch the app.
+- Shared native SwiftUI tokens standardize spacing, radii, adaptive status tones, surfaces, controls, tooltips, workspace layout, and motion.
+- Workspace destinations, sidebar selection, interactive rows, focus-block states, inline capture forms, timers, progress, loading, and connection results use bounded transitions.
+- Focus-block completion has a one-shot checkmark halo; Reduce Motion removes spatial motion and the halo.
+- An internal preview catalog covers light, dark, and reduced-motion component variants.
+- Pow was evaluated and intentionally not added; the app still has no production UI dependency.
 
 ## Next milestone
 
-Next task after merging the two-column app structure:
+Next task after reviewing the M13 branch:
 
 ```text
-Manual dogfood review of the 16 mapped app states
+Complete the M13 visual review checklist across the 16 mapped app states
 ```
 
 Expected prompt:
 
 ```text
-Launch the app and manually dogfood the two-column workspace against docs/mockups/app-state-mockups.html.
+Launch the app and complete docs/13-m13-ui-polish-checklist.md in light, dark, reduced-motion, and increased-contrast configurations.
 ```
 
 Optional post-MVP milestone:

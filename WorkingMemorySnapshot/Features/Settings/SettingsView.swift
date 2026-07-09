@@ -2,10 +2,16 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var viewModel: SettingsViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            AppWorkspace(
+                maxWidth: AppVisualTokens.Layout.compactWorkspaceWidth,
+                horizontalPadding: AppVisualTokens.Spacing.workspaceWide,
+                verticalPadding: AppVisualTokens.Spacing.workspaceWide
+            ) {
+                VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 7) {
                     Text("Settings")
                         .font(.title)
@@ -15,7 +21,7 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                DashboardSurface {
+                DashboardSurface(style: .emphasized) {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("LM Studio")
                             .font(.headline)
@@ -99,7 +105,7 @@ struct SettingsView: View {
                 }
 
                 if let message = viewModel.connectionState.message {
-                    DashboardSurface {
+                    DashboardSurface(style: .status(statusTone)) {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 8) {
                                 if viewModel.connectionState == .testing {
@@ -120,17 +126,20 @@ struct SettingsView: View {
                         .foregroundStyle(statusColor)
                         .accessibilityElement(children: .combine)
                     }
+                    .transition(AppMotion.stateTransition(reduceMotion: reduceMotion))
+                }
                 }
             }
-            .padding(32)
-            .frame(maxWidth: 760, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle("Settings")
         .task {
             await viewModel.loadSettings()
         }
+        .animation(
+            AppMotion.animation(.standard, reduceMotion: reduceMotion),
+            value: viewModel.connectionState
+        )
         .alert("Settings Error", isPresented: viewModel.isShowingError) {
             Button("OK", role: .cancel) {
                 viewModel.clearError()
@@ -141,11 +150,15 @@ struct SettingsView: View {
     }
 
     private var statusColor: Color {
+        statusTone.tint
+    }
+
+    private var statusTone: AppStatusTone {
         switch viewModel.connectionState {
         case .saved, .success:
-            .green
+            .success
         case .idle, .testing:
-            .secondary
+            .neutral
         case .invalidBaseURL,
              .serverUnreachable,
              .unauthorized,
@@ -153,7 +166,7 @@ struct SettingsView: View {
              .selectedModelUnavailable,
              .invalidResponse,
              .serverError:
-            .orange
+            .warning
         }
     }
 }

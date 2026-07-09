@@ -141,6 +141,17 @@ When an active focus block reaches zero, post a local macOS notification, bring 
 
 **Consequences:** No database migration is required. Deadlines are derived from existing `pomodoro_blocks` timing fields, and reaching zero does not complete a block or end a session. Notification permission is optional; if permission is denied, foreground activation plus the in-app prompt remain the app-process behavior. No new passive observation source is introduced.
 
+## ADR-016 — Native shared UI motion system
+
+**Date:** 2026-07-09
+**Status:** Accepted
+
+Use a small internal SwiftUI layer for visual tokens, adaptive surfaces, status presentation, hover and press feedback, workspace transitions, numeric timer transitions, and reduced-motion behavior.
+
+**Reasoning:** The app needs consistent, expressive polish without changing its workflow or making focus sessions visually noisy. Native SwiftUI covers the required transitions and one-shot completion halo on the macOS 14 deployment target.
+
+**Consequences:** Pow was evaluated but is not added. No production dependency, schema change, service boundary, or build-setting change is required. All motion must use the durations and accessibility fallbacks defined in the UI specification.
+
 ## Open decision template
 
 ### ADR-NNN — Title

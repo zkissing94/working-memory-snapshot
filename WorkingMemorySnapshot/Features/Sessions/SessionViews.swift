@@ -24,7 +24,7 @@ struct StartSessionView: View {
                 .textFieldStyle(.roundedBorder)
             }
 
-            DashboardSurface {
+            DashboardSurface(style: .soft) {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "timer")
                         .foregroundStyle(Color.accentColor)
@@ -62,8 +62,10 @@ struct StartSessionView: View {
 
             Spacer()
         }
-        .padding(32)
+        .padding(AppVisualTokens.Spacing.workspaceWide)
+        .frame(maxWidth: AppVisualTokens.Layout.compactWorkspaceWidth, alignment: .leading)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 }
 
@@ -151,25 +153,31 @@ struct ActiveSessionView: View {
     @State private var incrementTitle = ""
     @State private var incrementDetail = ""
     @State private var isWorkIncrementsExpanded = true
+    @State private var completionHaloTrigger = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                pomodoroBlockCard
-                if let activeBlock = viewModel.activeBlock, activeBlock.status != .active && activeBlock.status != .paused {
-                    workIncrementsSection
-                }
-                if viewModel.activeBlock?.status != .paused {
-                    sessionInspectorDisclosure
+            AppWorkspace {
+                VStack(alignment: .leading, spacing: 20) {
+                    pomodoroBlockCard
+                    if let activeBlock = viewModel.activeBlock, activeBlock.status != .active && activeBlock.status != .paused {
+                        workIncrementsSection
+                    }
+                    if viewModel.activeBlock?.status != .paused {
+                        sessionInspectorDisclosure
+                    }
                 }
             }
-            .padding(28)
-            .frame(maxWidth: 900, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .onChange(of: viewModel.activeBlock?.id) { _, _ in
             resetBlockCompletionInput()
+        }
+        .onChange(of: viewModel.activeBlock?.id) { oldBlockID, newBlockID in
+            if oldBlockID != nil && newBlockID == nil {
+                completionHaloTrigger += 1
+            }
         }
         .onChange(of: viewModel.activeBlock?.status) { _, status in
             if status != .active {
@@ -179,13 +187,41 @@ struct ActiveSessionView: View {
     }
 
     private var pomodoroBlockCard: some View {
-        DashboardSurface {
-            if let activeBlock = viewModel.activeBlock {
-                activeBlockContent(activeBlock)
-            } else {
-                betweenBlocksContent
+        DashboardSurface(style: blockSurfaceStyle) {
+            Group {
+                if let activeBlock = viewModel.activeBlock {
+                    activeBlockContent(activeBlock)
+                } else {
+                    betweenBlocksContent
+                }
             }
+            .id(blockPresentationIdentity)
+            .transition(AppMotion.stateTransition(reduceMotion: reduceMotion))
         }
+        .animation(
+            AppMotion.animation(.standard, reduceMotion: reduceMotion),
+            value: blockPresentationIdentity
+        )
+    }
+
+    private var blockSurfaceStyle: AppSurfaceStyle {
+        switch viewModel.activeBlock?.status {
+        case .active:
+            .emphasized
+        case .paused:
+            .status(.warning)
+        case .completed, .interrupted:
+            .soft
+        case nil:
+            .status(.success)
+        }
+    }
+
+    private var blockPresentationIdentity: String {
+        guard let block = viewModel.activeBlock else {
+            return "between-blocks"
+        }
+        return "\(block.id.uuidString)-\(block.status.rawValue)"
     }
 
     @ViewBuilder
@@ -207,16 +243,7 @@ struct ActiveSessionView: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
-                        Text("Focus Time")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.green)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(
-                                Capsule()
-                                    .fill(Color.green.opacity(0.12))
-                            )
+                        AppStatusPill("Focus Time", systemImage: "timer", tone: .success)
                     }
 
                     Text(block.intention ?? session.mission)
@@ -229,10 +256,16 @@ struct ActiveSessionView: View {
                 Spacer()
 
                 TimelineView(.periodic(from: block.startedAt, by: 1)) { context in
+                    let remainingSeconds = block.remainingSeconds(at: context.date)
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(DurationFormatter.timerString(from: block.remainingSeconds(at: context.date)))
+                        Text(DurationFormatter.timerString(from: remainingSeconds))
                             .font(.system(.title, design: .monospaced))
                             .monospacedDigit()
+                            .contentTransition(.numericText(countsDown: true))
+                            .animation(
+                                AppMotion.animation(.quick, reduceMotion: reduceMotion),
+                                value: remainingSeconds
+                            )
                         Text("remaining")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -241,67 +274,64 @@ struct ActiveSessionView: View {
             }
 
             TimelineView(.periodic(from: block.startedAt, by: 1)) { context in
-                ProgressView(value: progress(for: block, at: context.date))
+                let blockProgress = progress(for: block, at: context.date)
+                ProgressView(value: blockProgress)
                     .tint(.green)
+                    .animation(
+                        reduceMotion ? .linear(duration: AppMotion.reducedDuration) : .linear(duration: 0.16),
+                        value: blockProgress
+                    )
             }
 
             if isShowingBlockCompletionInput {
                 blockCompletionInput
+                    .transition(AppMotion.stateTransition(reduceMotion: reduceMotion))
             }
 
             Divider()
             workIncrementsContent()
         }
+        .animation(
+            AppMotion.animation(.standard, reduceMotion: reduceMotion),
+            value: isShowingBlockCompletionInput
+        )
     }
 
     private var blockCompletionInput: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Complete Block")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
+        AppSurface(style: .soft) {
+            VStack(alignment: .leading, spacing: 10) {
+                AppSectionLabel("Complete Block")
 
-            TextField("What changed during this block?", text: $blockSummary, axis: .vertical)
-                .lineLimit(2, reservesSpace: true)
-                .textFieldStyle(.roundedBorder)
+                TextField("What changed during this block?", text: $blockSummary, axis: .vertical)
+                    .lineLimit(2, reservesSpace: true)
+                    .textFieldStyle(.roundedBorder)
 
-            HStack(spacing: 10) {
-                Button("Cancel") {
-                    resetBlockCompletionInput()
-                }
-                .disabled(viewModel.isWorking)
-
-                Button {
-                    let summary = blockSummary
-                    Task {
-                        await viewModel.completeCurrentBlock(summary: summary)
+                HStack(spacing: 10) {
+                    Button("Cancel") {
                         resetBlockCompletionInput()
                     }
-                } label: {
-                    Label("Save and Complete", systemImage: "checkmark")
+                    .disabled(viewModel.isWorking)
+
+                    Button {
+                        let summary = blockSummary
+                        Task {
+                            await viewModel.completeCurrentBlock(summary: summary)
+                            resetBlockCompletionInput()
+                        }
+                    } label: {
+                        Label("Save and Complete", systemImage: "checkmark")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.isWorking)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(viewModel.isWorking)
             }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.secondary.opacity(0.16))
         }
     }
 
     private func pausedBlockContent(_ block: PomodoroBlock) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center) {
-                Label("Paused checkpoint", systemImage: "pause.circle")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.orange)
-                    .textCase(.uppercase)
+                AppStatusPill("Paused checkpoint", systemImage: "pause.circle", tone: .warning)
             }
 
             HStack(alignment: .top, spacing: 16) {
@@ -326,13 +356,19 @@ struct ActiveSessionView: View {
                 Spacer(minLength: 12)
 
                 TimelineView(.periodic(from: block.pausedAt ?? block.startedAt, by: 1)) { context in
+                    let remainingSeconds = block.remainingSeconds(at: context.date)
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("Time remaining")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(DurationFormatter.timerString(from: block.remainingSeconds(at: context.date)))
+                        Text(DurationFormatter.timerString(from: remainingSeconds))
                             .font(.system(.title, design: .monospaced))
                             .monospacedDigit()
+                            .contentTransition(.numericText(countsDown: true))
+                            .animation(
+                                AppMotion.animation(.quick, reduceMotion: reduceMotion),
+                                value: remainingSeconds
+                            )
                         Text("of \(DurationFormatter.timerString(from: block.plannedDurationSeconds))")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -341,8 +377,13 @@ struct ActiveSessionView: View {
             }
 
             TimelineView(.periodic(from: block.startedAt, by: 1)) { context in
-                ProgressView(value: progress(for: block, at: context.date))
+                let blockProgress = progress(for: block, at: context.date)
+                ProgressView(value: blockProgress)
                     .tint(.orange)
+                    .animation(
+                        reduceMotion ? .linear(duration: AppMotion.reducedDuration) : .linear(duration: 0.16),
+                        value: blockProgress
+                    )
             }
 
             Text("Paused time is tracked separately from elapsed focus time.")
@@ -363,10 +404,9 @@ struct ActiveSessionView: View {
                 Label("Resume Focus Block", systemImage: "play.fill")
                     .labelStyle(.iconOnly)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.blue)
+            .buttonStyle(AppIconButtonStyle(tone: .accent))
             .disabled(viewModel.isWorking)
-            .fastTooltip("Resume Focus Block")
+            .appTooltip("Resume Focus Block")
             .accessibilityLabel("Resume Focus Block")
 
             Button {
@@ -378,10 +418,9 @@ struct ActiveSessionView: View {
                     .labelStyle(.iconOnly)
                     .font(.title3)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.green)
+            .buttonStyle(AppIconButtonStyle(tone: .success))
             .disabled(viewModel.isWorking)
-            .fastTooltip("Complete Focus Block")
+            .appTooltip("Complete Focus Block")
             .accessibilityLabel("Complete Focus Block")
 
             Button(role: .destructive) {
@@ -390,10 +429,9 @@ struct ActiveSessionView: View {
                 Label("Complete Session", systemImage: "xmark")
                     .labelStyle(.iconOnly)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.red)
+            .buttonStyle(AppIconButtonStyle(tone: .error))
             .disabled(viewModel.isWorking)
-            .fastTooltip("Complete Session")
+            .appTooltip("Complete Session")
             .accessibilityLabel("Complete Session")
             .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
         }
@@ -401,11 +439,10 @@ struct ActiveSessionView: View {
 
     private var betweenBlocksContent: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Between Blocks")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
+            HStack(spacing: 10) {
+                AppCompletionHalo(trigger: completionHaloTrigger)
+                AppSectionLabel("Between Blocks")
+            }
             Text("The session is still active. Start another 20-minute block when you are ready.")
                 .font(.body)
 
@@ -456,6 +493,7 @@ struct ActiveSessionView: View {
                     VStack(spacing: 0) {
                         ForEach(viewModel.activeBlockIncrements) { increment in
                             IncrementRow(increment: increment)
+                                .transition(AppMotion.insertionTransition(reduceMotion: reduceMotion))
                             if increment.id != viewModel.activeBlockIncrements.last?.id {
                                 Divider()
                             }
@@ -465,6 +503,10 @@ struct ActiveSessionView: View {
                     Text("Work Increments")
                         .font(.headline)
                 }
+                .animation(
+                    AppMotion.animation(.standard, reduceMotion: reduceMotion),
+                    value: viewModel.activeBlockIncrements.map(\.id)
+                )
             }
 
             Divider()
@@ -512,10 +554,9 @@ struct ActiveSessionView: View {
                             .labelStyle(.iconOnly)
                             .font(.title3)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.green)
+                    .buttonStyle(AppIconButtonStyle(tone: .success))
                     .disabled(viewModel.activeBlock == nil || viewModel.isWorking || isShowingBlockCompletionInput)
-                    .fastTooltip("Complete Focus Block")
+                    .appTooltip("Complete Focus Block")
                     .accessibilityLabel("Complete Focus Block")
 
                     Button {
@@ -527,10 +568,9 @@ struct ActiveSessionView: View {
                             .labelStyle(.iconOnly)
                             .font(.title3)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.orange)
+                    .buttonStyle(AppIconButtonStyle(tone: .warning))
                     .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
-                    .fastTooltip("Pause Block")
+                    .appTooltip("Pause Block")
                     .accessibilityLabel("Pause Block")
 
                     Button(role: .destructive) {
@@ -539,10 +579,9 @@ struct ActiveSessionView: View {
                         Label("End Session", systemImage: "xmark")
                             .labelStyle(.iconOnly)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.red)
+                    .buttonStyle(AppIconButtonStyle(tone: .error))
                     .disabled(viewModel.activeBlock == nil || viewModel.isWorking)
-                    .fastTooltip("Complete Session")
+                    .appTooltip("Complete Session")
                     .accessibilityLabel("Complete Session")
                     .accessibilityHint("Open the brain dump form and prepare to generate a snapshot.")
                 }
@@ -585,45 +624,35 @@ struct ActiveSessionView: View {
         }
     }
     private var sessionInspectorDisclosure: some View {
-        DisclosureGroup {
-            VStack(alignment: .leading, spacing: 12) {
-                inspectorSection(title: "State Contract", text: inspectorStateContract)
-                inspectorSection(title: "Observed Context", text: viewModel.observationSummary.displayText)
-                inspectorSection(
-                    title: "Services",
-                    text: "FSEvents, Git, and active app observation stay scoped to this active session."
-                )
-                inspectorSection(
-                    title: "Privacy",
-                    text: "No screenshots, clipboard, browser history, messages, keystrokes, or file contents."
-                )
+        DashboardSurface(style: .soft) {
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 12) {
+                    inspectorSection(title: "State Contract", text: inspectorStateContract)
+                    inspectorSection(title: "Observed Context", text: viewModel.observationSummary.displayText)
+                    inspectorSection(
+                        title: "Services",
+                        text: "FSEvents, Git, and active app observation stay scoped to this active session."
+                    )
+                    inspectorSection(
+                        title: "Privacy",
+                        text: "No screenshots, clipboard, browser history, messages, keystrokes, or file contents."
+                    )
 
-                if !viewModel.sessionBlocks.isEmpty {
-                    Divider()
-                    Text("Focus Blocks")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                        ForEach(viewModel.sessionBlocks) { block in
-                            BlockChip(block: block)
+                    if !viewModel.sessionBlocks.isEmpty {
+                        Divider()
+                        AppSectionLabel("Focus Blocks")
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                            ForEach(viewModel.sessionBlocks) { block in
+                                BlockChip(block: block)
+                            }
                         }
                     }
                 }
+                .padding(.top, 10)
+            } label: {
+                Label("Open Inspector", systemImage: "sidebar.right")
+                    .font(.callout.weight(.semibold))
             }
-            .padding(.top, 10)
-        } label: {
-            Label("Open Inspector", systemImage: "sidebar.right")
-                .font(.callout.weight(.semibold))
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.secondary.opacity(0.16))
         }
     }
 
@@ -658,73 +687,6 @@ struct ActiveSessionView: View {
     }
 }
 
-private struct FastTooltipModifier: ViewModifier {
-    let text: String
-    let delay: TimeInterval
-
-    @State private var isShowingTooltip = false
-    @State private var scheduledWorkItem: DispatchWorkItem?
-
-    init(_ text: String, delayFactor: Double = 0.7, baseDelay: TimeInterval = 0.5) {
-        self.text = text
-        self.delay = baseDelay * delayFactor
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .overlay(alignment: .bottom) {
-                if isShowingTooltip {
-                    Text(text)
-                        .font(.caption2)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: true, vertical: true)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .foregroundStyle(.white)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(Color.black.opacity(0.9))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
-                        )
-                        .padding(.top, 6)
-                        .offset(y: 24.2)
-                        .allowsHitTesting(false)
-                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 2)
-                        .transition(.opacity)
-                        .zIndex(1)
-                }
-            }
-            .onAppear {
-                isShowingTooltip = false
-            }
-            .onDisappear {
-                scheduledWorkItem?.cancel()
-                isShowingTooltip = false
-            }
-            .onHover { hovering in
-                scheduledWorkItem?.cancel()
-                if hovering {
-                    let workItem = DispatchWorkItem {
-                        isShowingTooltip = true
-                    }
-                    scheduledWorkItem = workItem
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
-                } else {
-                    isShowingTooltip = false
-                }
-            }
-    }
-}
-
-private extension View {
-    func fastTooltip(_ text: String, delayFactor: Double = 0.7, baseDelay: TimeInterval = 0.5) -> some View {
-        modifier(FastTooltipModifier(text, delayFactor: delayFactor, baseDelay: baseDelay))
-    }
-}
-
 private struct RichTextField: View {
     let placeholder: String
     @Binding var text: String
@@ -740,7 +702,7 @@ private struct RichTextField: View {
             HStack {
                 Text(placeholder)
                     .font(.callout.weight(.semibold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
@@ -750,27 +712,24 @@ private struct RichTextField: View {
                     } label: {
                         Image(systemName: "bold")
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.primary)
-                    .fastTooltip("Bold")
+                    .buttonStyle(AppIconButtonStyle())
+                    .appTooltip("Bold")
 
                     Button {
                         formatter.toggleItalic()
                     } label: {
                         Image(systemName: "italic")
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.primary)
-                    .fastTooltip("Italic")
+                    .buttonStyle(AppIconButtonStyle())
+                    .appTooltip("Italic")
 
                     Button {
                         formatter.insertBullet()
                     } label: {
                         Image(systemName: "list.bullet")
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.primary)
-                    .fastTooltip("Insert bullets")
+                    .buttonStyle(AppIconButtonStyle())
+                    .appTooltip("Insert bullets")
                 }
             }
             .padding(.horizontal, 8)
@@ -787,8 +746,8 @@ private struct RichTextField: View {
                 .padding(.vertical, 6)
         }
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.secondary.opacity(0.24))
+            RoundedRectangle(cornerRadius: AppVisualTokens.Radius.standard, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.56))
         }
     }
 }
@@ -1058,24 +1017,33 @@ struct EndSessionView: View {
     let project: Project
     let session: WorkSession
     @ObservedObject var viewModel: SessionViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             Header(project: project)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("What is still in your head?")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Text("Include decisions, surprises, blockers, and what you would do next.")
-                    .foregroundStyle(.secondary)
-                TextEditor(text: $viewModel.brainDump)
-                    .font(.body)
-                    .frame(minHeight: 140, maxHeight: 180)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(.secondary.opacity(0.25))
-                    }
+            DashboardSurface(style: .emphasized) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("What is still in your head?")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    Text("Include decisions, surprises, blockers, and what you would do next.")
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: $viewModel.brainDump)
+                        .font(.body)
+                        .frame(minHeight: 140, maxHeight: 180)
+                        .scrollContentBackground(.hidden)
+                        .padding(6)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppVisualTokens.Radius.compact, style: .continuous)
+                                .fill(Color(nsColor: .controlBackgroundColor))
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: AppVisualTokens.Radius.compact, style: .continuous)
+                                .stroke(Color(nsColor: .separatorColor).opacity(0.56))
+                        }
+                }
             }
 
             HStack(spacing: 12) {
@@ -1107,12 +1075,16 @@ struct EndSessionView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
+                .transition(AppMotion.stateTransition(reduceMotion: reduceMotion))
             }
 
             Spacer()
         }
-        .padding(32)
+        .padding(AppVisualTokens.Spacing.workspaceWide)
+        .frame(maxWidth: AppVisualTokens.Layout.compactWorkspaceWidth, alignment: .leading)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .animation(AppMotion.animation(.standard, reduceMotion: reduceMotion), value: viewModel.isWorking)
     }
 }
 
@@ -1149,18 +1121,20 @@ struct SessionRecoverySheet: View {
             .accessibilityElement(children: .combine)
 
             if !context.isProjectFolderAccessible {
-                VStack(alignment: .leading, spacing: 8) {
-                    Label(
-                        "This project folder is no longer accessible.",
-                        systemImage: "folder.badge.questionmark"
-                    )
-                    .font(.headline)
+                AppSurface(style: .status(.warning)) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label(
+                            "This project folder is no longer accessible.",
+                            systemImage: "folder.badge.questionmark"
+                        )
+                        .font(.headline)
 
-                    Text("Choose the folder again before resuming observation.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        Text("Choose the folder again before resuming observation.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
                 }
-                .accessibilityElement(children: .combine)
             }
 
             HStack(spacing: 12) {
@@ -1196,51 +1170,50 @@ struct HistoricalSessionDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text("Session Detail")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        Text(project.name)
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                    }
-                    Spacer()
-                    Button(action: onBackToProject) {
-                        Label("Back", systemImage: "chevron.left")
-                    }
-                }
-
-                DashboardSurface {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Session Summary")
-                            .font(.headline)
-                        Text(session.mission)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .textSelection(.enabled)
-                        HStack(spacing: 8) {
-                            Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
-                            if let endedAt = session.endedAt {
-                                Text("·")
-                                Text(DurationFormatter.shortString(from: Int(endedAt.timeIntervalSince(session.startedAt))))
-                            }
-                            Text("·")
-                            Text(session.status.rawValue.capitalized)
+            AppWorkspace {
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 7) {
+                            Text("Session Detail")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            Text(project.name)
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
                         }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        Spacer()
+                        Button(action: onBackToProject) {
+                            Label("Back", systemImage: "chevron.left")
+                        }
                     }
-                }
 
-                snapshotSection
-                blocksSection
-                observedContextSection
+                    DashboardSurface {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Session Summary")
+                                .font(.headline)
+                            Text(session.mission)
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                                .textSelection(.enabled)
+                            HStack(spacing: 8) {
+                                Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
+                                if let endedAt = session.endedAt {
+                                    Text("·")
+                                    Text(DurationFormatter.shortString(from: Int(endedAt.timeIntervalSince(session.startedAt))))
+                                }
+                                Text("·")
+                                Text(session.status.rawValue.capitalized)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    snapshotSection
+                    blocksSection
+                    observedContextSection
+                }
             }
-            .padding(28)
-            .frame(maxWidth: 900, alignment: .leading)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Color(nsColor: .windowBackgroundColor))
     }
@@ -1357,56 +1330,49 @@ private struct HistoricalBlockRow: View {
     @State private var isIncrementsExpanded = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                BlockStatusBadge(block: block)
-                Spacer()
-                Text(DurationFormatter.shortString(from: block.elapsedSeconds(at: block.endedAt ?? Date())))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+        AppSurface(style: .soft) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    BlockStatusBadge(block: block)
+                    Spacer()
+                    Text(DurationFormatter.shortString(from: block.elapsedSeconds(at: block.endedAt ?? Date())))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-            if let intention = block.intention {
-                Text(intention)
-                    .font(.callout)
-                    .fontWeight(.semibold)
-                    .textSelection(.enabled)
-            }
+                if let intention = block.intention {
+                    Text(intention)
+                        .font(.callout)
+                        .fontWeight(.semibold)
+                        .textSelection(.enabled)
+                }
 
-            if let summary = block.summary {
-                Text(summary)
-                    .font(.callout)
-                    .textSelection(.enabled)
-            }
+                if let summary = block.summary {
+                    Text(summary)
+                        .font(.callout)
+                        .textSelection(.enabled)
+                }
 
-            if increments.isEmpty {
-                Text("No manual increments.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                DisclosureGroup(isExpanded: $isIncrementsExpanded) {
-                    VStack(spacing: 0) {
-                        ForEach(increments) { increment in
-                            IncrementRow(increment: increment)
-                            if increment.id != increments.last?.id {
-                                Divider()
+                if increments.isEmpty {
+                    Text("No manual increments.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    DisclosureGroup(isExpanded: $isIncrementsExpanded) {
+                        VStack(spacing: 0) {
+                            ForEach(increments) { increment in
+                                IncrementRow(increment: increment)
+                                if increment.id != increments.last?.id {
+                                    Divider()
+                                }
                             }
                         }
+                    } label: {
+                        Text("Work Increments")
+                            .font(.headline)
                     }
-                } label: {
-                    Text("Work Increments")
-                        .font(.headline)
                 }
             }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.secondary.opacity(0.16))
         }
     }
 }
@@ -1455,17 +1421,6 @@ private struct IncrementRow: View {
         }
     }
 
-    private var kindColor: Color {
-        switch increment.kind {
-        case .note:
-            .blue
-        case .decision:
-            .green
-        case .blocker:
-            .orange
-        }
-    }
-
     private var incrementHeader: some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Text(increment.occurredAt.formatted(date: .omitted, time: .shortened))
@@ -1477,13 +1432,7 @@ private struct IncrementRow: View {
                 HStack(spacing: 6) {
                     Text(increment.title)
                         .font(.callout)
-                    Text(increment.kind.displayName)
-                        .font(.caption2)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(kindColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(kindColor.opacity(0.12)))
+                    AppStatusPill(increment.kind.displayName, tone: increment.kind.appTone)
                 }
             }
             Spacer()
@@ -1495,41 +1444,28 @@ private struct BlockChip: View {
     let block: PomodoroBlock
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            BlockStatusBadge(block: block)
-            Text(block.intention ?? "Block \(block.blockIndex)")
-                .font(.callout)
-                .fontWeight(.semibold)
-                .lineLimit(2)
-            Text(block.status == .active || block.status == .paused
-                 ? "\(DurationFormatter.timerString(from: block.remainingSeconds())) left"
-                 : DurationFormatter.shortString(from: block.elapsedSeconds(at: block.endedAt ?? Date())))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        AppSurface(style: .soft) {
+            VStack(alignment: .leading, spacing: 8) {
+                BlockStatusBadge(block: block)
+                Text(block.intention ?? "Block \(block.blockIndex)")
+                    .font(.callout)
+                    .fontWeight(.semibold)
+                    .lineLimit(2)
+                Text(block.status == .active || block.status == .paused
+                     ? "\(DurationFormatter.timerString(from: block.remainingSeconds())) left"
+                     : DurationFormatter.shortString(from: block.elapsedSeconds(at: block.endedAt ?? Date())))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: AppVisualTokens.Radius.standard, style: .continuous)
                 .stroke(statusColor.opacity(0.55), lineWidth: block.status == .active ? 1.5 : 1)
         }
     }
 
     private var statusColor: Color {
-        switch block.status {
-        case .active:
-            .accentColor
-        case .paused:
-            .orange
-        case .completed:
-            .green
-        case .interrupted:
-            .secondary
-        }
+        block.status.appTone.tint
     }
 }
 
@@ -1541,26 +1477,7 @@ private struct BlockStatusBadge: View {
             Text("\(block.blockIndex)")
                 .font(.callout)
                 .fontWeight(.semibold)
-            Text(block.status.rawValue.capitalized)
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundStyle(color)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(color.opacity(0.12)))
-        }
-    }
-
-    private var color: Color {
-        switch block.status {
-        case .active:
-            .accentColor
-        case .paused:
-            .orange
-        case .completed:
-            .green
-        case .interrupted:
-            .secondary
+            AppStatusPill(block.status.rawValue.capitalized, tone: block.status.appTone)
         }
     }
 }
@@ -1591,5 +1508,33 @@ private extension Array where Element == String {
             values.append(value)
         }
         return values
+    }
+}
+
+private extension PomodoroBlockStatus {
+    var appTone: AppStatusTone {
+        switch self {
+        case .active:
+            .accent
+        case .paused:
+            .warning
+        case .completed:
+            .success
+        case .interrupted:
+            .neutral
+        }
+    }
+}
+
+private extension WorkIncrementKind {
+    var appTone: AppStatusTone {
+        switch self {
+        case .note:
+            .accent
+        case .decision:
+            .success
+        case .blocker:
+            .warning
+        }
     }
 }

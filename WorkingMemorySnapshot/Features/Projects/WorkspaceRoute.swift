@@ -85,4 +85,33 @@ enum WorkspaceRoute: Equatable {
 
         return .projectDashboard(projectID)
     }
+
+    var presentationIdentity: String {
+        switch self {
+        case .emptyLibrary:
+            "empty-library"
+        case .noProjectSelected:
+            "no-project"
+        case .settings:
+            "settings"
+        case .projectDashboard(let projectID):
+            "project-dashboard-\(projectID.uuidString)"
+        case .startSession(let projectID):
+            "start-session-\(projectID.uuidString)"
+        case .activeSession(let sessionID),
+             .pausedBlock(let sessionID),
+             .betweenBlocks(let sessionID):
+            "live-session-\(sessionID.uuidString)"
+        case .endSession(let sessionID):
+            "end-session-\(sessionID.uuidString)"
+        case .snapshotGenerationFailed(let sessionID):
+            "snapshot-failed-\(sessionID.uuidString)"
+        case .snapshotDetail(let snapshotID):
+            "snapshot-detail-\(snapshotID.uuidString)"
+        case .historicalSession(let sessionID):
+            "session-history-\(sessionID.uuidString)"
+        case .projectAccessLost(let projectID):
+            "project-access-\(projectID.uuidString)"
+        }
+    }
 }

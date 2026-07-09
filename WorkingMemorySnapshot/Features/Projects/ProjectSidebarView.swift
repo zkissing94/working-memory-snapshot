@@ -139,16 +139,20 @@ enum CurrentSessionSummaryStatus: Equatable {
     }
 
     var tint: Color {
-        switch self {
-        case .active:
-            Color(red: 0.08, green: 0.50, blue: 0.30)
-        case .paused:
-            Color(red: 0.72, green: 0.42, blue: 0.10)
-        }
+        tone.tint
     }
 
     var softFill: Color {
-        tint.opacity(0.12)
+        tone.softFill
+    }
+
+    private var tone: AppStatusTone {
+        switch self {
+        case .active:
+            .success
+        case .paused:
+            .warning
+        }
     }
 }
 
@@ -161,11 +165,11 @@ enum CurrentSessionBlockIndicatorStatus: Equatable {
     var tint: Color {
         switch self {
         case .active:
-            Color(red: 0.08, green: 0.50, blue: 0.30)
+            AppStatusTone.success.tint
         case .paused:
-            Color(red: 0.72, green: 0.42, blue: 0.10)
+            AppStatusTone.warning.tint
         case .completed:
-            Color(red: 0.08, green: 0.58, blue: 0.28)
+            AppStatusTone.success.tint
         case .interrupted:
             Color(nsColor: .tertiaryLabelColor)
         }
@@ -415,16 +419,7 @@ struct ProjectSidebarView: View {
                 .frame(width: 26, height: 26)
                 .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.accentColor)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
-        }
+        .buttonStyle(AppIconButtonStyle(tone: .accent))
         .disabled(viewModel.isLoading)
         .help("Add Project")
         .accessibilityLabel("Add Project")
@@ -441,16 +436,7 @@ struct ProjectSidebarView: View {
                 .frame(width: 26, height: 26)
                 .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.red)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(nsColor: .controlBackgroundColor))
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor).opacity(0.45), lineWidth: 1)
-        }
+        .buttonStyle(AppIconButtonStyle(tone: .error))
         .disabled(viewModel.selectedProject == nil || viewModel.isLoading)
         .help("Delete Project")
         .accessibilityLabel("Delete Project")
@@ -464,7 +450,12 @@ struct ProjectSidebarView: View {
             SidebarSettingsRow(isSelected: viewModel.selectedItem == .settings)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(
+            AppClickableRowButtonStyle(
+                isSelected: viewModel.selectedItem == .settings,
+                baseFill: .clear
+            )
+        )
         .accessibilityLabel("Settings")
         .accessibilityHint("Configure local snapshot generation.")
     }
@@ -474,11 +465,7 @@ struct ProjectSidebarView: View {
     }
 
     private func sidebarSection(_ title: String) -> some View {
-        Text(title)
-            .font(.caption2.weight(.bold))
-            .foregroundStyle(.secondary)
-            .textCase(.uppercase)
-            .tracking(0.8)
+        AppSectionLabel(title)
     }
 
     @ViewBuilder
@@ -538,16 +525,18 @@ struct ProjectSidebarView: View {
             }
             .contentShape(Rectangle())
         } else {
-            ProjectSidebarRow(
-                project: project,
-                metadata: viewModel.sidebarMetadata[project.id],
-                activity: activity,
-                isSelected: isSelected
-            )
-            .contentShape(Rectangle())
-            .onTapGesture {
+            Button {
                 selectProject(project)
+            } label: {
+                ProjectSidebarRow(
+                    project: project,
+                    metadata: viewModel.sidebarMetadata[project.id],
+                    activity: activity,
+                    isSelected: isSelected
+                )
+                .contentShape(Rectangle())
             }
+            .buttonStyle(AppClickableRowButtonStyle(isSelected: isSelected))
             .contextMenu {
                 Button {
                     selectProject(project)
@@ -678,11 +667,12 @@ private struct CurrentSessionSummaryView: View {
                 HStack(alignment: .top, spacing: 10) {
                     compactMetric(
                         label: "Elapsed",
-                        value: summary.elapsedSessionTimeText(at: timeline.date)
+                        value: summary.elapsedSessionTimeText(at: timeline.date),
+                        countsDown: false
                     )
 
                     if let remaining = summary.blockRemainingTimeText(at: timeline.date) {
-                        compactMetric(label: "Block", value: remaining)
+                        compactMetric(label: "Block", value: remaining, countsDown: true)
                     }
                 }
 
@@ -725,7 +715,7 @@ private struct CurrentSessionSummaryView: View {
         }
     }
 
-    private func compactMetric(label: String, value: String) -> some View {
+    private func compactMetric(label: String, value: String, countsDown: Bool) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(.caption2)
@@ -733,6 +723,7 @@ private struct CurrentSessionSummaryView: View {
             Text(value)
                 .font(.system(.caption, design: .monospaced).weight(.semibold))
                 .monospacedDigit()
+                .contentTransition(.numericText(countsDown: countsDown))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -819,11 +810,6 @@ private struct ProjectSidebarRow: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(rowBackground)
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(rowStroke, lineWidth: 1)
-        }
     }
 
     private var metadataText: String? {
@@ -836,16 +822,6 @@ private struct ProjectSidebarRow: View {
         return "\(metadata.sessionCount) sessions"
     }
 
-    private var rowBackground: some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(isSelected ? Color.accentColor.opacity(0.10) : Color(nsColor: .controlBackgroundColor))
-    }
-
-    private var rowStroke: Color {
-        isSelected
-            ? Color.accentColor.opacity(0.32)
-            : Color(nsColor: .separatorColor).opacity(0.35)
-    }
 }
 
 private struct SidebarSettingsRow: View {
@@ -867,17 +843,6 @@ private struct SidebarSettingsRow: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(isSelected ? Color.accentColor.opacity(0.10) : Color.clear)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(
-                    isSelected ? Color.accentColor.opacity(0.32) : Color.clear,
-                    lineWidth: 1
-                )
-        }
     }
 }
 
@@ -913,6 +878,7 @@ private struct SidebarStatusIndicator: View {
         Circle()
             .fill(kind.tint)
             .frame(width: 8, height: 8)
+            .shadow(color: kind.tint.opacity(0.24), radius: 3)
             .accessibilityLabel(kind.accessibilityLabel)
     }
 }
@@ -963,28 +929,23 @@ private extension ProjectSidebarActivityKind {
     }
 
     var tint: Color {
-        switch self {
-        case .preparing, .betweenBlocks, .recovery:
-            Color(nsColor: .secondaryLabelColor)
-        case .activeBlock:
-            Color(red: 0.08, green: 0.58, blue: 0.28)
-        case .pausedBlock, .ending, .accessLost:
-            Color(red: 0.73, green: 0.40, blue: 0.12)
-        case .snapshotFailed:
-            Color(red: 0.78, green: 0.18, blue: 0.16)
-        }
+        tone.tint
     }
 
     var textStyle: Color {
+        tone.tint
+    }
+
+    private var tone: AppStatusTone {
         switch self {
         case .activeBlock:
-            Color(red: 0.08, green: 0.48, blue: 0.24)
+            .success
         case .pausedBlock, .ending, .accessLost:
-            Color(red: 0.60, green: 0.32, blue: 0.09)
+            .warning
         case .snapshotFailed:
-            Color(red: 0.66, green: 0.12, blue: 0.11)
+            .error
         case .preparing, .betweenBlocks, .recovery:
-            Color(nsColor: .secondaryLabelColor)
+            .neutral
         }
     }
 

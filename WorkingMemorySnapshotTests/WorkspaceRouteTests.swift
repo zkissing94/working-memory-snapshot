@@ -130,6 +130,24 @@ final class WorkspaceRouteTests: XCTestCase {
         )
     }
 
+    func testPresentationIdentityKeepsLiveSessionViewStableAcrossBlockStates() {
+        let sessionID = UUID()
+        let projectID = UUID()
+
+        XCTAssertEqual(
+            WorkspaceRoute.activeSession(sessionID).presentationIdentity,
+            WorkspaceRoute.pausedBlock(sessionID).presentationIdentity
+        )
+        XCTAssertEqual(
+            WorkspaceRoute.pausedBlock(sessionID).presentationIdentity,
+            WorkspaceRoute.betweenBlocks(sessionID).presentationIdentity
+        )
+        XCTAssertNotEqual(
+            WorkspaceRoute.projectDashboard(projectID).presentationIdentity,
+            WorkspaceRoute.startSession(projectID).presentationIdentity
+        )
+    }
+
     private func route(
         selectedItem: SidebarSelection?,
         selectedProjectID: Project.ID?,

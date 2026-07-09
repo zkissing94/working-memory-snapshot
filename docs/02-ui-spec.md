@@ -365,6 +365,20 @@ Choose the folder again to restore access.
 - Respect Dynamic Type and reduced motion.
 - Avoid custom animations in v0.
 
+### Post-MVP M13 motion and visual polish
+
+The post-MVP interface uses one shared native SwiftUI presentation system across all mapped workspace states.
+
+- Preserve the existing navigation, copy, controls, information order, and state transitions.
+- Use 8-point continuous corner radii, adaptive system backgrounds, SF typography, the system accent color, and semantic success/warning/error tones.
+- Keep interactive feedback brief: 100-140 ms for hover and press, 180-240 ms for ordinary state changes, and 260-320 ms for a single emphasized moment.
+- Animate workspace replacement with opacity, no more than 8 points of vertical movement, and a maximum 0.99 insertion scale.
+- Use numeric content transitions for live timers and short interpolation for progress updates.
+- Use a one-shot checkmark halo only after a focus block is completed. Do not repeat it automatically.
+- Do not add ambient looping animation, particles, confetti, sound, gamified effects, or motion that delays input.
+- When Reduce Motion is enabled, remove scale, movement, symbol choreography, and the completion halo; use an instant update or a short opacity transition.
+- Keep native macOS sheet and window presentation behavior.
+
 ## 14. Copy rules
 
 Use literal, calm copy.
