@@ -7,7 +7,8 @@
 | Passive evidence lacks deep meaning from Codex or Claude work | Resume brief becomes generic | Brain dump is primary evidence; preserve mission, manual increments, and Git/file facts | M6/M8 dogfood |
 | Model invents decisions | Product becomes untrustworthy | Strict prompt, empty arrays allowed, low temperature, structured output, manual evaluation | M6/M7 |
 | Small model adds latency without quality | Two-stage design harms experience | Keep janitor disabled until measured need | M9 evaluation |
-| Pomodoro UI shifts the product toward productivity enforcement | Calm cognitive-continuity loop becomes a timer app | Treat blocks as optional capture points; no auto-ending sessions, streaks, scores, or notifications | M8 dogfood |
+| Pomodoro UI shifts the product toward productivity enforcement | Calm cognitive-continuity loop becomes a timer app | Treat blocks as optional capture points; no auto-ending sessions, streaks, scores, or break enforcement | M8 dogfood |
+| Focus-block completion alerts become intrusive | The app feels disruptive during work instead of useful at capture boundaries | Alert only at block completion, require user confirmation before persistence, avoid repeated prompts for a dismissed block | Manual alert validation |
 | Session detail implies message or transcript observation | Privacy promise is weakened and user trust drops | Render only Git/file/app events as observed context; explicitly exclude messages/transcripts from schema and UI | M8 review |
 | Large repositories create event noise or CPU load | Observation disrupts work | FSEvents, ignore rules, bounded aggregation, no repeated full scans | M5b |
 | Pre-existing Git changes are attributed to the session | Snapshot reports false work | Capture initial state and session-observed paths; label limitations | M5a/M6 |

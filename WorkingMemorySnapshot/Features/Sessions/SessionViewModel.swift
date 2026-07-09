@@ -17,12 +17,22 @@ struct GeneratedSnapshotContext: Equatable {
     let snapshot: Snapshot
 }
 
+struct FocusBlockCompletionPrompt: Equatable {
+    let session: WorkSession
+    let block: PomodoroBlock
+
+    var intention: String {
+        block.intention ?? session.mission
+    }
+}
+
 @MainActor
 final class SessionViewModel: ObservableObject {
     @Published private(set) var activeSession: WorkSession?
     @Published private(set) var recoveryContext: SessionRecoveryContext?
     @Published private(set) var generatedSnapshotContext: GeneratedSnapshotContext?
     @Published private(set) var failedSnapshotSession: WorkSession?
+    @Published private(set) var blockCompletionPrompt: FocusBlockCompletionPrompt?
     @Published private(set) var flow: SessionFlow = .idle
     @Published private(set) var activeBlock: PomodoroBlock?
     @Published private(set) var sessionBlocks: [PomodoroBlock] = []
@@ -39,7 +49,9 @@ final class SessionViewModel: ObservableObject {
     private let workIncrementRepository: WorkIncrementRepository
     private let snapshotGenerator: any SessionSnapshotGenerating
     private let observationCoordinator: any SessionObservationCoordinating
+    private let focusBlockDeadlineAlertService: any FocusBlockDeadlineAlerting
     private let fileManager: FileManager
+    private var promptedExpiredBlockIDs = Set<PomodoroBlock.ID>()
 
     init(
         sessionRepository: SessionRepository,
@@ -48,6 +60,7 @@ final class SessionViewModel: ObservableObject {
         workIncrementRepository: WorkIncrementRepository,
         snapshotGenerator: any SessionSnapshotGenerating,
         observationCoordinator: any SessionObservationCoordinating,
+        focusBlockDeadlineAlertService: (any FocusBlockDeadlineAlerting)? = nil,
         fileManager: FileManager = .default
     ) {
         self.sessionRepository = sessionRepository
@@ -56,9 +69,13 @@ final class SessionViewModel: ObservableObject {
         self.workIncrementRepository = workIncrementRepository
         self.snapshotGenerator = snapshotGenerator
         self.observationCoordinator = observationCoordinator
+        self.focusBlockDeadlineAlertService = focusBlockDeadlineAlertService ?? NoOpFocusBlockDeadlineAlertService()
         self.fileManager = fileManager
         self.observationCoordinator.onSummaryChange = { [weak self] summary in
             self?.observationSummary = summary
+        }
+        self.focusBlockDeadlineAlertService.onDeadlineReached = { [weak self] blockID in
+            self?.handleBlockDeadlineReached(blockID)
         }
     }
 
@@ -84,6 +101,17 @@ final class SessionViewModel: ObservableObject {
         )
     }
 
+    var isShowingBlockCompletionPrompt: Binding<Bool> {
+        Binding(
+            get: { self.blockCompletionPrompt != nil },
+            set: { isShowing in
+                if !isShowing {
+                    self.dismissBlockCompletionPrompt()
+                }
+            }
+        )
+    }
+
     func loadActiveSessionForRecovery() async {
         do {
             guard let session = try await sessionRepository.activeSession() else {
@@ -92,6 +120,8 @@ final class SessionViewModel: ObservableObject {
                 sessionBlocks = []
                 activeBlockIncrements = []
                 recoveryContext = nil
+                blockCompletionPrompt = nil
+                focusBlockDeadlineAlertService.cancelAllDeadlines()
                 return
             }
 
@@ -141,6 +171,7 @@ final class SessionViewModel: ObservableObject {
             mission = ""
             flow = .idle
             await observationCoordinator.startObserving(session: session, project: project)
+            scheduleDeadlineIfNeeded(for: block)
         }
     }
 
@@ -152,6 +183,7 @@ final class SessionViewModel: ObservableObject {
         if brainDump.isEmpty {
             brainDump = activeSession.brainDump ?? ""
         }
+        blockCompletionPrompt = nil
         flow = .ending(activeSession.id)
     }
 
@@ -162,6 +194,7 @@ final class SessionViewModel: ObservableObject {
 
         activeSession = recoveryContext.session
         brainDump = recoveryContext.session.brainDump ?? ""
+        blockCompletionPrompt = nil
         flow = .ending(recoveryContext.session.id)
         self.recoveryContext = nil
     }
@@ -178,6 +211,7 @@ final class SessionViewModel: ObservableObject {
         await performSessionUpdate {
             let endingSession = activeSession
             let endingBrainDump = brainDump
+            focusBlockDeadlineAlertService.cancelAllDeadlines()
             _ = try await pomodoroBlockRepository.interruptOpenBlock(for: endingSession.id)
             await observationCoordinator.stopObservingForCompletion(
                 session: endingSession,
@@ -193,6 +227,7 @@ final class SessionViewModel: ObservableObject {
             sessionBlocks = []
             activeBlockIncrements = []
             recoveryContext = nil
+            blockCompletionPrompt = nil
             brainDump = ""
             flow = .idle
 
@@ -223,6 +258,7 @@ final class SessionViewModel: ObservableObject {
         }
 
         await performSessionUpdate {
+            focusBlockDeadlineAlertService.cancelAllDeadlines()
             _ = try await pomodoroBlockRepository.interruptOpenBlock(for: activeSession.id)
             await observationCoordinator.stopObservingForCancellation(session: activeSession)
             _ = try await sessionRepository.cancelSession(id: activeSession.id)
@@ -231,6 +267,7 @@ final class SessionViewModel: ObservableObject {
             sessionBlocks = []
             activeBlockIncrements = []
             recoveryContext = nil
+            blockCompletionPrompt = nil
             brainDump = ""
             flow = .idle
         }
@@ -250,7 +287,12 @@ final class SessionViewModel: ObservableObject {
         self.recoveryContext = nil
         flow = .idle
         Task {
-            try? await self.ensureAndLoadBlocks(for: recoveryContext.session)
+            do {
+                try await self.ensureAndLoadBlocks(for: recoveryContext.session)
+                scheduleDeadlineIfNeeded(for: activeBlock)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
             await observationCoordinator.startObserving(
                 session: recoveryContext.session,
                 project: recoveryContext.project
@@ -295,13 +337,34 @@ final class SessionViewModel: ObservableObject {
         generatedSnapshotContext = nil
     }
 
+    func dismissBlockCompletionPrompt() {
+        if let blockID = blockCompletionPrompt?.block.id {
+            promptedExpiredBlockIDs.insert(blockID)
+            focusBlockDeadlineAlertService.cancelDeadline(for: blockID)
+        }
+        blockCompletionPrompt = nil
+    }
+
+    func completePromptedBlock(summary: String?) async {
+        guard let prompt = blockCompletionPrompt,
+              activeBlock?.id == prompt.block.id
+        else {
+            blockCompletionPrompt = nil
+            return
+        }
+
+        await completeCurrentBlock(summary: summary)
+    }
+
     func pauseCurrentBlock() async {
         guard let activeBlock, activeBlock.status == .active else {
             return
         }
 
         await performSessionUpdate {
+            focusBlockDeadlineAlertService.cancelDeadline(for: activeBlock.id)
             let paused = try await pomodoroBlockRepository.pauseBlock(id: activeBlock.id)
+            clearBlockCompletionPrompt(for: activeBlock.id)
             self.activeBlock = paused
             try await loadBlocksAndIncrements(for: paused.sessionID)
         }
@@ -316,6 +379,7 @@ final class SessionViewModel: ObservableObject {
             let resumed = try await pomodoroBlockRepository.resumeBlock(id: activeBlock.id)
             self.activeBlock = resumed
             try await loadBlocksAndIncrements(for: resumed.sessionID)
+            scheduleDeadlineIfNeeded(for: resumed)
         }
     }
 
@@ -325,7 +389,9 @@ final class SessionViewModel: ObservableObject {
         }
 
         await performSessionUpdate {
+            focusBlockDeadlineAlertService.cancelDeadline(for: activeBlock.id)
             _ = try await pomodoroBlockRepository.completeBlock(id: activeBlock.id, summary: summary)
+            clearBlockCompletionPrompt(for: activeBlock.id)
             self.activeBlock = nil
             self.activeBlockIncrements = []
             try await loadBlocksAndIncrements(for: activeBlock.sessionID)
@@ -345,6 +411,7 @@ final class SessionViewModel: ObservableObject {
             self.activeBlock = block
             self.activeBlockIncrements = []
             try await loadBlocksAndIncrements(for: activeSession.id)
+            scheduleDeadlineIfNeeded(for: block)
         }
     }
 
@@ -423,6 +490,39 @@ final class SessionViewModel: ObservableObject {
             activeBlockIncrements = try await workIncrementRepository.listIncrements(for: activeBlock.id)
         } else {
             activeBlockIncrements = []
+        }
+    }
+
+    private func scheduleDeadlineIfNeeded(for block: PomodoroBlock?) {
+        guard let block, block.status == .active else {
+            return
+        }
+        guard !(block.remainingSeconds() == 0 && promptedExpiredBlockIDs.contains(block.id)) else {
+            return
+        }
+        focusBlockDeadlineAlertService.scheduleDeadline(for: block)
+    }
+
+    private func handleBlockDeadlineReached(_ blockID: PomodoroBlock.ID) {
+        guard let activeSession,
+              let activeBlock,
+              activeBlock.id == blockID,
+              activeBlock.status == .active,
+              !promptedExpiredBlockIDs.contains(blockID)
+        else {
+            return
+        }
+
+        promptedExpiredBlockIDs.insert(blockID)
+        blockCompletionPrompt = FocusBlockCompletionPrompt(
+            session: activeSession,
+            block: activeBlock
+        )
+    }
+
+    private func clearBlockCompletionPrompt(for blockID: PomodoroBlock.ID) {
+        if blockCompletionPrompt?.block.id == blockID {
+            blockCompletionPrompt = nil
         }
     }
 

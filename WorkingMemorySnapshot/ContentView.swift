@@ -81,6 +81,13 @@ struct ContentView: View {
                 await projectsViewModel.refreshSidebarMetadata()
             }
         }
+        .onChange(of: sessionViewModel.blockCompletionPrompt) { _, prompt in
+            guard let prompt else {
+                return
+            }
+
+            projectsViewModel.selectProject(id: prompt.session.projectID)
+        }
         .alert("Project Error", isPresented: projectsViewModel.isShowingError) {
             Button("OK", role: .cancel) {
                 projectsViewModel.clearError()
@@ -131,6 +138,23 @@ struct ContentView: View {
                     }
                 )
                 .interactiveDismissDisabled()
+            }
+        }
+        .sheet(isPresented: sessionViewModel.isShowingBlockCompletionPrompt) {
+            if let prompt = sessionViewModel.blockCompletionPrompt {
+                FocusBlockCompletionSheet(
+                    prompt: prompt,
+                    isWorking: sessionViewModel.isWorking,
+                    onReturn: {
+                        sessionViewModel.dismissBlockCompletionPrompt()
+                    },
+                    onComplete: { summary in
+                        Task {
+                            await sessionViewModel.completePromptedBlock(summary: summary)
+                        }
+                    }
+                )
+                .interactiveDismissDisabled(sessionViewModel.isWorking)
             }
         }
     }

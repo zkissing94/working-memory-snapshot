@@ -176,6 +176,20 @@ Manual work increments can be added inside the current block with these kinds:
 
 Observed context remains read-only and generic: Git, changed files, and active applications from existing events. Do not add message, transcript, clipboard, browser-history, screenshot, or keystroke observation.
 
+### Post-MVP block completion alert
+
+When an active focus block reaches zero, the app may post a local macOS notification, bring Working Memory Snapshot to the front, select the active project, and show an in-app completion prompt:
+
+```text
+Focus Block <n> complete
+
+The session is still active. Capture what changed before starting another block.
+```
+
+The prompt includes the block intention, an optional “What changed during this block?” summary field, `Return to Block`, and `Save and Complete Block`.
+
+This alert is a capture boundary only. It does not auto-complete the block, end the session, enforce a break, create a streak, or add new observation sources. If notification permission is denied, the in-app prompt and foreground activation remain the primary behavior while the app process is running.
+
 ## 8. End-session brain dump
 
 Prompt:

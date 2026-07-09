@@ -60,6 +60,7 @@ Required for OS and local-runtime boundaries:
 - `/usr/bin/git` under sandbox after the sandbox migration milestone
 - FSEvents in a real project
 - `NSWorkspace` activation events
+- local focus-block completion notifications and foreground activation
 - live LM Studio connection
 - local model structured output
 - app termination during a session

@@ -67,6 +67,79 @@ struct StartSessionView: View {
     }
 }
 
+struct FocusBlockCompletionSheet: View {
+    let prompt: FocusBlockCompletionPrompt
+    let isWorking: Bool
+    let onReturn: () -> Void
+    let onComplete: (String) -> Void
+
+    @State private var summary = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(.green)
+                    .frame(width: 36)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Focus Block \(prompt.block.blockIndex) complete")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+
+                    Text("The session is still active. Capture what changed before starting another block.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Intention")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Text(prompt.intention)
+                    .font(.body)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("What changed during this block?")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                TextField("Notification and in-app prompt wired...", text: $summary, axis: .vertical)
+                    .lineLimit(4, reservesSpace: true)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            HStack(spacing: 12) {
+                Spacer()
+
+                Button("Return to Block") {
+                    onReturn()
+                }
+                .keyboardShortcut(.cancelAction)
+                .disabled(isWorking)
+
+                Button {
+                    onComplete(summary)
+                } label: {
+                    Label("Save and Complete Block", systemImage: "checkmark")
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.return, modifiers: .command)
+                .disabled(isWorking)
+            }
+        }
+        .padding(24)
+        .frame(width: 480)
+    }
+}
+
 struct ActiveSessionView: View {
     let project: Project
     let session: WorkSession

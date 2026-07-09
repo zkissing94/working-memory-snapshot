@@ -172,6 +172,8 @@ ON work_increments(block_id, occurred_at ASC);
 
 Work increments are manual, user-entered capture. Git/file/app observations remain in the generic `events` table and are rendered as read-only observed context.
 
+Block completion alerts do not add persistence. The deadline is derived from `started_at`, `paused_at`, `accumulated_pause_seconds`, `planned_duration_seconds`, `status`, and `ended_at`. Reaching zero does not write to SQLite; the existing `completeBlock(summary:)` repository path persists completion only after the user confirms.
+
 ## 8. Snapshots
 
 ```sql

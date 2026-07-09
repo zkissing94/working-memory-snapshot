@@ -13,6 +13,7 @@ struct AppEnvironment {
     let lmStudioHTTPTransport: any LMStudioHTTPTransport
     let observationCoordinator: ObservationCoordinator
     let snapshotGenerator: any SessionSnapshotGenerating
+    let focusBlockDeadlineAlertService: any FocusBlockDeadlineAlerting
 
     @MainActor
     static func live() -> AppEnvironment {
@@ -45,7 +46,8 @@ struct AppEnvironment {
                 settingsRepository: settingsRepository,
                 tokenStore: tokenStore,
                 transport: transport
-            )
+            ),
+            focusBlockDeadlineAlertService: FocusBlockDeadlineAlertService()
         )
     }
 

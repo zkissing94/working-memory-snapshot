@@ -56,6 +56,9 @@ stateDiagram-v2
     ActiveSession --> ActiveBlock
     ActiveBlock --> PausedBlock
     PausedBlock --> ActiveBlock
+    ActiveBlock --> BlockCompletionPrompt: countdown reaches zero
+    BlockCompletionPrompt --> ActiveBlock: return to block
+    BlockCompletionPrompt --> BetweenBlocks: save and complete block
     ActiveBlock --> BetweenBlocks: complete block or take break
     BetweenBlocks --> ActiveBlock: start next block
     ActiveSession --> EndSessionBrainDump
@@ -106,6 +109,7 @@ stateDiagram-v2
 | Start session form | `SessionFlow.starting(project.id)` | Goal field, Start Session, Cancel | `Project`, user-facing goal stored as `mission` draft | `SessionRepository.createActiveSession`, `PomodoroBlockRepository.createNextBlock`, access check | Active session, cancel, session error |
 | Start session invalid | Empty goal or inaccessible project | Disabled/failed start with error alert | `mission`, `Project.rootPath` | `SessionRepository` validation, `FileManager` | Correct goal/access, cancel |
 | Active session with active block | `activeSession != nil`, `activeBlock.status == .active` | Active session, block timer, block summary, increments, observed context | `WorkSession`, `PomodoroBlock`, active block `WorkIncrement`, live `ObservationSessionSummary` | `ObservationCoordinator.startObserving`, FSEvents, Git service, active-app service | Pause, complete block, take break, add increment, end, cancel |
+| Block completion prompt | Active block countdown reaches zero | Local notification, app activation, in-app sheet with optional block summary | Existing active `WorkSession` and active `PomodoroBlock`; no alert persistence | `FocusBlockDeadlineAlertService`, `UNUserNotificationCenter`, `NSRunningApplication.activate` | Save and complete block, return to block |
 | Active session paused block | `activeBlock.status == .paused` | Paused block card, Resume, Complete Block | `PomodoroBlock.paused_at`, accumulated pause seconds | `PomodoroBlockRepository.resumeBlock` | Resume, complete, end, cancel |
 | Between blocks | Active session with no open block | Start next block intention, End Session | Completed/interrupted `pomodoro_blocks`; no active/paused block | `PomodoroBlockRepository.createNextBlock` | Active block, end session |
 | Manual increment capture | User adds note, decision, or blocker | Segmented kind picker, title/detail fields | `WorkIncrementKind`, open `PomodoroBlock` | `WorkIncrementRepository.addIncrement` requires active session and active/paused block | Increment row appears, error if no open block |
@@ -172,6 +176,7 @@ stateDiagram-v2
 | File observation | `ObservationCoordinator` and `FileObservationService` | FSEvents scoped to project root | Active session only |
 | Git evidence | `GitService`, `ProcessRunner` | `/usr/bin/git` argument arrays | Active session start/end |
 | Active app evidence | `ActiveAppObservationService` | `NSWorkspace` activation notifications | Active session only |
+| Focus block alerts | `FocusBlockDeadlineAlertService` | `UserNotifications`, AppKit activation | Active block deadline only |
 | Evidence compaction | `EvidenceCompactor` | Bounded deterministic digest | Snapshot generation |
 | Prompt construction | `PromptBuilder` | Prompt version `v1`, JSON schema boundary | Snapshot generation |
 | Local model API | `LMStudioClient` | `GET {baseURL}/models`, `POST {baseURL}/chat/completions` | Settings, snapshot generation |

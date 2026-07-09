@@ -31,7 +31,8 @@ struct WorkingMemorySnapshotApp: App {
                 pomodoroBlockRepository: environment.pomodoroBlockRepository,
                 workIncrementRepository: environment.workIncrementRepository,
                 snapshotGenerator: environment.snapshotGenerator,
-                observationCoordinator: environment.observationCoordinator
+                observationCoordinator: environment.observationCoordinator,
+                focusBlockDeadlineAlertService: environment.focusBlockDeadlineAlertService
             )
         )
         _projectDetailViewModel = StateObject(

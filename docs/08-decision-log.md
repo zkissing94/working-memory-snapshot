@@ -130,6 +130,17 @@ Add Pomodoro blocks inside sessions as lightweight capture points with optional 
 
 **Consequences:** Passive Git/file/app evidence remains in the generic `events` table and is rendered as observed context by session or block time window. No message, transcript, clipboard, browser-history, screenshot, or keystroke observation is introduced. Snapshot prompts may include user-entered block summaries and manual increments below the brain dump and above passive evidence.
 
+## ADR-015 — Local focus-block completion alerts
+
+**Date:** 2026-07-09
+**Status:** Accepted
+
+When an active focus block reaches zero, post a local macOS notification, bring Working Memory Snapshot to the front, and show an in-app completion prompt.
+
+**Reasoning:** The alert makes the block boundary harder to miss and brings the user back to the capture surface that preserves working memory. The block remains a capture point inside the session, not an enforcement mechanism.
+
+**Consequences:** No database migration is required. Deadlines are derived from existing `pomodoro_blocks` timing fields, and reaching zero does not complete a block or end a session. Notification permission is optional; if permission is denied, foreground activation plus the in-app prompt remain the app-process behavior. No new passive observation source is introduced.
+
 ## Open decision template
 
 ### ADR-NNN — Title
