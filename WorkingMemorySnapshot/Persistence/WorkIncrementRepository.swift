@@ -15,7 +15,7 @@ struct WorkIncrementRepository {
             throw WorkIncrementRepositoryError.emptyTitle
         }
 
-        let now = try DateCoding.date(from: DateCoding.string(from: Date()))
+        let now = try DateCoding.now()
         let increment = WorkIncrement(
             id: UUID(),
             blockID: blockID,

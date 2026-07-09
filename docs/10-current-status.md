@@ -76,6 +76,7 @@ Current implementation state:
 - The five-session M7 manual dogfood checklist is documented in `docs/11-m7-dogfood-checklist.md`.
 - Automated M7 tests cover project path restoration, duplicate restore rejection, visible access state, recovery blocking for missing folders, and settings recovery copy.
 - SQLite migration version 6 adds `pomodoro_blocks` and `work_increments`.
+- SQLite migration version 7 removes the legacy `snapshot_prompt_version` app setting while keeping `snapshots.prompt_version` fields intact.
 - `PomodoroBlockRepository` and `WorkIncrementRepository` manage block lifecycle and manual note/decision/blocker capture.
 - Starting a session creates Block 1 with a 20-minute default duration.
 - Legacy active sessions without blocks recover by creating Block 1.

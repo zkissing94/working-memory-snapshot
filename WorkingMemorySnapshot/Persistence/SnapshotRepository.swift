@@ -5,58 +5,84 @@ struct SnapshotRepository {
     let database: Database
 
     func saveOrReplaceSnapshot(_ draft: SnapshotDraft, for sessionID: UUID) async throws -> Snapshot {
-        let now = try DateCoding.date(from: DateCoding.string(from: Date()))
-        let existingSnapshot = try await snapshot(for: sessionID)
-        let snapshot = Snapshot(
-            id: existingSnapshot?.id ?? UUID(),
-            sessionID: sessionID,
-            whatChanged: draft.whatChanged,
-            decisions: draft.decisions,
-            openLoops: draft.openLoops,
-            nextAction: draft.nextAction,
-            resumeBrief: draft.resumeBrief,
-            generatorModel: draft.generatorModel,
-            promptVersion: draft.promptVersion,
-            createdAt: existingSnapshot?.createdAt ?? now,
-            updatedAt: now
-        )
+        let now = try DateCoding.now()
+        return try await database.withTransaction { database in
+            let existingSnapshot = try snapshot(for: sessionID, using: database)
+            let snapshot = Snapshot(
+                id: existingSnapshot?.id ?? UUID(),
+                sessionID: sessionID,
+                whatChanged: draft.whatChanged,
+                decisions: draft.decisions,
+                openLoops: draft.openLoops,
+                nextAction: draft.nextAction,
+                resumeBrief: draft.resumeBrief,
+                generatorModel: draft.generatorModel,
+                promptVersion: draft.promptVersion,
+                createdAt: existingSnapshot?.createdAt ?? now,
+                updatedAt: now
+            )
 
-        let decisionsJSON = try encodeStringArray(snapshot.decisions)
-        let openLoopsJSON = try encodeStringArray(snapshot.openLoops)
+            let decisionsJSON = try encodeStringArray(snapshot.decisions)
+            let openLoopsJSON = try encodeStringArray(snapshot.openLoops)
 
-        try await database.execute("""
-        INSERT INTO snapshots(
-            id,
-            session_id,
-            what_changed,
-            decisions_json,
-            open_loops_json,
-            next_action,
-            resume_brief,
-            generator_model,
-            prompt_version,
-            created_at,
-            updated_at
-        )
-        VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(session_id) DO UPDATE SET
-            what_changed = excluded.what_changed,
-            decisions_json = excluded.decisions_json,
-            open_loops_json = excluded.open_loops_json,
-            next_action = excluded.next_action,
-            resume_brief = excluded.resume_brief,
-            generator_model = excluded.generator_model,
-            prompt_version = excluded.prompt_version,
-            updated_at = excluded.updated_at
-        """) { statement in
-            try bind(snapshot, decisionsJSON: decisionsJSON, openLoopsJSON: openLoopsJSON, to: statement)
+            try database.execute("""
+            INSERT INTO snapshots(
+                id,
+                session_id,
+                what_changed,
+                decisions_json,
+                open_loops_json,
+                next_action,
+                resume_brief,
+                generator_model,
+                prompt_version,
+                created_at,
+                updated_at
+            )
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET
+                what_changed = excluded.what_changed,
+                decisions_json = excluded.decisions_json,
+                open_loops_json = excluded.open_loops_json,
+                next_action = excluded.next_action,
+                resume_brief = excluded.resume_brief,
+                generator_model = excluded.generator_model,
+                prompt_version = excluded.prompt_version,
+                updated_at = excluded.updated_at
+            """) { statement in
+                try bind(snapshot, decisionsJSON: decisionsJSON, openLoopsJSON: openLoopsJSON, to: statement)
+            }
+
+            return snapshot
         }
-
-        return snapshot
     }
 
     func snapshot(for sessionID: UUID) async throws -> Snapshot? {
         try await database.query("""
+        SELECT id,
+               session_id,
+               what_changed,
+               decisions_json,
+               open_loops_json,
+               next_action,
+               resume_brief,
+               generator_model,
+               prompt_version,
+               created_at,
+               updated_at
+        FROM snapshots
+        WHERE session_id = ?
+        LIMIT 1
+        """, bind: { statement in
+            try SQLiteValue.bind(sessionID.uuidString, to: statement, at: 1)
+        }, map: { statement in
+            try mapSnapshot(from: statement)
+        })
+        .first
+    }
+
+    private func snapshot(for sessionID: UUID, using database: isolated Database) throws -> Snapshot? {
+        try database.query("""
         SELECT id,
                session_id,
                what_changed,

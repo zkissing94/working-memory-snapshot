@@ -17,15 +17,22 @@ struct SettingsRepository {
 
     func saveLMStudioSettings(_ settings: LMStudioSettings) async throws {
         let normalizedSettings = try settings.normalized()
+        let updatedAt = try DateCoding.now()
 
-        try await setValue(
-            normalizedSettings.baseURLString,
-            for: .lmStudioBaseURL
-        )
-        try await setValue(
-            normalizedSettings.selectedModelID,
-            for: .lmStudioSynthesizerModel
-        )
+        try await database.withTransaction { database in
+            try setValue(
+                normalizedSettings.baseURLString,
+                for: .lmStudioBaseURL,
+                updatedAt: updatedAt,
+                using: database
+            )
+            try setValue(
+                normalizedSettings.selectedModelID,
+                for: .lmStudioSynthesizerModel,
+                updatedAt: updatedAt,
+                using: database
+            )
+        }
     }
 
     func value(for key: SettingsKey) async throws -> String? {
@@ -43,7 +50,19 @@ struct SettingsRepository {
     }
 
     func setValue(_ value: String, for key: SettingsKey) async throws {
-        try await database.execute("""
+        let updatedAt = try DateCoding.now()
+        try await database.withTransaction { database in
+            try setValue(value, for: key, updatedAt: updatedAt, using: database)
+        }
+    }
+
+    private func setValue(
+        _ value: String,
+        for key: SettingsKey,
+        updatedAt: Date,
+        using database: isolated Database
+    ) throws {
+        try database.execute("""
         INSERT INTO app_settings(key, value, updated_at)
         VALUES(?, ?, ?)
         ON CONFLICT(key) DO UPDATE SET
@@ -52,7 +71,7 @@ struct SettingsRepository {
         """) { statement in
             try SQLiteValue.bind(key.rawValue, to: statement, at: 1)
             try SQLiteValue.bind(value, to: statement, at: 2)
-            try SQLiteValue.bind(DateCoding.string(from: Date()), to: statement, at: 3)
+            try SQLiteValue.bind(DateCoding.string(from: updatedAt), to: statement, at: 3)
         }
     }
 }
@@ -60,5 +79,4 @@ struct SettingsRepository {
 enum SettingsKey: String, CaseIterable {
     case lmStudioBaseURL = "lmstudio_base_url"
     case lmStudioSynthesizerModel = "lmstudio_synthesizer_model"
-    case snapshotPromptVersion = "snapshot_prompt_version"
 }

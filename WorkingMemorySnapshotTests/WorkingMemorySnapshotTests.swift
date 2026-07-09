@@ -11,6 +11,10 @@ import XCTest
 final class WorkingMemorySnapshotTests: XCTestCase {
     private var temporaryURLs: [URL] = []
 
+    private enum ForcedTransactionError: Error, Equatable {
+        case rollbackProbe
+    }
+
     override func tearDownWithError() throws {
         for url in temporaryURLs {
             try? FileManager.default.removeItem(at: url)
@@ -25,7 +29,36 @@ final class WorkingMemorySnapshotTests: XCTestCase {
         try await harness.migrator.migrate()
 
         let versions = try await harness.migrator.appliedVersions()
-        XCTAssertEqual(versions, [1, 2, 3, 4, 5, 6])
+        XCTAssertEqual(versions, [1, 2, 3, 4, 5, 6, 7])
+    }
+
+    func testTransactionRollsBackPartialWritesOnFailure() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let projectFolder = try makeTemporaryDirectory(named: "RollbackProject")
+        let projectID = UUID()
+        let timestamp = DateCoding.string(from: try DateCoding.now())
+
+        await XCTAssertThrowsAsyncError({
+            try await harness.database.withTransaction { database in
+                try database.execute("""
+                INSERT INTO projects(id, name, root_path, created_at, updated_at)
+                VALUES(?, ?, ?, ?, ?)
+                """) { statement in
+                    try SQLiteValue.bind(projectID.uuidString, to: statement, at: 1)
+                    try SQLiteValue.bind("RollbackProject", to: statement, at: 2)
+                    try SQLiteValue.bind(projectFolder.path, to: statement, at: 3)
+                    try SQLiteValue.bind(timestamp, to: statement, at: 4)
+                    try SQLiteValue.bind(timestamp, to: statement, at: 5)
+                }
+                throw ForcedTransactionError.rollbackProbe
+            }
+        }) { error in
+            XCTAssertEqual(error as? ForcedTransactionError, .rollbackProbe)
+        }
+
+        let projects = try await harness.repository.listProjects()
+        XCTAssertEqual(projects, [])
     }
 
     func testCreatesAndListsProjects() async throws {

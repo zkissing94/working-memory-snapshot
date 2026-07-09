@@ -10,7 +10,7 @@ struct SessionRepository {
             throw SessionRepositoryError.emptyMission
         }
 
-        let now = try DateCoding.date(from: DateCoding.string(from: Date()))
+        let now = try DateCoding.now()
         let session = WorkSession(
             id: UUID(),
             projectID: projectID,
@@ -115,51 +115,69 @@ struct SessionRepository {
     }
 
     func completeSession(id: UUID, brainDump: String) async throws -> WorkSession {
-        let now = Date()
-        let changes = try await database.executeReturningChanges("""
-        UPDATE sessions
-        SET brain_dump = ?,
-            ended_at = ?,
-            status = ?,
-            updated_at = ?
-        WHERE id = ? AND status = ?
-        """) { statement in
-            try SQLiteValue.bind(brainDump, to: statement, at: 1)
-            try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 2)
-            try SQLiteValue.bind(SessionStatus.completed.rawValue, to: statement, at: 3)
-            try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 4)
-            try SQLiteValue.bind(id.uuidString, to: statement, at: 5)
-            try SQLiteValue.bind(SessionStatus.active.rawValue, to: statement, at: 6)
-        }
+        let now = try DateCoding.now()
+        return try await database.withTransaction { database in
+            let changes = try database.executeReturningChanges("""
+            UPDATE sessions
+            SET brain_dump = ?,
+                ended_at = ?,
+                status = ?,
+                updated_at = ?
+            WHERE id = ? AND status = ?
+            """) { statement in
+                try SQLiteValue.bind(brainDump, to: statement, at: 1)
+                try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 2)
+                try SQLiteValue.bind(SessionStatus.completed.rawValue, to: statement, at: 3)
+                try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 4)
+                try SQLiteValue.bind(id.uuidString, to: statement, at: 5)
+                try SQLiteValue.bind(SessionStatus.active.rawValue, to: statement, at: 6)
+            }
 
-        guard changes == 1, let session = try await session(for: id) else {
-            throw SessionRepositoryError.sessionNotActive
-        }
+            guard changes == 1, let session = try session(for: id, using: database) else {
+                throw SessionRepositoryError.sessionNotActive
+            }
 
-        return session
+            return session
+        }
     }
 
     func cancelSession(id: UUID) async throws -> WorkSession {
-        let now = Date()
-        let changes = try await database.executeReturningChanges("""
-        UPDATE sessions
-        SET ended_at = ?,
-            status = ?,
-            updated_at = ?
-        WHERE id = ? AND status = ?
-        """) { statement in
-            try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 1)
-            try SQLiteValue.bind(SessionStatus.cancelled.rawValue, to: statement, at: 2)
-            try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 3)
-            try SQLiteValue.bind(id.uuidString, to: statement, at: 4)
-            try SQLiteValue.bind(SessionStatus.active.rawValue, to: statement, at: 5)
-        }
+        let now = try DateCoding.now()
+        return try await database.withTransaction { database in
+            let changes = try database.executeReturningChanges("""
+            UPDATE sessions
+            SET ended_at = ?,
+                status = ?,
+                updated_at = ?
+            WHERE id = ? AND status = ?
+            """) { statement in
+                try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 1)
+                try SQLiteValue.bind(SessionStatus.cancelled.rawValue, to: statement, at: 2)
+                try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 3)
+                try SQLiteValue.bind(id.uuidString, to: statement, at: 4)
+                try SQLiteValue.bind(SessionStatus.active.rawValue, to: statement, at: 5)
+            }
 
-        guard changes == 1, let session = try await session(for: id) else {
-            throw SessionRepositoryError.sessionNotActive
-        }
+            guard changes == 1, let session = try session(for: id, using: database) else {
+                throw SessionRepositoryError.sessionNotActive
+            }
 
-        return session
+            return session
+        }
+    }
+
+    private func session(for id: UUID, using database: isolated Database) throws -> WorkSession? {
+        try database.query("""
+        SELECT id, project_id, mission, brain_dump, started_at, ended_at, status, created_at, updated_at
+        FROM sessions
+        WHERE id = ?
+        LIMIT 1
+        """, bind: { statement in
+            try SQLiteValue.bind(id.uuidString, to: statement, at: 1)
+        }, map: { statement in
+            try mapSession(from: statement)
+        })
+        .first
     }
 
     private func mapSession(from statement: OpaquePointer) throws -> WorkSession {

@@ -14,8 +14,8 @@ struct DatabaseMigrator {
 
         let appliedVersions = Set(try await appliedVersions())
         if !appliedVersions.contains(1) {
-            try await applyMigration(version: 1) {
-                try await database.execute("""
+            try await applyMigration(version: 1) { database in
+                try database.execute("""
                 CREATE TABLE IF NOT EXISTS projects (
                     id TEXT PRIMARY KEY NOT NULL,
                     name TEXT NOT NULL,
@@ -25,7 +25,7 @@ struct DatabaseMigrator {
                 )
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS projects_root_path_unique
                 ON projects(root_path)
                 """)
@@ -33,8 +33,8 @@ struct DatabaseMigrator {
         }
 
         if !appliedVersions.contains(2) {
-            try await applyMigration(version: 2) {
-                try await database.execute("""
+            try await applyMigration(version: 2) { database in
+                try database.execute("""
                 CREATE TABLE IF NOT EXISTS app_settings (
                     key TEXT PRIMARY KEY NOT NULL,
                     value TEXT NOT NULL,
@@ -42,28 +42,25 @@ struct DatabaseMigrator {
                 )
                 """)
 
-                let now = DateCoding.string(from: Date())
-                try await insertDefaultSetting(
+                let now = DateCoding.string(from: try DateCoding.now())
+                try insertDefaultSetting(
                     key: SettingsKey.lmStudioBaseURL.rawValue,
                     value: LMStudioSettings.defaultBaseURLString,
-                    appliedAt: now
+                    appliedAt: now,
+                    using: database
                 )
-                try await insertDefaultSetting(
+                try insertDefaultSetting(
                     key: SettingsKey.lmStudioSynthesizerModel.rawValue,
                     value: "",
-                    appliedAt: now
-                )
-                try await insertDefaultSetting(
-                    key: SettingsKey.snapshotPromptVersion.rawValue,
-                    value: "v1",
-                    appliedAt: now
+                    appliedAt: now,
+                    using: database
                 )
             }
         }
 
         if !appliedVersions.contains(3) {
-            try await applyMigration(version: 3) {
-                try await database.execute("""
+            try await applyMigration(version: 3) { database in
+                try database.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (
                     id TEXT PRIMARY KEY NOT NULL,
                     project_id TEXT NOT NULL,
@@ -80,12 +77,12 @@ struct DatabaseMigrator {
                 )
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE INDEX IF NOT EXISTS sessions_project_started_index
                 ON sessions(project_id, started_at DESC)
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS sessions_single_active_index
                 ON sessions(status)
                 WHERE status = 'active'
@@ -94,8 +91,8 @@ struct DatabaseMigrator {
         }
 
         if !appliedVersions.contains(4) {
-            try await applyMigration(version: 4) {
-                try await database.execute("""
+            try await applyMigration(version: 4) { database in
+                try database.execute("""
                 CREATE TABLE IF NOT EXISTS snapshots (
                     id TEXT PRIMARY KEY NOT NULL,
                     session_id TEXT NOT NULL,
@@ -112,7 +109,7 @@ struct DatabaseMigrator {
                 )
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS snapshots_session_unique
                 ON snapshots(session_id)
                 """)
@@ -120,8 +117,8 @@ struct DatabaseMigrator {
         }
 
         if !appliedVersions.contains(5) {
-            try await applyMigration(version: 5) {
-                try await database.execute("""
+            try await applyMigration(version: 5) { database in
+                try database.execute("""
                 CREATE TABLE IF NOT EXISTS events (
                     id TEXT PRIMARY KEY NOT NULL,
                     session_id TEXT NOT NULL,
@@ -138,12 +135,12 @@ struct DatabaseMigrator {
                 )
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE INDEX IF NOT EXISTS events_session_time_index
                 ON events(session_id, occurred_at ASC)
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE INDEX IF NOT EXISTS events_session_source_kind_index
                 ON events(session_id, source, kind)
                 """)
@@ -151,8 +148,8 @@ struct DatabaseMigrator {
         }
 
         if !appliedVersions.contains(6) {
-            try await applyMigration(version: 6) {
-                try await database.execute("""
+            try await applyMigration(version: 6) { database in
+                try database.execute("""
                 CREATE TABLE IF NOT EXISTS pomodoro_blocks (
                     id TEXT PRIMARY KEY NOT NULL,
                     session_id TEXT NOT NULL,
@@ -173,23 +170,23 @@ struct DatabaseMigrator {
                 )
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS pomodoro_blocks_session_index_unique
                 ON pomodoro_blocks(session_id, block_index)
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS pomodoro_blocks_one_open_per_session
                 ON pomodoro_blocks(session_id)
                 WHERE status IN ('active', 'paused')
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE INDEX IF NOT EXISTS pomodoro_blocks_session_started_index
                 ON pomodoro_blocks(session_id, started_at ASC)
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE TABLE IF NOT EXISTS work_increments (
                     id TEXT PRIMARY KEY NOT NULL,
                     block_id TEXT NOT NULL,
@@ -205,38 +202,51 @@ struct DatabaseMigrator {
                 )
                 """)
 
-                try await database.execute("""
+                try database.execute("""
                 CREATE INDEX IF NOT EXISTS work_increments_block_time_index
                 ON work_increments(block_id, occurred_at ASC)
                 """)
             }
         }
+
+        if !appliedVersions.contains(7) {
+            try await applyMigration(version: 7) { database in
+                try database.execute("""
+                DELETE FROM app_settings
+                WHERE key = ?
+                """) { statement in
+                    try SQLiteValue.bind("snapshot_prompt_version", to: statement, at: 1)
+                }
+            }
+        }
     }
 
-    private func applyMigration(version: Int, body: () async throws -> Void) async throws {
-        try await database.execute("BEGIN IMMEDIATE TRANSACTION")
-        do {
-            try await body()
+    private func applyMigration(
+        version: Int,
+        body: (_ database: isolated Database) throws -> Void
+    ) async throws {
+        try await database.withTransaction { database in
+            try body(database)
 
-            try await database.execute("""
+            try database.execute("""
             INSERT INTO schema_migrations(version, applied_at)
             VALUES(?, ?)
             """) { statement in
                 guard sqlite3_bind_int64(statement, 1, Int64(version)) == SQLITE_OK else {
                     throw SQLiteError(code: SQLITE_MISUSE, message: "Could not bind migration version.")
                 }
-                try SQLiteValue.bind(DateCoding.string(from: Date()), to: statement, at: 2)
+                try SQLiteValue.bind(DateCoding.string(from: try DateCoding.now()), to: statement, at: 2)
             }
-
-            try await database.execute("COMMIT")
-        } catch {
-            try? await database.execute("ROLLBACK")
-            throw error
         }
     }
 
-    private func insertDefaultSetting(key: String, value: String, appliedAt: String) async throws {
-        try await database.execute("""
+    private func insertDefaultSetting(
+        key: String,
+        value: String,
+        appliedAt: String,
+        using database: isolated Database
+    ) throws {
+        try database.execute("""
         INSERT OR IGNORE INTO app_settings(key, value, updated_at)
         VALUES(?, ?, ?)
         """) { statement in

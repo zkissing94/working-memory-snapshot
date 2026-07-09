@@ -6,7 +6,10 @@ struct EventRepository {
 
     @discardableResult
     func insertEvent(_ event: SessionEvent) async throws -> SessionEvent {
-        try await insert(event)
+        let event = try normalized(event)
+        try await database.withTransaction { database in
+            try insert(event, using: database)
+        }
         return event
     }
 
@@ -15,15 +18,11 @@ struct EventRepository {
             return
         }
 
-        try await database.execute("BEGIN IMMEDIATE TRANSACTION")
-        do {
+        let events = try events.map(normalized)
+        try await database.withTransaction { database in
             for event in events {
-                try await insert(event)
+                try insert(event, using: database)
             }
-            try await database.execute("COMMIT")
-        } catch {
-            try? await database.execute("ROLLBACK")
-            throw error
         }
     }
 
@@ -115,8 +114,8 @@ struct EventRepository {
         .orderedUnique()
     }
 
-    private func insert(_ event: SessionEvent) async throws {
-        let changes = try await database.executeReturningChanges("""
+    private func insert(_ event: SessionEvent, using database: isolated Database) throws {
+        let changes = try database.executeReturningChanges("""
         INSERT INTO events(
             id,
             session_id,
@@ -159,6 +158,20 @@ struct EventRepository {
         guard changes == 1 else {
             throw EventRepositoryError.sessionNotActive
         }
+    }
+
+    private func normalized(_ event: SessionEvent) throws -> SessionEvent {
+        SessionEvent(
+            id: event.id,
+            sessionID: event.sessionID,
+            occurredAt: try DateCoding.normalized(event.occurredAt),
+            source: event.source,
+            kind: event.kind,
+            title: event.title,
+            body: event.body,
+            payloadJSON: event.payloadJSON,
+            createdAt: try DateCoding.normalized(event.createdAt)
+        )
     }
 
     private func mapEvent(from statement: OpaquePointer) throws -> SessionEvent {

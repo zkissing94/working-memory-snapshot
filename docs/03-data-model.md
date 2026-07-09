@@ -211,7 +211,6 @@ Initial keys:
 ```text
 lmstudio_base_url = http://localhost:1234/v1
 lmstudio_synthesizer_model = ""
-snapshot_prompt_version = v1
 ```
 
 Future keys, not required in the MUI:
@@ -222,6 +221,8 @@ janitor_enabled = false
 ```
 
 The LM Studio API token is stored in Keychain under a stable service and account identifier.
+
+Migration 7 removes the legacy `snapshot_prompt_version` app setting. Persisted `snapshots.prompt_version` fields remain unchanged; new generation uses the code-owned `PromptBuilder.promptVersion`.
 
 ## 10. Domain models
 

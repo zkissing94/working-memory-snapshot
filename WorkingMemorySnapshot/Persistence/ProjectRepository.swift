@@ -6,7 +6,7 @@ struct ProjectRepository {
 
     func createProject(at url: URL) async throws -> Project {
         let rootPath = normalizedPath(for: url)
-        let now = try DateCoding.date(from: DateCoding.string(from: Date()))
+        let now = try DateCoding.now()
         let project = Project(
             id: UUID(),
             name: displayName(for: url),
@@ -55,7 +55,7 @@ struct ProjectRepository {
 
     func updateProjectRoot(id: UUID, to url: URL) async throws -> Project {
         let rootPath = normalizedPath(for: url)
-        let now = try DateCoding.date(from: DateCoding.string(from: Date()))
+        let now = try DateCoding.now()
 
         do {
             let changedRows = try await database.executeReturningChanges("""
@@ -83,7 +83,7 @@ struct ProjectRepository {
     }
 
     func updateProjectName(id: UUID, to name: String) async throws -> Project {
-        let now = try DateCoding.date(from: DateCoding.string(from: Date()))
+        let now = try DateCoding.now()
 
         let changedRows = try await database.executeReturningChanges("""
         UPDATE projects

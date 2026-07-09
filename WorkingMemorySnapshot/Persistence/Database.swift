@@ -57,6 +57,18 @@ actor Database {
         return Int(sqlite3_changes(connection))
     }
 
+    func withTransaction<Value>(_ body: (_ database: isolated Database) throws -> Value) throws -> Value {
+        try execute("BEGIN IMMEDIATE TRANSACTION")
+        do {
+            let value = try body(self)
+            try execute("COMMIT")
+            return value
+        } catch {
+            try? execute("ROLLBACK")
+            throw error
+        }
+    }
+
     func query<Value>(
         _ sql: String,
         bind: ((OpaquePointer) throws -> Void)? = nil,

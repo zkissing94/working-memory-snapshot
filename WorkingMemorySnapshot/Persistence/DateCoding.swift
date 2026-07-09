@@ -5,6 +5,14 @@ enum DateCoding {
         formatter.string(from: date)
     }
 
+    static func now() throws -> Date {
+        try normalized(Date())
+    }
+
+    static func normalized(_ date: Date) throws -> Date {
+        try self.date(from: string(from: date))
+    }
+
     static func date(from string: String) throws -> Date {
         guard let date = formatter.date(from: string) else {
             throw DateCodingError.invalidDate(string)

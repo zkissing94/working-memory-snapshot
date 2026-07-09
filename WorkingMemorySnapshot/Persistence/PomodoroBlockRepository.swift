@@ -9,82 +9,27 @@ struct PomodoroBlockRepository {
         intention: String? = nil,
         plannedDurationSeconds: Int = PomodoroBlock.defaultPlannedDurationSeconds
     ) async throws -> PomodoroBlock {
-        guard plannedDurationSeconds > 0 else {
-            throw PomodoroBlockRepositoryError.invalidPlannedDuration
-        }
-
-        if try await openBlock(for: sessionID) != nil {
-            throw PomodoroBlockRepositoryError.openBlockAlreadyExists
-        }
-
-        let nextIndex = try await nextBlockIndex(for: sessionID)
-        let now = try DateCoding.date(from: DateCoding.string(from: Date()))
-        let newBlock = PomodoroBlock(
-            id: UUID(),
-            sessionID: sessionID,
-            blockIndex: nextIndex,
-            plannedDurationSeconds: plannedDurationSeconds,
-            intention: trimmedOptional(intention),
-            summary: nil,
-            status: .active,
-            startedAt: now,
-            pausedAt: nil,
-            accumulatedPauseSeconds: 0,
-            endedAt: nil,
-            createdAt: now,
-            updatedAt: now
-        )
-
-        do {
-            try await database.execute("""
-            INSERT INTO pomodoro_blocks(
-                id,
-                session_id,
-                block_index,
-                planned_duration_seconds,
-                intention,
-                summary,
-                status,
-                started_at,
-                paused_at,
-                accumulated_pause_seconds,
-                ended_at,
-                created_at,
-                updated_at
+        try await database.withTransaction { database in
+            try createNextBlock(
+                sessionID: sessionID,
+                intention: intention,
+                plannedDurationSeconds: plannedDurationSeconds,
+                using: database
             )
-            SELECT ?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?, NULL, ?, ?
-            WHERE EXISTS (
-                SELECT 1
-                FROM sessions
-                WHERE id = ? AND status = ?
-            )
-            """) { statement in
-                try bind(newBlock, to: statement)
-                try SQLiteValue.bind(newBlock.sessionID.uuidString, to: statement, at: 11)
-                try SQLiteValue.bind(SessionStatus.active.rawValue, to: statement, at: 12)
-            }
-        } catch let error as SQLiteError where error.code == SQLITE_CONSTRAINT {
-            if try await openBlock(for: sessionID) != nil {
-                throw PomodoroBlockRepositoryError.openBlockAlreadyExists
-            }
-            throw error
         }
-
-        guard let stored = try await block(for: newBlock.id) else {
-            throw PomodoroBlockRepositoryError.sessionNotActive
-        }
-        return stored
     }
 
     func ensureFirstBlock(for sessionID: UUID) async throws -> PomodoroBlock? {
-        let blocks = try await listBlocks(for: sessionID)
-        if let openBlock = blocks.first(where: \.isOpen) {
-            return openBlock
+        try await database.withTransaction { database in
+            let blocks = try listBlocks(for: sessionID, using: database)
+            if let openBlock = blocks.first(where: \.isOpen) {
+                return openBlock
+            }
+            guard blocks.isEmpty else {
+                return nil
+            }
+            return try createNextBlock(sessionID: sessionID, using: database)
         }
-        guard blocks.isEmpty else {
-            return nil
-        }
-        return try await createNextBlock(sessionID: sessionID)
     }
 
     func block(for id: UUID) async throws -> PomodoroBlock? {
@@ -168,84 +113,249 @@ struct PomodoroBlockRepository {
     }
 
     func pauseBlock(id: UUID) async throws -> PomodoroBlock {
-        let now = Date()
-        let changes = try await database.executeReturningChanges("""
-        UPDATE pomodoro_blocks
-        SET status = ?,
-            paused_at = ?,
-            updated_at = ?
-        WHERE id = ? AND status = ?
-        """) { statement in
-            try SQLiteValue.bind(PomodoroBlockStatus.paused.rawValue, to: statement, at: 1)
-            try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 2)
-            try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 3)
-            try SQLiteValue.bind(id.uuidString, to: statement, at: 4)
-            try SQLiteValue.bind(PomodoroBlockStatus.active.rawValue, to: statement, at: 5)
-        }
+        let now = try DateCoding.now()
+        return try await database.withTransaction { database in
+            let changes = try database.executeReturningChanges("""
+            UPDATE pomodoro_blocks
+            SET status = ?,
+                paused_at = ?,
+                updated_at = ?
+            WHERE id = ? AND status = ?
+            """) { statement in
+                try SQLiteValue.bind(PomodoroBlockStatus.paused.rawValue, to: statement, at: 1)
+                try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 2)
+                try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 3)
+                try SQLiteValue.bind(id.uuidString, to: statement, at: 4)
+                try SQLiteValue.bind(PomodoroBlockStatus.active.rawValue, to: statement, at: 5)
+            }
 
-        guard changes == 1, let block = try await block(for: id) else {
-            throw PomodoroBlockRepositoryError.blockNotOpen
+            guard changes == 1, let block = try block(for: id, using: database) else {
+                throw PomodoroBlockRepositoryError.blockNotOpen
+            }
+            return block
         }
-        return block
     }
 
     func resumeBlock(id: UUID) async throws -> PomodoroBlock {
-        guard let current = try await block(for: id),
-              current.status == .paused,
-              let pausedAt = current.pausedAt
-        else {
-            throw PomodoroBlockRepositoryError.blockNotPaused
-        }
+        try await database.withTransaction { database in
+            guard let current = try block(for: id, using: database),
+                  current.status == .paused,
+                  let pausedAt = current.pausedAt
+            else {
+                throw PomodoroBlockRepositoryError.blockNotPaused
+            }
 
-        let now = Date()
-        let pauseSeconds = max(0, Int(now.timeIntervalSince(pausedAt)))
-        let changes = try await database.executeReturningChanges("""
-        UPDATE pomodoro_blocks
-        SET status = ?,
-            paused_at = NULL,
-            accumulated_pause_seconds = ?,
-            updated_at = ?
-        WHERE id = ? AND status = ?
-        """) { statement in
-            try SQLiteValue.bind(PomodoroBlockStatus.active.rawValue, to: statement, at: 1)
-            try SQLiteValue.bind(current.accumulatedPauseSeconds + pauseSeconds, to: statement, at: 2)
-            try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 3)
-            try SQLiteValue.bind(id.uuidString, to: statement, at: 4)
-            try SQLiteValue.bind(PomodoroBlockStatus.paused.rawValue, to: statement, at: 5)
-        }
+            let now = try DateCoding.now()
+            let pauseSeconds = max(0, Int(now.timeIntervalSince(pausedAt)))
+            let changes = try database.executeReturningChanges("""
+            UPDATE pomodoro_blocks
+            SET status = ?,
+                paused_at = NULL,
+                accumulated_pause_seconds = ?,
+                updated_at = ?
+            WHERE id = ? AND status = ?
+            """) { statement in
+                try SQLiteValue.bind(PomodoroBlockStatus.active.rawValue, to: statement, at: 1)
+                try SQLiteValue.bind(current.accumulatedPauseSeconds + pauseSeconds, to: statement, at: 2)
+                try SQLiteValue.bind(DateCoding.string(from: now), to: statement, at: 3)
+                try SQLiteValue.bind(id.uuidString, to: statement, at: 4)
+                try SQLiteValue.bind(PomodoroBlockStatus.paused.rawValue, to: statement, at: 5)
+            }
 
-        guard changes == 1, let block = try await block(for: id) else {
-            throw PomodoroBlockRepositoryError.blockNotPaused
+            guard changes == 1, let block = try block(for: id, using: database) else {
+                throw PomodoroBlockRepositoryError.blockNotPaused
+            }
+            return block
         }
-        return block
     }
 
     func completeBlock(id: UUID, summary: String?) async throws -> PomodoroBlock {
-        try await closeBlock(id: id, status: .completed, summary: summary)
+        try await database.withTransaction { database in
+            try closeBlock(id: id, status: .completed, summary: summary, using: database)
+        }
     }
 
     func interruptOpenBlock(for sessionID: UUID) async throws -> PomodoroBlock? {
-        guard let openBlock = try await openBlock(for: sessionID) else {
-            return nil
+        try await database.withTransaction { database in
+            guard let openBlock = try openBlock(for: sessionID, using: database) else {
+                return nil
+            }
+            return try closeBlock(id: openBlock.id, status: .interrupted, summary: openBlock.summary, using: database)
         }
-        return try await closeBlock(id: openBlock.id, status: .interrupted, summary: openBlock.summary)
+    }
+
+    private func createNextBlock(
+        sessionID: UUID,
+        intention: String? = nil,
+        plannedDurationSeconds: Int = PomodoroBlock.defaultPlannedDurationSeconds,
+        using database: isolated Database
+    ) throws -> PomodoroBlock {
+        guard plannedDurationSeconds > 0 else {
+            throw PomodoroBlockRepositoryError.invalidPlannedDuration
+        }
+
+        if try openBlock(for: sessionID, using: database) != nil {
+            throw PomodoroBlockRepositoryError.openBlockAlreadyExists
+        }
+
+        let nextIndex = try nextBlockIndex(for: sessionID, using: database)
+        let now = try DateCoding.now()
+        let newBlock = PomodoroBlock(
+            id: UUID(),
+            sessionID: sessionID,
+            blockIndex: nextIndex,
+            plannedDurationSeconds: plannedDurationSeconds,
+            intention: trimmedOptional(intention),
+            summary: nil,
+            status: .active,
+            startedAt: now,
+            pausedAt: nil,
+            accumulatedPauseSeconds: 0,
+            endedAt: nil,
+            createdAt: now,
+            updatedAt: now
+        )
+
+        do {
+            let changes = try database.executeReturningChanges("""
+            INSERT INTO pomodoro_blocks(
+                id,
+                session_id,
+                block_index,
+                planned_duration_seconds,
+                intention,
+                summary,
+                status,
+                started_at,
+                paused_at,
+                accumulated_pause_seconds,
+                ended_at,
+                created_at,
+                updated_at
+            )
+            SELECT ?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?, NULL, ?, ?
+            WHERE EXISTS (
+                SELECT 1
+                FROM sessions
+                WHERE id = ? AND status = ?
+            )
+            """) { statement in
+                try bind(newBlock, to: statement)
+                try SQLiteValue.bind(newBlock.sessionID.uuidString, to: statement, at: 11)
+                try SQLiteValue.bind(SessionStatus.active.rawValue, to: statement, at: 12)
+            }
+            guard changes == 1 else {
+                throw PomodoroBlockRepositoryError.sessionNotActive
+            }
+        } catch let error as SQLiteError where error.code == SQLITE_CONSTRAINT {
+            if try openBlock(for: sessionID, using: database) != nil {
+                throw PomodoroBlockRepositoryError.openBlockAlreadyExists
+            }
+            throw error
+        }
+
+        guard let stored = try block(for: newBlock.id, using: database) else {
+            throw PomodoroBlockRepositoryError.sessionNotActive
+        }
+        return stored
+    }
+
+    private func block(for id: UUID, using database: isolated Database) throws -> PomodoroBlock? {
+        try database.query("""
+        SELECT id,
+               session_id,
+               block_index,
+               planned_duration_seconds,
+               intention,
+               summary,
+               status,
+               started_at,
+               paused_at,
+               accumulated_pause_seconds,
+               ended_at,
+               created_at,
+               updated_at
+        FROM pomodoro_blocks
+        WHERE id = ?
+        LIMIT 1
+        """, bind: { statement in
+            try SQLiteValue.bind(id.uuidString, to: statement, at: 1)
+        }, map: { statement in
+            try mapBlock(from: statement)
+        })
+        .first
+    }
+
+    private func listBlocks(for sessionID: UUID, using database: isolated Database) throws -> [PomodoroBlock] {
+        try database.query("""
+        SELECT id,
+               session_id,
+               block_index,
+               planned_duration_seconds,
+               intention,
+               summary,
+               status,
+               started_at,
+               paused_at,
+               accumulated_pause_seconds,
+               ended_at,
+               created_at,
+               updated_at
+        FROM pomodoro_blocks
+        WHERE session_id = ?
+        ORDER BY block_index ASC
+        """, bind: { statement in
+            try SQLiteValue.bind(sessionID.uuidString, to: statement, at: 1)
+        }, map: { statement in
+            try mapBlock(from: statement)
+        })
+    }
+
+    private func openBlock(for sessionID: UUID, using database: isolated Database) throws -> PomodoroBlock? {
+        try database.query("""
+        SELECT id,
+               session_id,
+               block_index,
+               planned_duration_seconds,
+               intention,
+               summary,
+               status,
+               started_at,
+               paused_at,
+               accumulated_pause_seconds,
+               ended_at,
+               created_at,
+               updated_at
+        FROM pomodoro_blocks
+        WHERE session_id = ? AND status IN (?, ?)
+        ORDER BY block_index DESC
+        LIMIT 1
+        """, bind: { statement in
+            try SQLiteValue.bind(sessionID.uuidString, to: statement, at: 1)
+            try SQLiteValue.bind(PomodoroBlockStatus.active.rawValue, to: statement, at: 2)
+            try SQLiteValue.bind(PomodoroBlockStatus.paused.rawValue, to: statement, at: 3)
+        }, map: { statement in
+            try mapBlock(from: statement)
+        })
+        .first
     }
 
     private func closeBlock(
         id: UUID,
         status: PomodoroBlockStatus,
-        summary: String?
-    ) async throws -> PomodoroBlock {
-        guard var current = try await block(for: id), current.isOpen else {
+        summary: String?,
+        using database: isolated Database
+    ) throws -> PomodoroBlock {
+        guard var current = try block(for: id, using: database), current.isOpen else {
             throw PomodoroBlockRepositoryError.blockNotOpen
         }
 
-        let now = Date()
+        let now = try DateCoding.now()
         if current.status == .paused, let pausedAt = current.pausedAt {
             current.accumulatedPauseSeconds += max(0, Int(now.timeIntervalSince(pausedAt)))
         }
 
-        let changes = try await database.executeReturningChanges("""
+        let changes = try database.executeReturningChanges("""
         UPDATE pomodoro_blocks
         SET status = ?,
             summary = ?,
@@ -269,14 +379,14 @@ struct PomodoroBlockRepository {
             try SQLiteValue.bind(PomodoroBlockStatus.paused.rawValue, to: statement, at: 8)
         }
 
-        guard changes == 1, let block = try await block(for: id) else {
+        guard changes == 1, let block = try block(for: id, using: database) else {
             throw PomodoroBlockRepositoryError.blockNotOpen
         }
         return block
     }
 
-    private func nextBlockIndex(for sessionID: UUID) async throws -> Int {
-        let maxIndex = try await database.query("""
+    private func nextBlockIndex(for sessionID: UUID, using database: isolated Database) throws -> Int {
+        let maxIndex = try database.query("""
         SELECT COALESCE(MAX(block_index), 0)
         FROM pomodoro_blocks
         WHERE session_id = ?

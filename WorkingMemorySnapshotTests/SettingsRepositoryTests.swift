@@ -17,10 +17,19 @@ final class SettingsRepositoryTests: XCTestCase {
         try await harness.migrator.migrate()
 
         let settings = try await harness.repository.loadLMStudioSettings()
-        let promptVersion = try await harness.repository.value(for: .snapshotPromptVersion)
+        let promptVersionRows = try await harness.database.query("""
+        SELECT value
+        FROM app_settings
+        WHERE key = ?
+        LIMIT 1
+        """, bind: { statement in
+            try SQLiteValue.bind("snapshot_prompt_version", to: statement, at: 1)
+        }, map: { statement in
+            SQLiteValue.text(statement, at: 0)
+        })
 
         XCTAssertEqual(settings, .defaults)
-        XCTAssertEqual(promptVersion, "v1")
+        XCTAssertEqual(promptVersionRows, [])
     }
 
     func testSettingsPersistAcrossRepositoryReload() async throws {

@@ -74,6 +74,72 @@ final class EventRepositoryTests: XCTestCase {
         XCTAssertTrue(events.isEmpty)
     }
 
+    func testInsertEventsRollsBackBatchWhenOneEventIsInvalid() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let project = try await harness.projectRepository.createProject(
+            at: makeTemporaryDirectory(named: "BatchRollbackProject")
+        )
+        let session = try await harness.sessionRepository.createActiveSession(
+            projectID: project.id,
+            mission: "Reject partial event batches"
+        )
+        let validEvent = SessionEvent(
+            sessionID: session.id,
+            occurredAt: Date(timeIntervalSince1970: 20),
+            source: .file,
+            kind: SessionEventKind.fileChanged,
+            title: "Sources/App.swift",
+            createdAt: Date(timeIntervalSince1970: 21)
+        )
+        let invalidEvent = SessionEvent(
+            sessionID: UUID(),
+            occurredAt: Date(timeIntervalSince1970: 22),
+            source: .git,
+            kind: SessionEventKind.gitFinalSummary,
+            title: "No matching active session",
+            createdAt: Date(timeIntervalSince1970: 23)
+        )
+
+        await XCTAssertThrowsAsyncError({
+            try await harness.eventRepository.insertEvents([validEvent, invalidEvent])
+        }) { error in
+            XCTAssertEqual(error as? EventRepositoryError, .sessionNotActive)
+        }
+
+        let events = try await harness.eventRepository.listEvents(for: session.id)
+        XCTAssertEqual(events, [])
+    }
+
+    func testInsertEventNormalizesTimestamps() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        let project = try await harness.projectRepository.createProject(
+            at: makeTemporaryDirectory(named: "TimestampNormalizationProject")
+        )
+        let session = try await harness.sessionRepository.createActiveSession(
+            projectID: project.id,
+            mission: "Normalize stored timestamps"
+        )
+        let occurredAt = Date(timeIntervalSince1970: 30.123456)
+        let createdAt = Date(timeIntervalSince1970: 31.654321)
+        let event = SessionEvent(
+            sessionID: session.id,
+            occurredAt: occurredAt,
+            source: .user,
+            kind: SessionEventKind.brainDump,
+            title: "Captured note",
+            createdAt: createdAt
+        )
+
+        let inserted = try await harness.eventRepository.insertEvent(event)
+        let events = try await harness.eventRepository.listEvents(for: session.id)
+
+        XCTAssertEqual(inserted.occurredAt, try DateCoding.normalized(occurredAt))
+        XCTAssertEqual(inserted.createdAt, try DateCoding.normalized(createdAt))
+        XCTAssertEqual(events, [inserted])
+    }
+
     func testChangedFilePathsAreDistinctInObservationOrder() async throws {
         let harness = try makeHarness()
         try await harness.migrator.migrate()
