@@ -13,8 +13,8 @@
             }
           ],
           "glass" : false,
-          "image-name" : "03-resume-thread.svg",
-          "name" : "03-resume-thread"
+          "image-name" : "02-wm-capsule.svg",
+          "name" : "02-wm-capsule"
         },
         {
           "fill-specializations" : [
@@ -24,26 +24,8 @@
             }
           ],
           "glass" : false,
-          "image-name" : "02-snapshot-frame.svg",
-          "name" : "02-snapshot-frame",
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "fill-specializations" : [
-            {
-              "appearance" : "dark",
-              "value" : "none"
-            }
-          ],
-          "glass" : false,
-          "image-name" : "01-rear-thread.svg",
-          "name" : "01-rear-thread"
+          "image-name" : "01-brain-structure.svg",
+          "name" : "01-brain-structure"
         },
         {
           "image-name" : "00-background.svg",
