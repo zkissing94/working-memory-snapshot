@@ -13,8 +13,19 @@
             }
           ],
           "glass" : false,
-          "image-name" : "02-wm-capsule.svg",
-          "name" : "02-wm-capsule"
+          "image-name" : "03-wm-monogram.svg",
+          "name" : "03-wm-monogram"
+        },
+        {
+          "fill-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : "none"
+            }
+          ],
+          "glass" : false,
+          "image-name" : "02-capsule.svg",
+          "name" : "02-capsule"
         },
         {
           "fill-specializations" : [
@@ -34,18 +45,15 @@
       ],
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.5
+        "opacity" : 0.35
       },
       "translucency" : {
         "enabled" : true,
-        "value" : 0.5
+        "value" : 0.28
       }
     }
   ],
   "supported-platforms" : {
-    "circles" : [
-      "watchOS"
-    ],
     "squares" : "shared"
   }
 }

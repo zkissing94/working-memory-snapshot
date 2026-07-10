@@ -11,7 +11,7 @@ codex/professional-app-icon
 Current focus:
 
 ```text
-WM Brain icon revision - user-selected mockup rebuilt and validated as layered Icon Composer and sidebar artwork
+Polished WM production icon - one small-size-first four-layer vector identity for Icon Composer and the sidebar
 ```
 
 Baseline:
@@ -97,7 +97,7 @@ Current implementation state:
 - Focus-block completion has a one-shot checkmark halo; Reduce Motion removes spatial motion and the halo.
 - An internal preview catalog covers light, dark, and reduced-motion component variants.
 - Pow was evaluated and intentionally not added; the app still has no production UI dependency.
-- The app icon and 40-point sidebar mark use the user-selected WM Brain identity, with simplified small-size geometry and layered Default, Dark, and Mono treatments in Icon Composer.
+- The app icon and 40-point sidebar mark use one polished WM Brain identity, with four small-size-first vector layers and Default, Dark, and Mono treatments in Icon Composer. There is no separate detailed master.
 - The legacy `AppIcon.appiconset` has been replaced by `WorkingMemorySnapshot/AppIcon.icon` while retaining the `AppIcon` build-setting name and macOS 14 deployment target.
 
 ## Next milestone

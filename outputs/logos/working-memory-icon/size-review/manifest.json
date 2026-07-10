@@ -1,14 +1,14 @@
 [
   {"index": 1, "id": "current-16", "title": "Current · 16 px", "src": "current-16.png"},
-  {"index": 2, "id": "proposed-16", "title": "Proposed · 16 px", "src": "proposed-16.png"},
+  {"index": 2, "id": "proposed-16", "title": "Polished · 16 px", "src": "proposed-16.png"},
   {"index": 3, "id": "current-32", "title": "Current · 32 px", "src": "current-32.png"},
-  {"index": 4, "id": "proposed-32", "title": "Proposed · 32 px", "src": "proposed-32.png"},
+  {"index": 4, "id": "proposed-32", "title": "Polished · 32 px", "src": "proposed-32.png"},
   {"index": 5, "id": "current-40", "title": "Current · 40 px", "src": "current-40.png"},
-  {"index": 6, "id": "proposed-40", "title": "Proposed · 40 px", "src": "proposed-40.png"},
+  {"index": 6, "id": "proposed-40", "title": "Polished · 40 px", "src": "proposed-40.png"},
   {"index": 7, "id": "current-64", "title": "Current · 64 px", "src": "current-64.png"},
-  {"index": 8, "id": "proposed-64", "title": "Proposed · 64 px", "src": "proposed-64.png"},
+  {"index": 8, "id": "proposed-64", "title": "Polished · 64 px", "src": "proposed-64.png"},
   {"index": 9, "id": "current-128", "title": "Current · 128 px", "src": "current-128.png"},
-  {"index": 10, "id": "proposed-128", "title": "Proposed · 128 px", "src": "proposed-128.png"},
+  {"index": 10, "id": "proposed-128", "title": "Polished · 128 px", "src": "proposed-128.png"},
   {"index": 11, "id": "current-256", "title": "Current · 256 px", "src": "current-256.png"},
-  {"index": 12, "id": "proposed-256", "title": "Proposed · 256 px", "src": "proposed-256.png"}
+  {"index": 12, "id": "proposed-256", "title": "Polished · 256 px", "src": "proposed-256.png"}
 ]
