@@ -20,7 +20,7 @@ struct ProjectDashboardView: View {
     }
 
     private var previousSessions: [WorkSession] {
-        projectDetailViewModel.sessions
+        (projectDetailViewModel.history(for: project.id)?.sessions ?? [])
             .filter { $0.status != .active }
             .sorted { $0.startedAt > $1.startedAt }
     }
@@ -41,7 +41,7 @@ struct ProjectDashboardView: View {
                             activeBlock: sessionViewModel.activeBlock,
                             blocks: sessionViewModel.sessionBlocks,
                             onContinue: {
-                                projectDetailViewModel.clearSelectedSession()
+                                projectDetailViewModel.clearSelectedSession(for: project.id)
                             },
                             onEnd: onEndSession
                         )
@@ -55,9 +55,6 @@ struct ProjectDashboardView: View {
         }
         .background(Color(nsColor: .windowBackgroundColor))
         .navigationTitle(project.name)
-        .task(id: project.id) {
-            await projectDetailViewModel.loadLatestSnapshot(for: project.id)
-        }
     }
 
     private var header: some View {
@@ -74,33 +71,46 @@ struct ProjectDashboardView: View {
                 .truncationMode(.middle)
 
             HStack(spacing: 8) {
-                MetricPill(title: "Sessions", value: "\(completedSessionCount)")
-                MetricPill(title: "Blocks", value: "\(completedBlockCount)")
-                if let latest = projectDetailViewModel.latestSnapshotSession?.endedAt {
+                MetricPill(title: "Sessions", value: summary.map { "\($0.completedSessionCount)" } ?? "—")
+                MetricPill(title: "Blocks", value: summary.map { "\($0.completedBlockCount)" } ?? "—")
+                if let latest = summary?.latestSnapshotSession?.endedAt {
                     MetricPill(title: "Last", value: latest.formatted(date: .omitted, time: .shortened))
                 }
             }
         }
     }
 
-    private var completedSessionCount: Int {
-        projectDetailViewModel.sessions.filter { $0.status == .completed }.count
-    }
-
-    private var completedBlockCount: Int {
-        projectDetailViewModel.blocksBySessionID.values
-            .flatMap { $0 }
-            .filter { $0.status == .completed }
-            .count
+    private var summary: ProjectDashboardSummary? {
+        projectDetailViewModel.summary(for: project.id)
     }
 
     @ViewBuilder
     private var startSessionCard: some View {
-        if let latestSnapshot = projectDetailViewModel.latestSnapshot {
+        if let latestSnapshot = summary?.latestSnapshot {
             latestMemoryCard(latestSnapshot)
-        } else {
+        } else if summary != nil {
             firstSessionCard
+        } else {
+            loadingMemoryCard
         }
+    }
+
+    private var loadingMemoryCard: some View {
+        DashboardSurface(style: .soft) {
+            HStack(spacing: 12) {
+                ProgressView()
+                    .controlSize(.small)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Loading project memory…")
+                        .font(.headline)
+                    Text("Reading the latest snapshot stored on this Mac.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(minHeight: 72, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private var firstSessionCard: some View {
@@ -116,7 +126,10 @@ struct ProjectDashboardView: View {
                     Label("Start Session", systemImage: "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!sessionViewModel.canStartSession || projectDetailViewModel.projectAccessState.isInaccessible)
+                .disabled(
+                    !sessionViewModel.canStartSession
+                        || projectDetailViewModel.projectAccessState(for: project.id).isInaccessible
+                )
             }
         }
     }
@@ -157,7 +170,10 @@ struct ProjectDashboardView: View {
                         Label("Start Session", systemImage: "play.fill")
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(!sessionViewModel.canStartSession || projectDetailViewModel.projectAccessState.isInaccessible)
+                    .disabled(
+                        !sessionViewModel.canStartSession
+                            || projectDetailViewModel.projectAccessState(for: project.id).isInaccessible
+                    )
 
                     Button(action: onViewSnapshot) {
                         Label("View Snapshot", systemImage: "doc.text.magnifyingglass")
@@ -172,7 +188,17 @@ struct ProjectDashboardView: View {
             DisclosureGroup(
                 isExpanded: $isPreviousSessionListExpanded,
                 content: {
-                    if previousSessions.isEmpty {
+                    if projectDetailViewModel.history(for: project.id) == nil {
+                        DashboardSurface {
+                            HStack(spacing: 10) {
+                                ProgressView()
+                                    .controlSize(.small)
+                                Text("Loading previous sessions…")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } else if previousSessions.isEmpty {
                         DashboardSurface {
                             Text("Completed sessions will appear here.")
                                 .font(.callout)
@@ -189,7 +215,7 @@ struct ProjectDashboardView: View {
                                                 session: session,
                                                 snapshot: projectDetailViewModel.snapshot(for: session),
                                                 blocks: projectDetailViewModel.blocks(for: session),
-                                                isSelected: projectDetailViewModel.selectedSessionID == session.id,
+                                                isSelected: projectDetailViewModel.selectedSessionID(for: project.id) == session.id,
                                                 onSelect: {
                                                     onSelectSession(session)
                                                 }

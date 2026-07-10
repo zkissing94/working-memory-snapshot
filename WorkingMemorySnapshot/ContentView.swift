@@ -12,7 +12,6 @@ struct ContentView: View {
     @ObservedObject var sessionViewModel: SessionViewModel
     @ObservedObject var projectDetailViewModel: ProjectDetailViewModel
     @ObservedObject var settingsViewModel: SettingsViewModel
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationSplitView {
@@ -48,29 +47,30 @@ struct ContentView: View {
             )
                 .navigationSplitViewColumnWidth(min: 240, ideal: 280)
         } detail: {
-            ZStack(alignment: .topLeading) {
-                detailContent
-                    .id(detailRootIdentity)
-                    .transition(AppMotion.workspaceTransition(reduceMotion: reduceMotion))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .animation(
-                AppMotion.animation(.standard, reduceMotion: reduceMotion),
-                value: detailRootIdentity
-            )
+            detailContent
+                .id(detailRootIdentity)
         }
         .task {
             await projectsViewModel.loadProjects()
-            await sessionViewModel.loadActiveSessionForRecovery()
-            await settingsViewModel.loadSettings()
+            let projectIDs = projectsViewModel.projects.map(\.id)
+            async let summaries: Void = projectDetailViewModel.preloadSummaries(for: projectIDs)
+            async let recovery: Void = sessionViewModel.loadActiveSessionForRecovery()
+            async let settings: Void = settingsViewModel.loadSettings()
+            _ = await (summaries, recovery, settings)
         }
-        .onChange(of: sessionViewModel.activeSession) { _, newSession in
+        .onChange(of: projectsViewModel.projects) { _, projects in
+            projectDetailViewModel.retainProjects(Set(projects.map(\.id)))
+        }
+        .onChange(of: sessionViewModel.activeSession) { oldSession, newSession in
             guard newSession == nil else {
                 return
             }
 
             Task {
                 await projectsViewModel.refreshSidebarMetadata()
+                if let projectID = oldSession?.projectID {
+                    await projectDetailViewModel.refreshProject(projectID)
+                }
             }
         }
         .onChange(of: sessionViewModel.blockCompletionPrompt) { _, prompt in
@@ -194,7 +194,9 @@ struct ContentView: View {
             recoveryContext: sessionViewModel.recoveryContext,
             failedSnapshotSession: sessionViewModel.failedSnapshotSession,
             selectedProjectID: projectsViewModel.selectedProject?.id,
-            selectedProjectAccessState: projectDetailViewModel.projectAccessState
+            selectedProjectAccessState: projectsViewModel.selectedProject.map {
+                projectDetailViewModel.projectAccessState(for: $0.id)
+            } ?? .unknown
         )
     }
 

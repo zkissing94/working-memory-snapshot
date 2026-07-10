@@ -17,8 +17,8 @@ struct ProjectDetailContainerView: View {
                 projectDetailViewModel: projectDetailViewModel
             )
             .task(id: project.id) {
-                projectDetailViewModel.dismissPresentedSnapshot()
-                await projectDetailViewModel.loadLatestSnapshot(for: project.id)
+                projectDetailViewModel.dismissPresentedSnapshot(for: project.id)
+                await projectDetailViewModel.loadProject(for: project.id)
                 presentGeneratedSnapshotIfNeeded(for: project)
             }
             .task(id: project.rootPath) {
@@ -43,10 +43,10 @@ struct ProjectDetailContainerView: View {
             return
         }
 
-        projectDetailViewModel.presentGeneratedSnapshot(context.snapshot)
+        projectDetailViewModel.presentGeneratedSnapshot(context.snapshot, for: project.id)
         sessionViewModel.clearGeneratedSnapshotContext()
         Task {
-            await projectDetailViewModel.loadLatestSnapshot(for: project.id)
+            await projectDetailViewModel.refreshProject(project.id)
         }
     }
 }
@@ -95,10 +95,10 @@ private struct ProjectSessionRouteView: View {
         case .projectAccessLost:
             ProjectAccessLostWorkspaceView(
                 project: project,
-                latestSnapshot: projectDetailViewModel.latestSnapshot,
+                latestSnapshot: projectDetailViewModel.summary(for: project.id)?.latestSnapshot,
                 onRestoreProjectAccess: restoreProjectAccess,
                 onViewSnapshot: {
-                    projectDetailViewModel.presentLatestSnapshot()
+                    projectDetailViewModel.presentLatestSnapshot(for: project.id)
                 }
             )
         case .snapshotGenerationFailed:
@@ -129,31 +129,31 @@ private struct ProjectSessionRouteView: View {
             selectedItem: projectsViewModel.selectedItem,
             selectedProjectID: project.id,
             projectsIsEmpty: projectsViewModel.projects.isEmpty,
-            presentedSnapshotID: projectDetailViewModel.presentedSnapshot?.id,
+            presentedSnapshotID: projectDetailViewModel.presentedSnapshot(for: project.id)?.id,
             flow: sessionViewModel.flow,
             activeSession: sessionViewModel.activeSession,
             activeBlock: sessionViewModel.activeBlock,
             sessionBlocks: sessionViewModel.sessionBlocks,
-            selectedSessionID: projectDetailViewModel.selectedSessionID,
-            projectAccessState: projectDetailViewModel.projectAccessState,
+            selectedSessionID: projectDetailViewModel.selectedSessionID(for: project.id),
+            projectAccessState: projectDetailViewModel.projectAccessState(for: project.id),
             failedSnapshotSession: sessionViewModel.failedSnapshotSession
         )
     }
 
     @ViewBuilder
     private var snapshotDetail: some View {
-        if let snapshot = projectDetailViewModel.presentedSnapshot {
+        if let snapshot = projectDetailViewModel.presentedSnapshot(for: project.id) {
             SnapshotDetailView(
                 project: project,
                 snapshot: snapshot,
-                session: projectDetailViewModel.session(for: snapshot),
+                session: projectDetailViewModel.session(for: snapshot, projectID: project.id),
                 canStartSession: sessionViewModel.canStartSession,
                 onStartNewSession: {
-                    projectDetailViewModel.dismissPresentedSnapshot()
+                    projectDetailViewModel.dismissPresentedSnapshot(for: project.id)
                     sessionViewModel.beginStartSession(for: project)
                 },
                 onBackToProject: {
-                    projectDetailViewModel.dismissPresentedSnapshot()
+                    projectDetailViewModel.dismissPresentedSnapshot(for: project.id)
                 }
             )
         } else {
@@ -163,22 +163,22 @@ private struct ProjectSessionRouteView: View {
 
     @ViewBuilder
     private var historicalSessionDetail: some View {
-        if let selectedSession = projectDetailViewModel.selectedSession {
+        if let selectedSession = projectDetailViewModel.selectedSession(for: project.id) {
             HistoricalSessionDetailView(
                 project: project,
                 session: selectedSession,
                 snapshot: projectDetailViewModel.snapshot(for: selectedSession),
                 blocks: projectDetailViewModel.blocks(for: selectedSession),
                 incrementsForBlock: { block in
-                    projectDetailViewModel.increments(for: block)
+                    projectDetailViewModel.increments(for: block, projectID: project.id)
                 },
                 events: projectDetailViewModel.events(for: selectedSession),
                 onBackToProject: {
-                    projectDetailViewModel.clearSelectedSession()
+                    projectDetailViewModel.clearSelectedSession(for: project.id)
                 },
                 onViewSnapshot: {
                     if let snapshot = projectDetailViewModel.snapshot(for: selectedSession) {
-                        projectDetailViewModel.presentSnapshot(snapshot)
+                        projectDetailViewModel.presentSnapshot(snapshot, for: project.id)
                     }
                 }
             )
@@ -199,7 +199,7 @@ private struct ProjectSessionRouteView: View {
                 sessionViewModel.beginEndingActiveSession()
             },
             onViewSnapshot: {
-                projectDetailViewModel.presentLatestSnapshot()
+                projectDetailViewModel.presentLatestSnapshot(for: project.id)
             },
             onSelectSession: { session in
                 projectDetailViewModel.selectSession(session)
@@ -211,7 +211,7 @@ private struct ProjectSessionRouteView: View {
         Task {
             if let restoredProject = await projectsViewModel.restoreProjectAccessFromPicker(for: project) {
                 await projectDetailViewModel.checkProjectAccess(for: restoredProject)
-                await projectDetailViewModel.loadLatestSnapshot(for: restoredProject.id)
+                await projectDetailViewModel.refreshProject(restoredProject.id)
                 sessionViewModel.updateRecoveredProject(restoredProject)
             }
         }

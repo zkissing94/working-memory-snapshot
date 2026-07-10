@@ -83,6 +83,21 @@ struct PomodoroBlockRepository {
         })
     }
 
+    func completedBlockCount(for projectID: UUID) async throws -> Int {
+        try await database.query("""
+        SELECT COUNT(*)
+        FROM pomodoro_blocks
+        INNER JOIN sessions ON sessions.id = pomodoro_blocks.session_id
+        WHERE sessions.project_id = ? AND pomodoro_blocks.status = ?
+        """, bind: { statement in
+            try SQLiteValue.bind(projectID.uuidString, to: statement, at: 1)
+            try SQLiteValue.bind(PomodoroBlockStatus.completed.rawValue, to: statement, at: 2)
+        }, map: { statement in
+            Int(sqlite3_column_int64(statement, 0))
+        })
+        .first ?? 0
+    }
+
     func openBlock(for sessionID: UUID) async throws -> PomodoroBlock? {
         try await database.query("""
         SELECT id,
