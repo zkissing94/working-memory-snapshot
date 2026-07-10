@@ -5,13 +5,13 @@
 Current handoff branch:
 
 ```text
-codex/professional-app-icon
+codex/project-scoped-detail-state
 ```
 
 Current focus:
 
 ```text
-Polished WM production icon - one small-size-first four-layer vector identity for Icon Composer and the sidebar
+Project-scoped detail state - prevent one project's dashboard and history from rendering another project's memory
 ```
 
 Baseline:
@@ -99,10 +99,12 @@ Current implementation state:
 - Pow was evaluated and intentionally not added; the app still has no production UI dependency.
 - The app icon and 40-point sidebar mark use one polished WM Brain identity, with four small-size-first vector layers and Default, Dark, and Mono treatments in Icon Composer. There is no separate detailed master.
 - The legacy `AppIcon.appiconset` has been replaced by `WorkingMemorySnapshot/AppIcon.icon` while retaining the `AppIcon` build-setting name and macOS 14 deployment target.
+- Project dashboards, histories, snapshots, access state, and drill-down selection are cached by project ID; uncached projects show neutral loading content instead of another project's memory.
+- The app is single-instance through Launch Services so multiple debug copies cannot compete over the same local database.
 
 ## Next milestone
 
-Next task after reviewing the M13 branch:
+Next task after merging the project-scoped detail-state fix:
 
 ```text
 Complete the M13 visual review checklist across the 16 mapped app states
@@ -123,7 +125,7 @@ M9 - Optional evidence-janitor model
 Expected commit message:
 
 ```text
-feat: implement two-column app structure
+fix: enforce project-owned detail content
 ```
 
 ## Fresh chat startup

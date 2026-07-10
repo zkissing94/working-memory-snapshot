@@ -292,6 +292,7 @@ struct ProjectSidebarView: View {
     let currentSessionSummary: CurrentSessionSummary?
     let canStartSessionForProject: (Project.ID) -> Bool
     let canPauseSessionForProject: (Project.ID) -> Bool
+    let onSelectProject: (Project.ID) -> Void
     let onStartSession: (Project) -> Void
     let onPauseSession: (Project) -> Void
     @State private var isDeleteProjectPromptVisible = false
@@ -310,7 +311,7 @@ struct ProjectSidebarView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     if let currentSessionSummary {
                         CurrentSessionSummaryView(summary: currentSessionSummary) {
-                            viewModel.selectProject(id: currentSessionSummary.projectID)
+                            selectProject(id: currentSessionSummary.projectID)
                         }
                     }
 
@@ -625,7 +626,12 @@ struct ProjectSidebarView: View {
             return
         }
 
-        viewModel.selectProject(id: project.id)
+        selectProject(id: project.id)
+    }
+
+    private func selectProject(id projectID: Project.ID) {
+        onSelectProject(projectID)
+        viewModel.selectProject(id: projectID)
     }
 
     private func rowBackground(isSelected: Bool) -> some View {

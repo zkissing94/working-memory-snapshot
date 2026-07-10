@@ -36,6 +36,9 @@ struct ContentView: View {
                     }
                     return sessionViewModel.activeBlock?.status == .active
                 },
+                onSelectProject: { projectID in
+                    projectDetailViewModel.resetNavigation(for: projectID)
+                },
                 onStartSession: { project in
                     sessionViewModel.beginStartSession(for: project)
                 },
@@ -73,12 +76,28 @@ struct ContentView: View {
                 }
             }
         }
+        .onChange(of: sessionViewModel.generatedSnapshotContext) { _, context in
+            guard let context else {
+                return
+            }
+
+            if projectsViewModel.selectedProject?.id == context.projectID {
+                projectDetailViewModel.presentGeneratedSnapshot(
+                    context.snapshot,
+                    for: context.projectID
+                )
+            }
+            sessionViewModel.clearGeneratedSnapshotContext()
+            Task {
+                await projectDetailViewModel.refreshProject(context.projectID)
+            }
+        }
         .onChange(of: sessionViewModel.blockCompletionPrompt) { _, prompt in
             guard let prompt else {
                 return
             }
 
-            projectsViewModel.selectProject(id: prompt.session.projectID)
+            selectProject(id: prompt.session.projectID)
         }
         .alert("Project Error", isPresented: projectsViewModel.isShowingError) {
             Button("OK", role: .cancel) {
@@ -107,11 +126,11 @@ struct ContentView: View {
                     context: recoveryContext,
                     onResume: {
                         sessionViewModel.resumeRecoveredSession()
-                        projectsViewModel.selectProject(id: recoveryContext.project.id)
+                        selectProject(id: recoveryContext.project.id)
                     },
                     onEnd: {
                         sessionViewModel.beginEndingRecoveredSession()
-                        projectsViewModel.selectProject(id: recoveryContext.project.id)
+                        selectProject(id: recoveryContext.project.id)
                     },
                     onCancel: {
                         Task {
@@ -124,7 +143,9 @@ struct ContentView: View {
                                 for: recoveryContext.project
                             ) {
                                 sessionViewModel.updateRecoveredProject(restoredProject)
-                                projectsViewModel.selectProject(id: restoredProject.id)
+                                await projectDetailViewModel.checkProjectAccess(for: restoredProject)
+                                await projectDetailViewModel.refreshProject(restoredProject.id)
+                                selectProject(id: restoredProject.id)
                             }
                         }
                     }
@@ -213,6 +234,11 @@ struct ContentView: View {
         return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
             && isDirectory.boolValue
             && FileManager.default.isReadableFile(atPath: path)
+    }
+
+    private func selectProject(id projectID: Project.ID) {
+        projectDetailViewModel.resetNavigation(for: projectID)
+        projectsViewModel.selectProject(id: projectID)
     }
 }
 

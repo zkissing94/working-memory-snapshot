@@ -113,7 +113,7 @@ Use an explicit checked-in plist:
 WorkingMemorySnapshot/Resources/Info.plist
 ```
 
-It must include `NSAllowsLocalNetworking` for local LM Studio HTTP access and must not use `NSAllowsArbitraryLoads`.
+It must include `NSAllowsLocalNetworking` for local LM Studio HTTP access, set `LSMultipleInstancesProhibited` to prevent competing app processes from sharing the local database, and must not use `NSAllowsArbitraryLoads`.
 
 The default LM Studio URL is:
 
@@ -195,6 +195,22 @@ Diagnostic environment report:
 ```text
 CODE_SIGNING_ALLOWED=NO
 ```
+
+## Running the Validated Debug Build
+
+Build once, stop any older debug copy, and launch the exact repository build through Launch Services:
+
+```bash
+APP="$PWD/.derivedData/Build/Products/Debug/WorkingMemorySnapshot.app"
+pkill -x WorkingMemorySnapshot 2>/dev/null || true
+./scripts/check.sh
+test -x "$APP/Contents/MacOS/WorkingMemorySnapshot"
+open "$APP"
+sleep 1
+ps -p "$(pgrep -x WorkingMemorySnapshot)" -o command=
+```
+
+The reported executable must be inside the current repository's `.derivedData`. Full checks run tests serially and require all existing app copies to be stopped because XCTest launches its own host process. Do not use `open -n`; Working Memory Snapshot is intentionally a single-instance app because every process would otherwise share the same local SQLite database.
 
 ## Git Ignore Rules
 

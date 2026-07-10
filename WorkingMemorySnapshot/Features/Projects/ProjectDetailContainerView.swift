@@ -17,15 +17,11 @@ struct ProjectDetailContainerView: View {
                 projectDetailViewModel: projectDetailViewModel
             )
             .task(id: project.id) {
-                projectDetailViewModel.dismissPresentedSnapshot(for: project.id)
+                projectDetailViewModel.resetNavigation(for: project.id)
                 await projectDetailViewModel.loadProject(for: project.id)
-                presentGeneratedSnapshotIfNeeded(for: project)
             }
             .task(id: project.rootPath) {
                 await projectDetailViewModel.checkProjectAccess(for: project)
-            }
-            .onChange(of: sessionViewModel.generatedSnapshotContext) { _, _ in
-                presentGeneratedSnapshotIfNeeded(for: project)
             }
         } else {
             ContentUnavailableView(
@@ -33,20 +29,6 @@ struct ProjectDetailContainerView: View {
                 systemImage: "folder.badge.questionmark",
                 description: Text("Select or add a project from the sidebar.")
             )
-        }
-    }
-
-    private func presentGeneratedSnapshotIfNeeded(for project: Project) {
-        guard let context = sessionViewModel.generatedSnapshotContext,
-              context.projectID == project.id
-        else {
-            return
-        }
-
-        projectDetailViewModel.presentGeneratedSnapshot(context.snapshot, for: project.id)
-        sessionViewModel.clearGeneratedSnapshotContext()
-        Task {
-            await projectDetailViewModel.refreshProject(project.id)
         }
     }
 }
@@ -106,7 +88,10 @@ private struct ProjectSessionRouteView: View {
                 SnapshotFailureWorkspaceView(
                     project: project,
                     session: failedSnapshotSession,
-                    blocks: projectDetailViewModel.blocks(for: failedSnapshotSession),
+                    blocks: projectDetailViewModel.blocks(
+                        for: failedSnapshotSession,
+                        projectID: project.id
+                    ),
                     onRetrySnapshot: {
                         Task {
                             await sessionViewModel.retrySnapshotGeneration()
@@ -167,17 +152,29 @@ private struct ProjectSessionRouteView: View {
             HistoricalSessionDetailView(
                 project: project,
                 session: selectedSession,
-                snapshot: projectDetailViewModel.snapshot(for: selectedSession),
-                blocks: projectDetailViewModel.blocks(for: selectedSession),
+                snapshot: projectDetailViewModel.snapshot(
+                    for: selectedSession,
+                    projectID: project.id
+                ),
+                blocks: projectDetailViewModel.blocks(
+                    for: selectedSession,
+                    projectID: project.id
+                ),
                 incrementsForBlock: { block in
                     projectDetailViewModel.increments(for: block, projectID: project.id)
                 },
-                events: projectDetailViewModel.events(for: selectedSession),
+                events: projectDetailViewModel.events(
+                    for: selectedSession,
+                    projectID: project.id
+                ),
                 onBackToProject: {
                     projectDetailViewModel.clearSelectedSession(for: project.id)
                 },
                 onViewSnapshot: {
-                    if let snapshot = projectDetailViewModel.snapshot(for: selectedSession) {
+                    if let snapshot = projectDetailViewModel.snapshot(
+                        for: selectedSession,
+                        projectID: project.id
+                    ) {
                         projectDetailViewModel.presentSnapshot(snapshot, for: project.id)
                     }
                 }
@@ -202,7 +199,7 @@ private struct ProjectSessionRouteView: View {
                 projectDetailViewModel.presentLatestSnapshot(for: project.id)
             },
             onSelectSession: { session in
-                projectDetailViewModel.selectSession(session)
+                projectDetailViewModel.selectSession(session, for: project.id)
             }
         )
     }
