@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="monogram" x1="292" y1="512" x2="732" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1B2472"/>
+      <stop offset="0.52" stop-color="#3A49E0"/>
+      <stop offset="1" stop-color="#6A4DFF"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#monogram)" fill-rule="evenodd" d="M292 426 H352 L380 546 L416 454 L452 546 L480 426 H540 L494 598 H438 L416 540 L394 598 H338 Z M568 426 H624 L650 492 L676 426 H732 V598 H680 V516 L660 566 H640 L620 516 V598 H568 Z"/>
+</svg>

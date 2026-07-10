@@ -1,47 +1,34 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="background" x1="90" y1="100" x2="930" y2="930" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#243C8F"/>
-      <stop offset="1" stop-color="#6558E8"/>
+    <linearGradient id="background" x1="64" y1="64" x2="960" y2="960" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1B2472"/>
+      <stop offset="0.52" stop-color="#3A49E0"/>
+      <stop offset="1" stop-color="#6A4DFF"/>
     </linearGradient>
-    <mask id="wm-knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
-      <rect width="1024" height="1024" fill="#000000"/>
-      <rect x="212" y="356" width="600" height="312" rx="156" fill="#FFFFFF"/>
-      <path
-        d="M276 412 H328 L356 574 L402 450 L448 574 L476 412 H528 L482 612 H426 L402 550 L378 612 H322 Z"
-        fill="#000000"
-      />
-      <path
-        d="M532 612 V412 H596 L640 506 L684 412 H748 V612 H692 V500 L664 566 H616 L588 500 V612 Z"
-        fill="#000000"
-      />
-    </mask>
+    <radialGradient id="center-depth" cx="512" cy="504" r="390" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1B2472" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#1B2472" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="brain" x1="0" y1="196" x2="0" y2="790" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F5F7FF"/>
+      <stop offset="1" stop-color="#BBD1FF"/>
+    </linearGradient>
+    <linearGradient id="monogram" x1="292" y1="512" x2="732" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1B2472"/>
+      <stop offset="0.52" stop-color="#3A49E0"/>
+      <stop offset="1" stop-color="#6A4DFF"/>
+    </linearGradient>
+    <path id="outer-left" d="M496 338 C496 250 454 196 396 196 C346 196 308 226 290 270 C246 268 212 302 204 350 C184 378 180 420 194 466 C176 512 192 558 224 584 C212 634 246 674 294 688 C330 736 386 758 432 738 C474 714 494 676 496 636"/>
+    <path id="lower-left" d="M220 548 C248 610 322 640 386 614 C424 600 450 572 460 538"/>
   </defs>
-
   <rect width="1024" height="1024" fill="url(#background)"/>
-
-  <g
-    fill="none"
-    stroke="#B8C7FF"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path
-      d="M486 330 C486 252 448 208 394 204 C344 200 310 228 292 274 C238 272 194 306 184 356 C134 378 108 426 116 480 C94 528 112 584 152 612 C150 668 194 710 252 714 C292 758 356 770 408 744 C458 720 490 688 498 646"
-      stroke-width="64"
-    />
-    <path
-      d="M538 330 C538 252 576 208 630 204 C680 200 714 228 732 274 C786 272 830 306 840 356 C890 378 916 426 908 480 C930 528 912 584 872 612 C874 668 830 710 772 714 C732 758 668 770 616 744 C566 720 534 688 526 646"
-      stroke-width="64"
-    />
-    <path d="M292 336 C324 290 386 286 424 330" stroke-width="54"/>
-    <path d="M732 336 C700 290 638 286 600 330" stroke-width="54"/>
-    <path d="M170 472 C190 432 224 414 260 426" stroke-width="54"/>
-    <path d="M854 472 C834 432 800 414 764 426" stroke-width="54"/>
-    <path d="M226 580 C266 626 336 636 390 600" stroke-width="54"/>
-    <path d="M798 580 C758 626 688 636 634 600" stroke-width="54"/>
+  <rect width="1024" height="1024" fill="url(#center-depth)"/>
+  <g fill="none" stroke="url(#brain)" stroke-linecap="round" stroke-linejoin="round">
+    <use href="#outer-left" stroke-width="72"/>
+    <use href="#outer-left" stroke-width="72" transform="translate(1024 0) scale(-1 1)"/>
+    <use href="#lower-left" stroke-width="60"/>
+    <use href="#lower-left" stroke-width="60" transform="translate(1024 0) scale(-1 1)"/>
   </g>
-
-  <rect width="1024" height="1024" fill="#F7F8FF" mask="url(#wm-knockout)"/>
+  <rect x="210" y="370" width="604" height="284" rx="142" fill="#F5F7FF" stroke="#BBD1FF" stroke-width="12" stroke-opacity="0.55"/>
+  <path fill="url(#monogram)" fill-rule="evenodd" d="M292 426 H352 L380 546 L416 454 L452 546 L480 426 H540 L494 598 H438 L416 540 L394 598 H338 Z M568 426 H624 L650 492 L676 426 H732 V598 H680 V516 L660 566 H640 L620 516 V598 H568 Z"/>
 </svg>
