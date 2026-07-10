@@ -114,6 +114,20 @@ struct SessionRepository {
         .first
     }
 
+    func completedSessionCount(for projectID: UUID) async throws -> Int {
+        try await database.query("""
+        SELECT COUNT(*)
+        FROM sessions
+        WHERE project_id = ? AND status = ?
+        """, bind: { statement in
+            try SQLiteValue.bind(projectID.uuidString, to: statement, at: 1)
+            try SQLiteValue.bind(SessionStatus.completed.rawValue, to: statement, at: 2)
+        }, map: { statement in
+            Int(sqlite3_column_int64(statement, 0))
+        })
+        .first ?? 0
+    }
+
     func completeSession(id: UUID, brainDump: String) async throws -> WorkSession {
         let now = try DateCoding.now()
         return try await database.withTransaction { database in
