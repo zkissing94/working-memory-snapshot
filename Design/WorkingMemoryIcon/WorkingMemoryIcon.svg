@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="background" x1="90" y1="100" x2="930" y2="930" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#243C8F"/>
+      <stop offset="1" stop-color="#6558E8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#background)"/>
+
+  <path
+    d="M150 540 C270 612 334 430 470 500 C604 569 652 698 874 566"
+    fill="none"
+    stroke="#B8C7FF"
+    stroke-width="124"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <rect
+    x="286"
+    y="232"
+    width="452"
+    height="560"
+    rx="116"
+    fill="none"
+    stroke="#F7F8FF"
+    stroke-width="112"
+  />
+
+  <path
+    d="M470 500 C604 569 652 698 874 566"
+    fill="none"
+    stroke="#B8C7FF"
+    stroke-width="124"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

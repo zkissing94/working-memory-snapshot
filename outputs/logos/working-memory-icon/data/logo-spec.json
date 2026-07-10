@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "Working Memory icon exploration",
+    "stage": "Logo exploration",
+    "brand_name": "Working Memory Snapshot",
+    "anchor": "A local-first macOS utility that preserves the thread of thought so founder/coders can resume deep work quickly.",
+    "summary": "Compare six bold continuity symbols for a calm, professional macOS app icon. The Folded-W memory thread is the delegated default for production.",
+    "base_asset": "data/base_asset.png",
+    "base_asset_url": "/data/base_asset.png"
+  },
+  "constraints": {
+    "preserve": [
+      "exact product name: Working Memory Snapshot",
+      "calm local-first macOS utility character",
+      "blue brand heritage",
+      "one dominant silhouette that remains clear at 16–32 pixels",
+      "palette: #243C8F, #6558E8, #F7F8FF, #B8C7FF"
+    ],
+    "avoid": [
+      "brains, circuit traces, nodes, timers, document stacks, clouds, chat bubbles, or generic AI sparkle symbols",
+      "copies or close derivations of marks in the supplied reference image",
+      "text, initials rendered as typography, taglines, watermarks, fake partner marks, or badges",
+      "thin linework, tiny interior details, excessive glass, ornamental gradients, or photorealistic mockups"
+    ]
+  },
+  "routes": [
+    {
+      "id": "folded-w-memory-thread",
+      "label": "Folded-W Memory Thread",
+      "family": "monogram-symbol",
+      "usage_contexts": [
+        "macOS Dock",
+        "Finder",
+        "app switcher",
+        "40-point in-app header"
+      ],
+      "prompt": "Use case: logo-brand. Asset type: original macOS app-icon concept. Input Image 1 is a benchmark reference showing the current thin blue brain icon beside professional macOS icons; use it only to understand the desired level of silhouette, scale, and polish, and do not copy any visible mark. Create one centered square app-icon concept for Working Memory Snapshot: a single broad continuous ribbon folding into a compact abstract W, with two rounded valleys and one clear overlap where the returning thread passes forward, expressing captured context becoming resumed work. The symbol should occupy about 64% of the icon width and 58% of its height. Use a full-bleed indigo #243C8F to violet #6558E8 background, an off-white #F7F8FF front ribbon, and a restrained periwinkle #B8C7FF rear fold. Calm, dimensional, vector-friendly, crisply defined edges, generous negative space, one dominant silhouette. Present the icon alone on a clean white inspection background with generous padding. No text, brain, circuits, nodes, timer, documents, cloud, chat bubble, sparkle, infinity sign, watermark, extra objects, or competitor imitation. No device mockup and no perspective tilt.",
+      "rationale": "Turns continuity into a compact product-specific symbol while quietly carrying the W initial.",
+      "best_for": "The primary app icon and small in-app brand tile.",
+      "decision_advice": "Use as the default if the mark remains unmistakable at 16 pixels and the W reads as a ribbon rather than lettering.",
+      "watch_out": "The overlap must remain simple enough not to become a knot or generic monogram.",
+      "next_step": "Reconstruct the selected geometry as two clean SVG foreground layers and test in Icon Composer.",
+      "final_owner": "macOS-icon-production",
+      "next_prompt_hints": []
+    },
+    {
+      "id": "capture-resume-loop",
+      "label": "Capture / Resume Loop",
+      "family": "symbol",
+      "usage_contexts": [
+        "macOS Dock",
+        "Finder",
+        "app switcher"
+      ],
+      "prompt": "Use case: logo-brand. Asset type: original macOS app-icon concept. Input Image 1 is a benchmark reference showing professional macOS icon scale and polish; do not copy any visible mark. Create one centered square app-icon concept for Working Memory Snapshot using a single thick asymmetric open loop: the left end folds inward to capture a thread, while the right end rises and opens forward to imply resuming work. It must not resemble an infinity sign, chain link, refresh arrow, or letter. Use a full-bleed indigo #243C8F to violet #6558E8 background, off-white #F7F8FF main form, and one restrained periwinkle #B8C7FF rear fold. Calm, dimensional, vector-friendly, crisply defined edges, generous negative space, one dominant silhouette, readable at 16 pixels. Present the icon alone on a clean white inspection background with generous padding. No text, brain, circuits, nodes, timer, documents, cloud, chat bubble, sparkle, arrows, watermark, extra objects, or competitor imitation. No device mockup and no perspective tilt.",
+      "rationale": "Expresses the product loop without relying on an initial or a literal memory object.",
+      "best_for": "A category-neutral product symbol with strong motion and continuity.",
+      "decision_advice": "Choose if the open gesture feels clearly directional without becoming a sync icon.",
+      "watch_out": "Loop symbols can become generic or resemble refresh and automation products.",
+      "next_step": "Simplify the terminal shapes and verify the open gap at favicon size.",
+      "final_owner": "macOS-icon-production",
+      "next_prompt_hints": []
+    },
+    {
+      "id": "thread-through-snapshot",
+      "label": "Thread Through Snapshot",
+      "family": "product-metaphor",
+      "usage_contexts": [
+        "macOS Dock",
+        "website product mark",
+        "feature illustration"
+      ],
+      "prompt": "Use case: logo-brand. Asset type: original macOS app-icon concept. Input Image 1 is a benchmark reference for silhouette and polish only; do not copy any visible mark. Create one centered square app-icon concept for Working Memory Snapshot: a thick continuous ribbon passes through one simplified rounded snapshot frame, entering behind the frame and exiting forward, representing context preserved at a boundary and carried into the next session. Use only the frame and one thread as a unified silhouette; avoid looking like a document, camera, window, or app UI. Use a full-bleed indigo #243C8F to violet #6558E8 background, off-white #F7F8FF foreground, and restrained periwinkle #B8C7FF rear layer. Calm, dimensional, vector-friendly, crisp edges, generous negative space, bold enough for 16 pixels. Present the icon alone on a clean white inspection background with generous padding. No text, brain, circuits, nodes, timer, document stack, cloud, chat bubble, sparkle, watermark, extra objects, or competitor imitation. No device mockup and no perspective tilt.",
+      "rationale": "Makes the snapshot boundary visible while keeping continuity as the primary idea.",
+      "best_for": "Product storytelling where the snapshot concept needs to be more explicit.",
+      "decision_advice": "Choose only if the frame reads as a boundary rather than a generic document or camera.",
+      "watch_out": "The secondary frame can add detail and weaken small-size performance.",
+      "next_step": "Collapse the frame and ribbon into the fewest possible vector shapes.",
+      "final_owner": "macOS-icon-production",
+      "next_prompt_hints": []
+    },
+    {
+      "id": "interlocking-continuity-links",
+      "label": "Interlocking Continuity Links",
+      "family": "geometric",
+      "usage_contexts": [
+        "macOS Dock",
+        "Finder",
+        "monochrome usage"
+      ],
+      "prompt": "Use case: logo-brand. Asset type: original macOS app-icon concept. Input Image 1 is a benchmark reference for macOS icon quality only; do not copy any visible mark. Create one centered square app-icon concept for Working Memory Snapshot from two broad rounded ribbon segments that interlock once: the rear segment represents the previous session and the front segment continues the same trajectory into the next. The combined result must read as one compact continuity symbol, not chain links, an infinity sign, a handshake, or a letter. Use a full-bleed indigo #243C8F to violet #6558E8 background, off-white #F7F8FF front segment, and periwinkle #B8C7FF rear segment. Calm, dimensional, vector-friendly, crisp edges, balanced negative space, bold at 16 pixels. Present the icon alone on a clean white inspection background with generous padding. No text, brain, circuits, nodes, timer, documents, cloud, chat bubble, sparkle, watermark, extra objects, or competitor imitation. No device mockup and no perspective tilt.",
+      "rationale": "Uses a minimal front/back relationship to show continuity across sessions.",
+      "best_for": "Strong monochrome translation and compact small-size recognition.",
+      "decision_advice": "Choose if the two pieces still feel like one continuing thought rather than a collaboration logo.",
+      "watch_out": "Interlocking forms are common and need unusually distinctive proportions.",
+      "next_step": "Run a similarity screen and refine the overlap proportions before vector production.",
+      "final_owner": "macOS-icon-production",
+      "next_prompt_hints": []
+    },
+    {
+      "id": "memory-bridge",
+      "label": "Memory Bridge",
+      "family": "premium-symbol",
+      "usage_contexts": [
+        "macOS Dock",
+        "launch material",
+        "large-format brand mark"
+      ],
+      "prompt": "Use case: logo-brand. Asset type: original macOS app-icon concept. Input Image 1 is a benchmark reference for professional macOS icon composition only; do not copy any visible mark. Create one centered square app-icon concept for Working Memory Snapshot using a single thick ribbon that rises from a lower left terminal, forms one calm elevated bridge, folds behind itself at center, and lands as a forward-facing upper right terminal. Convey moving across an interruption while carrying the same thought. It must not resemble a rainbow, cloud, road, mountain, arrow, or letter. Use a full-bleed indigo #243C8F to violet #6558E8 background, off-white #F7F8FF front surface, and a restrained periwinkle #B8C7FF rear fold. Calm, dimensional, vector-friendly, crisp edges, generous negative space, bold at 16 pixels. Present the icon alone on a clean white inspection background with generous padding. No text, brain, circuits, nodes, timer, documents, cloud, chat bubble, sparkle, watermark, extra objects, or competitor imitation. No device mockup and no perspective tilt.",
+      "rationale": "Frames restart friction as a gap the product helps the user cross.",
+      "best_for": "A quieter premium identity with an emotional continuity cue.",
+      "decision_advice": "Choose if it reads as a purposeful bridge without becoming scenic or literal.",
+      "watch_out": "An arch alone can feel generic and less product-specific than the Folded-W.",
+      "next_step": "Reduce the bridge to a compact glyph and test its mono silhouette.",
+      "final_owner": "macOS-icon-production",
+      "next_prompt_hints": []
+    },
+    {
+      "id": "nested-thread",
+      "label": "Nested Thread",
+      "family": "adaptive-symbol",
+      "usage_contexts": [
+        "macOS Dock",
+        "Finder",
+        "small in-app header",
+        "monochrome usage"
+      ],
+      "prompt": "Use case: logo-brand. Asset type: original macOS app-icon concept. Input Image 1 is a benchmark reference for icon scale and finish only; do not copy any visible mark. Create one centered square app-icon concept for Working Memory Snapshot: one thick outer ribbon curves inward and shelters a smaller continuation of the same ribbon, then both resolve into one forward terminal. Express a fragile thought being held locally and returned intact. It must read as one simple nested continuity form, not a brain, ear, fingerprint, speech bubble, location pin, spiral, or letter. Use a full-bleed indigo #243C8F to violet #6558E8 background, off-white #F7F8FF main ribbon, and restrained periwinkle #B8C7FF rear surface. Calm, dimensional, vector-friendly, crisp edges, generous negative space, bold at 16 pixels. Present the icon alone on a clean white inspection background with generous padding. No text, circuits, nodes, timer, documents, cloud, chat bubble, sparkle, watermark, extra objects, or competitor imitation. No device mockup and no perspective tilt.",
+      "rationale": "Emphasizes protected local memory and a return to the same cognitive thread.",
+      "best_for": "A softer, more human identity that still scales down well.",
+      "decision_advice": "Choose if the nesting feels protective without resembling a biometric or communication app.",
+      "watch_out": "Curved nested forms can drift toward ear, fingerprint, and chat metaphors.",
+      "next_step": "Perform a silhouette-only collision review before vectorization.",
+      "final_owner": "macOS-icon-production",
+      "next_prompt_hints": []
+    }
+  ],
+  "handoff": {
+    "default_owner": "macOS-icon-production",
+    "next_prompt_hints": [
+      "Preserve the chosen silhouette exactly during vector construction.",
+      "Test Default, Dark, and Mono appearances in Icon Composer.",
+      "Use a simplified full-bleed rendition for the 40-point sidebar tile."
+    ]
+  }
+}

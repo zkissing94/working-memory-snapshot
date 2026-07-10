@@ -1,0 +1,51 @@
+{
+  "status": "complete",
+  "total": 6,
+  "complete": 6,
+  "failed": 0,
+  "pending": 0,
+  "results": [
+    {
+      "id": "folded-w-memory-thread",
+      "status": "complete",
+      "image_path": "outputs/logos/working-memory-icon/generated/01-folded-w-memory-thread.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "capture-resume-loop",
+      "status": "complete",
+      "image_path": "outputs/logos/working-memory-icon/generated/02-capture-resume-loop.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "thread-through-snapshot",
+      "status": "complete",
+      "image_path": "outputs/logos/working-memory-icon/generated/03-thread-through-snapshot.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "interlocking-continuity-links",
+      "status": "complete",
+      "image_path": "outputs/logos/working-memory-icon/generated/04-interlocking-continuity-links.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "memory-bridge",
+      "status": "complete",
+      "image_path": "outputs/logos/working-memory-icon/generated/05-memory-bridge.png",
+      "error": null,
+      "caveats": ""
+    },
+    {
+      "id": "nested-thread",
+      "status": "complete",
+      "image_path": "outputs/logos/working-memory-icon/generated/06-nested-thread.png",
+      "error": null,
+      "caveats": ""
+    }
+  ]
+}

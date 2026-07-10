@@ -1,0 +1,64 @@
+{
+  "meta": {
+    "title": "Working Memory icon exploration",
+    "anchor": "A local-first macOS utility that preserves the thread of thought so founder/coders can resume deep work quickly.",
+    "selection_basis": "Delegated selection adjusted by the required similarity screen."
+  },
+  "selected_logo_route": {
+    "id": "thread-through-snapshot",
+    "label": "Thread Through Snapshot",
+    "family": "product-metaphor",
+    "rationale": "The thread passes behind a snapshot boundary and returns in front, expressing captured context becoming resumed work without relying on a generic AI or letterform symbol.",
+    "best_for": "macOS Dock, Finder, app switcher, and the 40-point in-app header tile.",
+    "decision_advice": "Use the simplified deterministic construction with one white frame and one periwinkle thread; preserve the over-under layer order at every size.",
+    "watch_out": "Keep the frame and thread bold enough that the crossing remains visible at 16 pixels.",
+    "next_step": "Package the three vector foreground layers in Icon Composer and validate Default, Dark, Mono, and legacy macOS rendering."
+  },
+  "rejected_directions": [
+    {
+      "id": "folded-w-memory-thread",
+      "label": "Folded-W Memory Thread",
+      "reason": "Rejected after the similarity screen found materially close live blue-gradient app icons using a white folded W ribbon."
+    },
+    {
+      "id": "capture-resume-loop",
+      "label": "Capture / Resume Loop",
+      "reason": "Too close to generic sync and automation symbols."
+    },
+    {
+      "id": "interlocking-continuity-links",
+      "label": "Interlocking Continuity Links",
+      "reason": "Reads more like collaboration or link management than cognitive continuity."
+    },
+    {
+      "id": "memory-bridge",
+      "label": "Memory Bridge",
+      "reason": "Clear silhouette but less product-specific and easily confused with a generic wave."
+    },
+    {
+      "id": "nested-thread",
+      "label": "Nested Thread",
+      "reason": "Drifts toward chat, email, and at-sign metaphors."
+    }
+  ],
+  "logo_route_metadata": {
+    "preserve": [
+      "Working Memory Snapshot product name",
+      "calm local-first macOS character",
+      "indigo and violet brand heritage",
+      "one strong silhouette",
+      "the thread-behind/frame/thread-in-front layer order"
+    ],
+    "avoid": [
+      "brains, circuits, nodes, timers, documents, clouds, chat bubbles, sparkles, and literal AI imagery",
+      "letterform-first marks",
+      "baked shadows, bevels, glows, or masks in source artwork",
+      "close derivations of supplied reference icons"
+    ]
+  },
+  "final_owner": "macOS-icon-production",
+  "caveats": [
+    "Generated concepts are directional; the selected app artwork is rebuilt as deterministic vector geometry.",
+    "The similarity screen is a basic visual search, not formal trademark clearance."
+  ]
+}

@@ -5,19 +5,19 @@
 Current handoff branch:
 
 ```text
-feature/m13-ui-motion-polish
+codex/professional-app-icon
 ```
 
 Current focus:
 
 ```text
-M13 full-app native motion and visual polish - implementation and automated validation complete; exhaustive visual matrix pending
+Professional Working Memory icon system - layered Icon Composer source, sidebar rendition, and review artifacts complete
 ```
 
 Baseline:
 
 ```text
-The branch includes the completed focus-block alert milestone on top of the current main baseline.
+The branch adds the professional icon system on top of the completed M13 native motion and visual-polish baseline.
 ```
 
 Completed milestones:
@@ -97,6 +97,8 @@ Current implementation state:
 - Focus-block completion has a one-shot checkmark halo; Reduce Motion removes spatial motion and the halo.
 - An internal preview catalog covers light, dark, and reduced-motion component variants.
 - Pow was evaluated and intentionally not added; the app still has no production UI dependency.
+- The app icon and 40-point sidebar mark use the bold Thread Through Snapshot identity, with layered Default, Dark, and Mono treatments in Icon Composer.
+- The legacy `AppIcon.appiconset` has been replaced by `WorkingMemorySnapshot/AppIcon.icon` while retaining the `AppIcon` build-setting name and macOS 14 deployment target.
 
 ## Next milestone
 
