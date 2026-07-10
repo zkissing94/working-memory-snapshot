@@ -13,8 +13,16 @@
             }
           ],
           "glass" : false,
+          "hidden" : false,
           "image-name" : "03-wm-monogram.svg",
-          "name" : "03-wm-monogram"
+          "name" : "03-wm-monogram",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -10.515625,
+              -31.5234375
+            ]
+          }
         },
         {
           "fill-specializations" : [
@@ -24,19 +32,40 @@
             }
           ],
           "glass" : false,
+          "hidden" : false,
           "image-name" : "02-capsule.svg",
-          "name" : "02-capsule"
+          "name" : "02-capsule",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              -31.5234375
+            ]
+          }
         },
         {
           "fill-specializations" : [
+            {
+              "value" : {
+                "automatic-gradient" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+              }
+            },
             {
               "appearance" : "dark",
               "value" : "none"
             }
           ],
           "glass" : false,
+          "hidden" : false,
           "image-name" : "01-brain-structure.svg",
-          "name" : "01-brain-structure"
+          "name" : "01-brain-structure",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              9.7890625
+            ]
+          }
         },
         {
           "image-name" : "00-background.svg",
