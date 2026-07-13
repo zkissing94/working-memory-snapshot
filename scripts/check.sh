@@ -137,6 +137,12 @@ xcodebuild \
   build
 
 if [[ "${RUN_TESTS:-1}" == "1" ]]; then
+  if pgrep -x WorkingMemorySnapshot >/dev/null 2>&1; then
+    echo "error: quit all running WorkingMemorySnapshot copies before running tests." >&2
+    echo "The app is single-instance, and the XCTest host must launch its own validated copy." >&2
+    exit 1
+  fi
+
   echo "Running tests for scheme: $scheme"
   xcodebuild \
     "${container_args[@]}" \
@@ -144,6 +150,7 @@ if [[ "${RUN_TESTS:-1}" == "1" ]]; then
     -configuration "$configuration" \
     -destination 'platform=macOS' \
     -derivedDataPath "$derived_data" \
+    -parallel-testing-enabled NO \
     CODE_SIGNING_ALLOWED=NO \
     test
 fi

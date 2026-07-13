@@ -17,6 +17,23 @@ struct ProjectDashboardSummary: Equatable, Sendable {
     var latestSnapshotSession: WorkSession?
     var completedSessionCount: Int
     var completedBlockCount: Int
+
+    func belongs(to projectID: Project.ID) -> Bool {
+        guard self.projectID == projectID else {
+            return false
+        }
+
+        guard let latestSnapshot else {
+            return latestSnapshotSession == nil
+        }
+
+        guard let latestSnapshotSession else {
+            return false
+        }
+
+        return latestSnapshotSession.projectID == projectID
+            && latestSnapshot.sessionID == latestSnapshotSession.id
+    }
 }
 
 struct ProjectHistory: Equatable, Sendable {
@@ -26,6 +43,38 @@ struct ProjectHistory: Equatable, Sendable {
     var blocksBySessionID: [WorkSession.ID: [PomodoroBlock]]
     var incrementsByBlockID: [PomodoroBlock.ID: [WorkIncrement]]
     var eventsBySessionID: [WorkSession.ID: [SessionEvent]]
+
+    func belongs(to projectID: Project.ID) -> Bool {
+        guard self.projectID == projectID,
+              sessions.allSatisfy({ $0.projectID == projectID })
+        else {
+            return false
+        }
+
+        let sessionIDs = Set(sessions.map(\.id))
+        guard snapshotsBySessionID.allSatisfy({ sessionID, snapshot in
+            sessionIDs.contains(sessionID) && snapshot.sessionID == sessionID
+        }), blocksBySessionID.allSatisfy({ sessionID, blocks in
+            sessionIDs.contains(sessionID) && blocks.allSatisfy { $0.sessionID == sessionID }
+        }), eventsBySessionID.allSatisfy({ sessionID, events in
+            sessionIDs.contains(sessionID) && events.allSatisfy { $0.sessionID == sessionID }
+        }) else {
+            return false
+        }
+
+        let blockIDs = Set(blocksBySessionID.values.flatMap { $0 }.map(\.id))
+        return incrementsByBlockID.allSatisfy { blockID, increments in
+            blockIDs.contains(blockID) && increments.allSatisfy { $0.blockID == blockID }
+        }
+    }
+}
+
+enum ProjectDetailLoadingError: LocalizedError, Equatable {
+    case projectMismatch
+
+    var errorDescription: String? {
+        "Working Memory received information for the wrong project. Try selecting the project again."
+    }
 }
 
 protocol ProjectDetailLoading {
@@ -178,6 +227,9 @@ final class ProjectDetailViewModel: ObservableObject {
             guard !Task.isCancelled, summaryRequestTokens[projectID] == token else {
                 return
             }
+            guard summary.belongs(to: projectID) else {
+                throw ProjectDetailLoadingError.projectMismatch
+            }
             summariesByProjectID[projectID] = summary
         } catch is CancellationError {
             return
@@ -211,6 +263,9 @@ final class ProjectDetailViewModel: ObservableObject {
             let history = try await loader.loadHistory(for: projectID)
             guard !Task.isCancelled, historyRequestTokens[projectID] == token else {
                 return
+            }
+            guard history.belongs(to: projectID) else {
+                throw ProjectDetailLoadingError.projectMismatch
             }
             historiesByProjectID[projectID] = history
             if let selectedSessionID = selectedSessionIDsByProjectID[projectID],
@@ -249,6 +304,10 @@ final class ProjectDetailViewModel: ObservableObject {
             .union(presentedSnapshotsByProjectID.keys)
             .union(selectedSessionIDsByProjectID.keys)
             .union(projectAccessStates.keys)
+            .union(summaryRequestTokens.keys)
+            .union(historyRequestTokens.keys)
+            .union(loadingSummaryProjectIDs)
+            .union(loadingHistoryProjectIDs)
         for projectID in cachedProjectIDs.subtracting(projectIDs) {
             removeProject(projectID)
         }
@@ -300,6 +359,9 @@ final class ProjectDetailViewModel: ObservableObject {
     }
 
     func presentSnapshot(_ snapshot: Snapshot, for projectID: Project.ID) {
+        guard historiesByProjectID[projectID]?.snapshotsBySessionID[snapshot.sessionID] == snapshot else {
+            return
+        }
         presentedSnapshotsByProjectID[projectID] = snapshot
     }
 
@@ -307,9 +369,19 @@ final class ProjectDetailViewModel: ObservableObject {
         presentedSnapshotsByProjectID[projectID] = nil
     }
 
-    func selectSession(_ session: WorkSession) {
-        presentedSnapshotsByProjectID[session.projectID] = nil
-        selectedSessionIDsByProjectID[session.projectID] = session.id
+    func resetNavigation(for projectID: Project.ID) {
+        presentedSnapshotsByProjectID[projectID] = nil
+        selectedSessionIDsByProjectID[projectID] = nil
+    }
+
+    func selectSession(_ session: WorkSession, for projectID: Project.ID) {
+        guard session.projectID == projectID,
+              historiesByProjectID[projectID]?.sessions.contains(where: { $0.id == session.id }) == true
+        else {
+            return
+        }
+        presentedSnapshotsByProjectID[projectID] = nil
+        selectedSessionIDsByProjectID[projectID] = session.id
     }
 
     func clearSelectedSession(for projectID: Project.ID) {
@@ -327,25 +399,58 @@ final class ProjectDetailViewModel: ObservableObject {
         return historiesByProjectID[projectID]?.sessions.first { $0.id == selectedSessionID }
     }
 
-    func snapshot(for session: WorkSession) -> Snapshot? {
-        historiesByProjectID[session.projectID]?.snapshotsBySessionID[session.id]
+    func snapshot(for session: WorkSession, projectID: Project.ID) -> Snapshot? {
+        guard session.projectID == projectID,
+              historiesByProjectID[projectID]?.sessions.contains(where: { $0.id == session.id }) == true,
+              let snapshot = historiesByProjectID[projectID]?.snapshotsBySessionID[session.id],
+              snapshot.sessionID == session.id
+        else {
+            return nil
+        }
+        return snapshot
     }
 
     func session(for snapshot: Snapshot, projectID: Project.ID) -> WorkSession? {
-        historiesByProjectID[projectID]?.sessions.first { $0.id == snapshot.sessionID }
-            ?? summariesByProjectID[projectID]?.latestSnapshotSession
+        if let session = historiesByProjectID[projectID]?.sessions.first(where: {
+            $0.id == snapshot.sessionID && $0.projectID == projectID
+        }) {
+            return session
+        }
+
+        guard let latestSession = summariesByProjectID[projectID]?.latestSnapshotSession,
+              latestSession.id == snapshot.sessionID,
+              latestSession.projectID == projectID
+        else {
+            return nil
+        }
+        return latestSession
     }
 
-    func blocks(for session: WorkSession) -> [PomodoroBlock] {
-        historiesByProjectID[session.projectID]?.blocksBySessionID[session.id] ?? []
+    func blocks(for session: WorkSession, projectID: Project.ID) -> [PomodoroBlock] {
+        guard session.projectID == projectID,
+              historiesByProjectID[projectID]?.sessions.contains(where: { $0.id == session.id }) == true
+        else {
+            return []
+        }
+        return historiesByProjectID[projectID]?.blocksBySessionID[session.id] ?? []
     }
 
     func increments(for block: PomodoroBlock, projectID: Project.ID) -> [WorkIncrement] {
-        historiesByProjectID[projectID]?.incrementsByBlockID[block.id] ?? []
+        guard historiesByProjectID[projectID]?.blocksBySessionID[block.sessionID]?.contains(
+            where: { $0.id == block.id }
+        ) == true else {
+            return []
+        }
+        return historiesByProjectID[projectID]?.incrementsByBlockID[block.id] ?? []
     }
 
-    func events(for session: WorkSession) -> [SessionEvent] {
-        historiesByProjectID[session.projectID]?.eventsBySessionID[session.id] ?? []
+    func events(for session: WorkSession, projectID: Project.ID) -> [SessionEvent] {
+        guard session.projectID == projectID,
+              historiesByProjectID[projectID]?.sessions.contains(where: { $0.id == session.id }) == true
+        else {
+            return []
+        }
+        return historiesByProjectID[projectID]?.eventsBySessionID[session.id] ?? []
     }
 
     func clearError() {

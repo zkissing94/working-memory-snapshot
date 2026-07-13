@@ -213,8 +213,14 @@ struct ProjectDashboardView: View {
                                         ForEach(group.sessions) { session in
                                             SessionTimelineRow(
                                                 session: session,
-                                                snapshot: projectDetailViewModel.snapshot(for: session),
-                                                blocks: projectDetailViewModel.blocks(for: session),
+                                                snapshot: projectDetailViewModel.snapshot(
+                                                    for: session,
+                                                    projectID: project.id
+                                                ),
+                                                blocks: projectDetailViewModel.blocks(
+                                                    for: session,
+                                                    projectID: project.id
+                                                ),
                                                 isSelected: projectDetailViewModel.selectedSessionID(for: project.id) == session.id,
                                                 onSelect: {
                                                     onSelectSession(session)
