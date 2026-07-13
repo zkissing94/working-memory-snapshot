@@ -712,24 +712,30 @@ private struct RichTextField: View {
                     } label: {
                         Image(systemName: "bold")
                     }
-                    .buttonStyle(AppIconButtonStyle())
-                    .appTooltip("Bold")
+                    .buttonStyle(RichTextFormattingButtonStyle(isActive: formatter.isBoldActive))
+                    .help(formatter.isBoldActive ? "Turn off bold" : "Turn on bold")
+                    .accessibilityLabel("Bold")
+                    .accessibilityValue(formatter.isBoldActive ? "On" : "Off")
 
                     Button {
                         formatter.toggleItalic()
                     } label: {
                         Image(systemName: "italic")
                     }
-                    .buttonStyle(AppIconButtonStyle())
-                    .appTooltip("Italic")
+                    .buttonStyle(RichTextFormattingButtonStyle(isActive: formatter.isItalicActive))
+                    .help(formatter.isItalicActive ? "Turn off italic" : "Turn on italic")
+                    .accessibilityLabel("Italic")
+                    .accessibilityValue(formatter.isItalicActive ? "On" : "Off")
 
                     Button {
-                        formatter.insertBullet()
+                        formatter.toggleBullet()
                     } label: {
                         Image(systemName: "list.bullet")
                     }
-                    .buttonStyle(AppIconButtonStyle())
-                    .appTooltip("Insert bullets")
+                    .buttonStyle(RichTextFormattingButtonStyle(isActive: formatter.isBulletActive))
+                    .help(formatter.isBulletActive ? "Turn off bullets" : "Turn on bullets")
+                    .accessibilityLabel("Bullets")
+                    .accessibilityValue(formatter.isBulletActive ? "On" : "Off")
                 }
             }
             .padding(.horizontal, 8)
@@ -752,18 +758,51 @@ private struct RichTextField: View {
     }
 }
 
+private struct RichTextFormattingButtonStyle: ButtonStyle {
+    let isActive: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(
+                minWidth: AppVisualTokens.Layout.minimumIconTarget,
+                minHeight: AppVisualTokens.Layout.minimumIconTarget
+            )
+            .foregroundStyle(isActive ? Color.white : Color.primary)
+            .background(
+                RoundedRectangle(cornerRadius: AppVisualTokens.Radius.standard, style: .continuous)
+                    .fill(backgroundFill(isPressed: configuration.isPressed))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: AppVisualTokens.Radius.standard, style: .continuous)
+                    .strokeBorder(isActive ? Color.accentColor : Color(nsColor: .separatorColor).opacity(0.42))
+            }
+            .contentShape(RoundedRectangle(cornerRadius: AppVisualTokens.Radius.standard, style: .continuous))
+    }
+
+    private func backgroundFill(isPressed: Bool) -> Color {
+        if isPressed {
+            return Color.accentColor.opacity(isActive ? 0.78 : 0.16)
+        }
+        return isActive ? Color.accentColor : Color.clear
+    }
+}
+
+@MainActor
 private final class RichTextFieldFormatter: ObservableObject {
     fileprivate weak var textView: NSTextView?
+    @Published private(set) var isBoldActive = false
+    @Published private(set) var isItalicActive = false
+    @Published private(set) var isBulletActive = false
 
     func toggleBold() {
-        toggleFontTrait(.boldFontMask)
+        setFontTrait(.boldFontMask, enabled: !isBoldActive)
     }
 
     func toggleItalic() {
-        toggleFontTrait(.italicFontMask)
+        setFontTrait(.italicFontMask, enabled: !isItalicActive)
     }
 
-    private func toggleFontTrait(_ trait: NSFontTraitMask) {
+    private func setFontTrait(_ trait: NSFontTraitMask, enabled: Bool) {
         guard let textView else {
             return
         }
@@ -773,7 +812,8 @@ private final class RichTextFieldFormatter: ObservableObject {
             let baseFont = (textView.typingAttributes[.font] as? NSFont)
                 ?? textView.font
                 ?? NSFont.preferredFont(forTextStyle: .body)
-            textView.typingAttributes[.font] = toggledFont(from: baseFont, trait: trait)
+            textView.typingAttributes[.font] = font(from: baseFont, trait: trait, enabled: enabled)
+            refreshSelectionState()
             return
         }
 
@@ -786,23 +826,24 @@ private final class RichTextFieldFormatter: ObservableObject {
             let currentFont = (attributes[.font] as? NSFont)
                 ?? textView.font
                 ?? NSFont.preferredFont(forTextStyle: .body)
-            let updatedFont = toggledFont(from: currentFont, trait: trait)
+            let updatedFont = font(from: currentFont, trait: trait, enabled: enabled)
             textStorage.addAttribute(.font, value: updatedFont, range: range)
         }
         textStorage.endEditing()
         textView.didChangeText()
         textView.setSelectedRange(selection)
+        refreshSelectionState()
     }
 
-    private func toggledFont(from font: NSFont, trait: NSFontTraitMask) -> NSFont {
+    private func font(from font: NSFont, trait: NSFontTraitMask, enabled: Bool) -> NSFont {
         let fontManager = NSFontManager.shared
-        if fontManager.traits(of: font).contains(trait) {
-            return fontManager.convert(font, toNotHaveTrait: trait)
+        if enabled {
+            return fontManager.convert(font, toHaveTrait: trait)
         }
-        return fontManager.convert(font, toHaveTrait: trait)
+        return fontManager.convert(font, toNotHaveTrait: trait)
     }
 
-    func insertBullet() {
+    func toggleBullet() {
         guard let textView else {
             return
         }
@@ -811,64 +852,135 @@ private final class RichTextFieldFormatter: ObservableObject {
         let fullString = storage.string as NSString
         let selection = textView.selectedRange()
         let lineRange = fullString.lineRange(for: selection)
+        let shouldEnable = !isBulletActive
 
         if selection.length == 0 {
             let lineTextRange = lineRangeWithoutLineBreak(from: lineRange, in: fullString)
             let lineText = fullString.substring(with: lineTextRange)
-
-            if lineText.hasPrefix("• ") {
-                return
-            }
-
             let leadingWhitespace = String(lineText.prefix(while: { $0 == " " || $0 == "\t" }))
             let remainingText = String(lineText.dropFirst(leadingWhitespace.count))
-            let replacement = "\(leadingWhitespace)• \(remainingText)"
+            let replacement: String
+            let cursorDelta: Int
+
+            if shouldEnable {
+                guard !remainingText.hasPrefix("• ") else {
+                    refreshSelectionState()
+                    return
+                }
+                replacement = "\(leadingWhitespace)• \(remainingText)"
+                cursorDelta = 2
+            } else {
+                guard remainingText.hasPrefix("• ") else {
+                    refreshSelectionState()
+                    return
+                }
+                replacement = leadingWhitespace + remainingText.dropFirst(2)
+                cursorDelta = -2
+            }
 
             storage.replaceCharacters(in: lineTextRange, with: replacement)
-            textView.textStorage?.setAttributedString(storage)
             textView.didChangeText()
 
-            let newCursorLocation = lineTextRange.location + (leadingWhitespace as NSString).length + 2
+            let newCursorLocation = max(
+                lineTextRange.location + (leadingWhitespace as NSString).length,
+                selection.location + cursorDelta
+            )
             textView.setSelectedRange(NSRange(location: newCursorLocation, length: 0))
+            refreshSelectionState()
             return
         }
 
         let selectedText = fullString.substring(with: lineRange)
         let lines = selectedText.split(separator: "\n", omittingEmptySubsequences: false)
-        var transformedLines: [String] = []
-        transformedLines.reserveCapacity(lines.count)
+        let transformedLines = lines.map { line -> String in
+            let value = String(line)
+            let leadingWhitespace = String(value.prefix(while: { $0 == " " || $0 == "\t" }))
+            let remainingText = String(value.dropFirst(leadingWhitespace.count))
 
-        var didChangeSelection = false
-        var insertionOffset = 0
-
-        for line in lines {
-            if line.hasPrefix("• ") || line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                transformedLines.append(String(line))
-            } else {
-                transformedLines.append("• " + line)
-                if lineRange.location < selection.location {
-                    insertionOffset += 2
+            if shouldEnable {
+                guard !remainingText.isEmpty, !remainingText.hasPrefix("• ") else {
+                    return value
                 }
-                didChangeSelection = true
+                return "\(leadingWhitespace)• \(remainingText)"
             }
-            transformedLines.append("")
-        }
-        if !transformedLines.isEmpty {
-            transformedLines.removeLast()
-        }
 
+            guard remainingText.hasPrefix("• ") else {
+                return value
+            }
+            return leadingWhitespace + remainingText.dropFirst(2)
+        }
         let replacedText = transformedLines.joined(separator: "\n")
         guard replacedText != selectedText else {
+            refreshSelectionState()
             return
         }
 
         storage.replaceCharacters(in: lineRange, with: replacedText)
-        textView.textStorage?.setAttributedString(storage)
         textView.didChangeText()
+        textView.setSelectedRange(NSRange(location: lineRange.location, length: (replacedText as NSString).length))
+        refreshSelectionState()
+    }
 
-        if didChangeSelection {
-            let newLocation = max(0, min(storage.length, selection.location + insertionOffset))
-            textView.setSelectedRange(NSRange(location: newLocation, length: 0))
+    func refreshSelectionState() {
+        guard let textView else {
+            isBoldActive = false
+            isItalicActive = false
+            isBulletActive = false
+            return
+        }
+
+        isBoldActive = isFontTraitActive(.boldFontMask, in: textView)
+        isItalicActive = isFontTraitActive(.italicFontMask, in: textView)
+        isBulletActive = isBulletActive(in: textView)
+    }
+
+    private func isFontTraitActive(_ trait: NSFontTraitMask, in textView: NSTextView) -> Bool {
+        let selection = textView.selectedRange()
+        if selection.length == 0 {
+            let font = (textView.typingAttributes[.font] as? NSFont)
+                ?? textView.font
+                ?? NSFont.preferredFont(forTextStyle: .body)
+            return NSFontManager.shared.traits(of: font).contains(trait)
+        }
+
+        guard let textStorage = textView.textStorage,
+              selection.location + selection.length <= textStorage.length else {
+            return false
+        }
+
+        var isActive = true
+        textStorage.enumerateAttribute(.font, in: selection, options: []) { value, _, stop in
+            let font = (value as? NSFont)
+                ?? textView.font
+                ?? NSFont.preferredFont(forTextStyle: .body)
+            if !NSFontManager.shared.traits(of: font).contains(trait) {
+                isActive = false
+                stop.pointee = true
+            }
+        }
+        return isActive
+    }
+
+    private func isBulletActive(in textView: NSTextView) -> Bool {
+        let fullString = textView.string as NSString
+        let selection = textView.selectedRange()
+        guard selection.location <= fullString.length else {
+            return false
+        }
+
+        let lineRange = fullString.lineRange(for: selection)
+        let selectedLines = fullString.substring(with: lineRange)
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map(String.init)
+            .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+        guard !selectedLines.isEmpty else {
+            return false
+        }
+
+        return selectedLines.allSatisfy { line in
+            let remainder = line.drop(while: { $0 == " " || $0 == "\t" })
+            return remainder.hasPrefix("• ")
         }
     }
 
@@ -920,6 +1032,7 @@ private struct RichTextFieldRepresentable: NSViewRepresentable {
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
         formatter.textView = textView
+        formatter.refreshSelectionState()
 
         return scrollView
     }
@@ -933,6 +1046,7 @@ private struct RichTextFieldRepresentable: NSViewRepresentable {
             textView.string = text
         }
 
+        context.coordinator.parent = self
         formatter.textView = textView
     }
 
@@ -977,6 +1091,7 @@ private struct RichTextFieldRepresentable: NSViewRepresentable {
             textView.didChangeText()
             let newCursor = cursorLocation + (replacement as NSString).length
             textView.setSelectedRange(NSRange(location: newCursor, length: 0))
+            parent.formatter.refreshSelectionState()
             return false
         }
 
@@ -1009,6 +1124,11 @@ private struct RichTextFieldRepresentable: NSViewRepresentable {
             if parent.text != textView.string {
                 parent.text = textView.string
             }
+            parent.formatter.refreshSelectionState()
+        }
+
+        func textViewDidChangeSelection(_ notification: Notification) {
+            parent.formatter.refreshSelectionState()
         }
     }
 }
