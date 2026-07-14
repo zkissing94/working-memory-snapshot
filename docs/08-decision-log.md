@@ -155,13 +155,24 @@ Use a small internal SwiftUI layer for visual tokens, adaptive surfaces, status 
 ## ADR-017 — Durable local Daily Rollup through the existing synthesizer
 
 **Date:** 2026-07-13
-**Status:** Accepted
+**Status:** Superseded in part by ADR-018
 
 Create one on-demand, refreshable Daily Rollup per local calendar day from completed sessions across projects. Reuse the selected LM Studio synthesizer and persist validated results plus source metadata in SQLite.
 
 **Reasoning:** End-of-day closure is a cross-project cognitive-continuity need. A durable artifact remains useful after generation, while a shared model configuration avoids a second runtime and settings surface.
 
 **Consequences:** Migration 8 adds `daily_rollups` and `daily_rollup_sources`. Active sessions block generation. Snapshot-backed evidence is preferred, capture points provide a grounded fallback, and failed refreshes preserve the last valid artifact. This adds no observation source, cloud backend, account, analytics, or production dependency.
+
+## ADR-018 — Append-only Daily Rollup revisions
+
+**Date:** 2026-07-14
+**Status:** Accepted
+
+Persist every successful Daily Rollup generation as a revision rather than replacing the existing row for that local day. Continue to load the latest revision by default and expose earlier same-day runs through Previous Rollups with generation times.
+
+**Reasoning:** Dogfooding showed that a valid refresh could return fewer or no carry-forwards and destructively erase useful unresolved context from an earlier run. Preserving revisions protects cognition without merging stale items into the current synthesis or introducing task-state semantics.
+
+**Consequences:** Migration 9 drops the unique date index and adds a history index. Each revision retains its own source links. Failed generation writes nothing; successful generation never mutates an earlier artifact. History may contain multiple entries for one date, ordered newest-first.
 
 ## Open decision template
 

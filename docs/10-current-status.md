@@ -101,12 +101,12 @@ Current implementation state:
 - The legacy `AppIcon.appiconset` has been replaced by `WorkingMemorySnapshot/AppIcon.icon` while retaining the `AppIcon` build-setting name and macOS 14 deployment target.
 - Project dashboards, histories, snapshots, access state, and drill-down selection are cached by project ID; uncached projects show neutral loading content instead of another project's memory.
 - The app is single-instance through Launch Services so multiple debug copies cannot compete over the same local database.
-- Migration 8 adds durable `daily_rollups` and source metadata with one refreshable artifact per local calendar day.
+- Migration 8 adds durable `daily_rollups` and source metadata; migration 9 makes successful generations append-only so earlier same-day carry-forwards remain recoverable.
 - Daily Rollup source loading includes every completed session ending in the selected local day, prefers snapshots, and falls back to mission, brain dump, block summaries, and manual increments.
 - The existing LM Studio structured-completion seam now supports artifact-specific schema names, schema objects, and token limits; snapshots remain at 700 tokens and Daily Rollup uses 1,500 tokens.
 - Daily Rollup validation requires one thread per participating project, known project attribution, bounded carry-forwards, strict keys, and one repair retry.
 - The global sidebar destination and Carry-Forward Focus workspace implement empty, ready, blocked, generating, generated, stale, and failure behavior plus history, project opening, and source-session drill-down.
-- Automated coverage includes persistence, local-day boundaries, fallback evidence, fingerprints, schema rejection, model request construction, refresh safety, and view-model states. `./scripts/check.sh` passes 144 tests.
+- Automated coverage includes persistence, local-day boundaries, fallback evidence, fingerprints, schema rejection, model request construction, refresh safety, same-day revision retention, exact history selection, and view-model states. `./scripts/check.sh` passes 146 tests.
 - The selected visual direction is preserved in `docs/mockups/global-daily-rollup-carry-forward-focus.png`.
 - The unlocked seeded-app comparison passed at 1298 × 768 against the selected direction, including a focused content-region review; `design-qa.md` records the evidence and remaining P3-only polish.
 - Manual QA also reports the feature behaving as expected.
@@ -116,13 +116,13 @@ Current implementation state:
 Current task:
 
 ```text
-Implement the local-first Global Daily Rollup using the selected Carry-Forward Focus visual direction.
+Preserve Daily Rollup carry-forwards from earlier same-day generation runs.
 ```
 
 Delivery target:
 
 ```text
-Persist one refreshable rollup per local day, synthesize it through the existing LM Studio model, expose source-session drill-down, and keep stale artifacts readable until refresh succeeds.
+Append every validated generation as a revision, keep the latest run as the day default, and allow exact earlier runs to be reopened from history.
 ```
 
 The remaining M13 visual review checklist is deferred until the Daily Rollup states are integrated so the review covers the complete shell.
@@ -133,10 +133,10 @@ Optional post-MVP milestone:
 M9 - Optional evidence-janitor model
 ```
 
-Expected Daily Rollup commit message:
+Expected Daily Rollup retention commit message:
 
 ```text
-feat: add global daily rollup
+fix: preserve daily rollup revisions
 ```
 
 ## Fresh chat startup

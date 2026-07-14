@@ -29,7 +29,7 @@ final class WorkingMemorySnapshotTests: XCTestCase {
         try await harness.migrator.migrate()
 
         let versions = try await harness.migrator.appliedVersions()
-        XCTAssertEqual(versions, [1, 2, 3, 4, 5, 6, 7, 8])
+        XCTAssertEqual(versions, [1, 2, 3, 4, 5, 6, 7, 8, 9])
     }
 
     func testTransactionRollsBackPartialWritesOnFailure() async throws {

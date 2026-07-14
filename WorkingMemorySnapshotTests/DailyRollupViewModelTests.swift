@@ -67,6 +67,46 @@ final class DailyRollupViewModelTests: XCTestCase {
         XCTAssertTrue(message.contains("source sessions remain saved"))
     }
 
+    func testSelectingEarlierSameDayRevisionLoadsThatExactArtifactAndSources() async {
+        let eligibility = eligibility(active: false, hasSessions: true, fingerprint: "current")
+        let latest = rollup(fingerprint: "current", summary: "Latest run")
+        let earlier = rollup(
+            fingerprint: "earlier",
+            summary: "Earlier run with preserved carry-forwards",
+            generatedAt: Date().addingTimeInterval(-120)
+        )
+        let project = eligibility.projects[0]
+        let source = DailyRollupSource(
+            rollupID: earlier.id,
+            sessionID: UUID(),
+            projectID: project.id,
+            projectName: project.name,
+            mission: "Earlier source",
+            endedAt: Date(),
+            isAvailable: true
+        )
+        let repository = DailyRollupRepositoryFake(
+            existing: latest,
+            history: [latest, earlier],
+            sourcesByRollupID: [earlier.id: [source]]
+        )
+        let viewModel = DailyRollupViewModel(
+            sourceLoader: DailyRollupSourceLoaderFake(eligibility: eligibility),
+            repository: repository,
+            generator: DailyRollupGeneratorFake(result: .success(latest))
+        )
+        await viewModel.load()
+
+        await viewModel.select(earlier)
+
+        guard case .generated(let selected, let isStale) = viewModel.state else {
+            return XCTFail("Expected selected revision")
+        }
+        XCTAssertEqual(selected.id, earlier.id)
+        XCTAssertTrue(isStale)
+        XCTAssertEqual(viewModel.sources, [source])
+    }
+
     private func eligibility(active: Bool, hasSessions: Bool, fingerprint: String) -> DailyRollupEligibility {
         let project = Project(id: UUID(), name: "Project", rootPath: "/tmp/project", createdAt: Date(), updatedAt: Date())
         let session = WorkSession(
@@ -83,12 +123,16 @@ final class DailyRollupViewModelTests: XCTestCase {
         )
     }
 
-    private func rollup(fingerprint: String) -> DailyRollup {
+    private func rollup(
+        fingerprint: String,
+        summary: String = "Summary",
+        generatedAt: Date = Date()
+    ) -> DailyRollup {
         DailyRollup(
             id: UUID(), rollupDate: "2026-07-13", timezoneIdentifier: "America/Denver",
-            daySummary: "Summary", projectThreads: [], carryForwards: [], closureNote: "Closed",
+            daySummary: summary, projectThreads: [], carryForwards: [], closureNote: "Closed",
             generatorModel: "model", promptVersion: "daily-rollup-v1", sourceFingerprint: fingerprint,
-            generatedAt: Date(), updatedAt: Date()
+            generatedAt: generatedAt, updatedAt: generatedAt
         )
     }
 }
@@ -100,14 +144,28 @@ private struct DailyRollupSourceLoaderFake: DailyRollupSourceLoading {
 
 private actor DailyRollupRepositoryFake: DailyRollupPersisting {
     private var existing: DailyRollup?
-    init(existing: DailyRollup? = nil) { self.existing = existing }
-    func saveOrReplace(_ draft: DailyRollupDraft) async throws -> DailyRollup {
+    private var history: [DailyRollup]
+    private var sourcesByRollupID: [UUID: [DailyRollupSource]]
+
+    init(
+        existing: DailyRollup? = nil,
+        history: [DailyRollup]? = nil,
+        sourcesByRollupID: [UUID: [DailyRollupSource]] = [:]
+    ) {
+        self.existing = existing
+        self.history = history ?? existing.map { [$0] } ?? []
+        self.sourcesByRollupID = sourcesByRollupID
+    }
+
+    func saveRevision(_ draft: DailyRollupDraft) async throws -> DailyRollup {
         guard let existing else { throw DailyRollupRepositoryError.invalidJSON }
         return existing
     }
     func rollup(for rollupDate: String) async throws -> DailyRollup? { existing }
-    func listRollups() async throws -> [DailyRollup] { existing.map { [$0] } ?? [] }
-    func sources(for rollupID: UUID) async throws -> [DailyRollupSource] { [] }
+    func listRollups() async throws -> [DailyRollup] { history }
+    func sources(for rollupID: UUID) async throws -> [DailyRollupSource] {
+        sourcesByRollupID[rollupID] ?? []
+    }
 }
 
 private struct DailyRollupGeneratorFake: DailyRollupGenerating {

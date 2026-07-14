@@ -344,6 +344,8 @@ struct DailyRollupView: View {
         let date = formatter.date(from: rollup.rollupDate) ?? rollup.generatedAt
         formatter.locale = .current
         formatter.dateFormat = "MMM d, yyyy"
-        return formatter.string(from: date)
+        let day = formatter.string(from: date)
+        let time = rollup.generatedAt.formatted(.dateTime.hour().minute().second())
+        return "\(day) · \(time)"
     }
 }

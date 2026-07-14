@@ -273,6 +273,17 @@ struct DatabaseMigrator {
                 """)
             }
         }
+
+        if !appliedVersions.contains(9) {
+            try await applyMigration(version: 9) { database in
+                try database.execute("DROP INDEX IF EXISTS daily_rollups_date_unique")
+                try database.execute("DROP INDEX IF EXISTS daily_rollups_generated_index")
+                try database.execute("""
+                CREATE INDEX IF NOT EXISTS daily_rollups_history_index
+                ON daily_rollups(rollup_date DESC, generated_at DESC)
+                """)
+            }
+        }
     }
 
     private func applyMigration(

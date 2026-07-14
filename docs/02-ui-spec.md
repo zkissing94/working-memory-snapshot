@@ -424,5 +424,5 @@ No:
 - Ready, blocked, generating, generated, stale, empty, and failed are mutually exclusive states in the same hierarchy.
 - A stale artifact remains visible with a calm `Refresh Rollup` notice.
 - Project names open the project workspace. Available source sessions open historical session detail; deleted sources remain labeled but disabled.
-- Previous Rollups lists only generated days, newest first.
+- Previous Rollups lists every generated run newest-first. Same-day revisions include generation time so an earlier set of carry-forwards can be reopened unambiguously.
 - Do not introduce checkboxes, scores, charts, streaks, timelines, or task-manager language.

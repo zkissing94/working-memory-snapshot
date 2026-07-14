@@ -16,6 +16,7 @@
 | LM Studio is stopped, model unloaded, or authentication changes | Snapshot generation fails | Save brain dump before generation; clear connection states; retry | M2/M6 |
 | Structured output varies by local model | JSON parsing fails | Schema mode, validation, one bounded repair retry, model-selection guidance | M5d |
 | Daily Rollup invents cross-project progress or turns carry-forwards into task scoring | End-of-day closure becomes untrustworthy or gamified | Snapshot-first evidence, strict project attribution and word limits, no scores, one bounded repair retry, preserve last valid artifact | Daily Rollup dogfood |
+| Daily Rollup refresh removes useful carry-forwards from an earlier run | Unresolved context is lost during testing or refinement | Append every successful generation as a revision; load latest by default; keep exact prior runs in history | Daily Rollup dogfood |
 | Non-loopback LM Studio URL leaks private evidence | Privacy promise is violated | Detect and warn before saving remote address | M2 |
 | Token or prompt content appears in logs | Sensitive data exposure | Keychain, OSLog privacy, no prompt/body logging | Every milestone |
 | Parallel Codex threads edit shared files | Merge conflicts and inconsistent architecture | Worktrees only after M4; explicit file ownership | M5 |

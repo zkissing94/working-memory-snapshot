@@ -47,7 +47,7 @@ final class DailyRollupGeneratorTests: XCTestCase {
         )
         let eligibility = makeEligibility(projectCount: 1)
         let project = eligibility.projects[0]
-        let existing = try await harness.repository.saveOrReplace(
+        let existing = try await harness.repository.saveRevision(
             DailyRollupDraft(
                 rollupDate: eligibility.rollupDate, timezoneIdentifier: eligibility.timezoneIdentifier,
                 daySummary: "Existing close", projectThreads: [DailyProjectThread(projectID: project.id, projectName: project.name, summary: "Existing thread")],
@@ -72,6 +72,68 @@ final class DailyRollupGeneratorTests: XCTestCase {
 
         let preserved = try await harness.repository.rollup(for: eligibility.rollupDate)
         XCTAssertEqual(preserved, existing)
+    }
+
+    func testSuccessfulRefreshAppendsRevisionAndPreservesPriorCarryForwards() async throws {
+        let harness = try makeHarness()
+        try await harness.migrator.migrate()
+        try await harness.settings.saveLMStudioSettings(
+            LMStudioSettings(baseURLString: LMStudioSettings.defaultBaseURLString, selectedModelID: "daily-model")
+        )
+        let eligibility = makeEligibility(projectCount: 1)
+        let project = eligibility.projects[0]
+        let earlier = try await harness.repository.saveRevision(
+            DailyRollupDraft(
+                rollupDate: eligibility.rollupDate,
+                timezoneIdentifier: eligibility.timezoneIdentifier,
+                daySummary: "Earlier close",
+                projectThreads: [DailyProjectThread(
+                    projectID: project.id,
+                    projectName: project.name,
+                    summary: "Earlier thread"
+                )],
+                carryForwards: [DailyCarryForward(
+                    projectID: project.id,
+                    projectName: project.name,
+                    text: "Keep the earlier unresolved thread."
+                )],
+                closureNote: "Earlier closure",
+                generatorModel: "old-model",
+                promptVersion: "daily-rollup-v1",
+                sourceFingerprint: "old",
+                sources: []
+            )
+        )
+        let contentObject: [String: Any] = [
+            "day_summary": "The refreshed run reflects the latest evidence.",
+            "project_threads": [[
+                "project_id": project.id.uuidString,
+                "summary": "The latest thread remains grounded."
+            ]],
+            "carry_forwards": [],
+            "closure_note": "The latest run is saved without erasing the earlier one."
+        ]
+        let contentData = try JSONSerialization.data(withJSONObject: contentObject)
+        let generator = DailyRollupGenerator(
+            repository: harness.repository,
+            settingsRepository: harness.settings,
+            tokenStore: DailyMemoryTokenStore(),
+            transport: MockLMStudioHTTPTransport.success(
+                body: completionBody(String(decoding: contentData, as: UTF8.self))
+            )
+        )
+
+        let refreshed = try await generator.generate(from: eligibility)
+
+        let latestForDay = try await harness.repository.rollup(for: eligibility.rollupDate)
+        XCTAssertEqual(latestForDay, refreshed)
+        let history = try await harness.repository.listRollups()
+        XCTAssertEqual(history.count, 2)
+        XCTAssertTrue(refreshed.carryForwards.isEmpty)
+        XCTAssertEqual(
+            history.first(where: { $0.id == earlier.id })?.carryForwards.first?.text,
+            "Keep the earlier unresolved thread."
+        )
     }
 
     func testGeneratorRejectsActiveOrEmptyEligibilityBeforeNetwork() async throws {

@@ -87,12 +87,21 @@ final class DailyRollupViewModel: ObservableObject {
     }
 
     func select(_ rollup: DailyRollup) async {
-        let formatter = DateFormatter()
-        formatter.calendar = .autoupdatingCurrent
-        formatter.timeZone = .autoupdatingCurrent
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        await load(date: formatter.date(from: rollup.rollupDate) ?? rollup.generatedAt)
+        let preserved = displayedRollup
+        let date = date(for: rollup)
+        selectedDate = date
+        state = .loading
+        do {
+            let eligibility = try await sourceLoader.load(for: date, calendar: .autoupdatingCurrent)
+            self.eligibility = eligibility
+            history = try await repository.listRollups()
+            sources = try await repository.sources(for: rollup.id)
+            state = .generated(rollup, isStale: rollup.sourceFingerprint != eligibility.sourceFingerprint)
+        } catch {
+            eligibility = nil
+            sources = []
+            state = .failed(message: error.localizedDescription, preservedRollup: preserved)
+        }
     }
 
     private func initialState(for eligibility: DailyRollupEligibility) -> DailyRollupScreenState {
@@ -103,5 +112,14 @@ final class DailyRollupViewModel: ObservableObject {
 
     private func recoveryMessage(for error: Error) -> String {
         "\(error.localizedDescription) Your source sessions remain saved."
+    }
+
+    private func date(for rollup: DailyRollup) -> Date {
+        let formatter = DateFormatter()
+        formatter.calendar = .autoupdatingCurrent
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: rollup.rollupDate) ?? rollup.generatedAt
     }
 }

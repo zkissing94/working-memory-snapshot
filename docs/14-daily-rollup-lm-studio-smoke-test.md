@@ -10,5 +10,5 @@ Use this checklist for the live local-runtime boundary. Automated tests must not
 6. Open one project and one source session, then return to Daily Rollup.
 7. Complete another session or regenerate a source snapshot. Confirm the existing rollup becomes stale and remains readable.
 8. Stop LM Studio and refresh. Confirm the previous artifact remains visible with a recovery message.
-9. Restart LM Studio and refresh. Confirm the artifact updates and Previous Rollups contains only generated days.
+9. Restart LM Studio and refresh. Confirm the latest artifact updates and Previous Rollups retains both same-day runs with distinct generation times.
 10. Review for invented work, productivity judgments, scores, cropped text, or unsupported carry-forwards. Record any failure before changing prompt or limits.

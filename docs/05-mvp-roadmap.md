@@ -355,7 +355,7 @@ Provide an on-demand end-of-day close across all projects without turning Workin
 
 ### Deliverables
 
-- migration 8 and durable one-rollup-per-local-day persistence
+- migrations 8 and 9 with durable append-only revisions per local day
 - snapshot-first cross-project source loading with deterministic staleness
 - strict local LM Studio rollup generation through the existing synthesizer setting
 - Carry-Forward Focus UI with history and source-session drill-down
@@ -365,7 +365,7 @@ Provide an on-demand end-of-day close across all projects without turning Workin
 ### Exit criteria
 
 - active sessions block generation
-- failed refresh preserves the existing artifact and all source sessions
+- successful refresh preserves earlier carry-forwards in revision history; failed refresh appends nothing
 - source attribution is visible without dominating the day close
 - generated content fits comfortably in the native two-column shell
 - no new observation source, backend, dependency, analytics, or productivity scoring

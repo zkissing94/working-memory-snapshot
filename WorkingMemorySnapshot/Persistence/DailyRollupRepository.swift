@@ -2,7 +2,7 @@ import Foundation
 import SQLite3
 
 protocol DailyRollupPersisting: Sendable {
-    func saveOrReplace(_ draft: DailyRollupDraft) async throws -> DailyRollup
+    func saveRevision(_ draft: DailyRollupDraft) async throws -> DailyRollup
     func rollup(for rollupDate: String) async throws -> DailyRollup?
     func listRollups() async throws -> [DailyRollup]
     func sources(for rollupID: UUID) async throws -> [DailyRollupSource]
@@ -11,12 +11,11 @@ protocol DailyRollupPersisting: Sendable {
 struct DailyRollupRepository: DailyRollupPersisting {
     let database: Database
 
-    func saveOrReplace(_ draft: DailyRollupDraft) async throws -> DailyRollup {
+    func saveRevision(_ draft: DailyRollupDraft) async throws -> DailyRollup {
         let now = try DateCoding.now()
         return try await database.withTransaction { database in
-            let existing = try rollup(for: draft.rollupDate, using: database)
             let rollup = DailyRollup(
-                id: existing?.id ?? UUID(),
+                id: UUID(),
                 rollupDate: draft.rollupDate,
                 timezoneIdentifier: draft.timezoneIdentifier,
                 daySummary: draft.daySummary,
@@ -40,23 +39,8 @@ struct DailyRollupRepository: DailyRollupPersisting {
                 generated_at, updated_at
             )
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(rollup_date) DO UPDATE SET
-                timezone_identifier = excluded.timezone_identifier,
-                day_summary = excluded.day_summary,
-                project_threads_json = excluded.project_threads_json,
-                carry_forwards_json = excluded.carry_forwards_json,
-                closure_note = excluded.closure_note,
-                generator_model = excluded.generator_model,
-                prompt_version = excluded.prompt_version,
-                source_fingerprint = excluded.source_fingerprint,
-                generated_at = excluded.generated_at,
-                updated_at = excluded.updated_at
             """) { statement in
                 try bind(rollup, threadsJSON: threadsJSON, carryForwardsJSON: carryForwardsJSON, to: statement)
-            }
-
-            try database.execute("DELETE FROM daily_rollup_sources WHERE rollup_id = ?") { statement in
-                try SQLiteValue.bind(rollup.id.uuidString, to: statement, at: 1)
             }
 
             for source in draft.sources {
@@ -80,14 +64,17 @@ struct DailyRollupRepository: DailyRollupPersisting {
     }
 
     func rollup(for rollupDate: String) async throws -> DailyRollup? {
-        try await database.query(selectSQL + " WHERE rollup_date = ? LIMIT 1", bind: { statement in
+        try await database.query(selectSQL + " WHERE rollup_date = ? ORDER BY generated_at DESC, rowid DESC LIMIT 1", bind: { statement in
             try SQLiteValue.bind(rollupDate, to: statement, at: 1)
         }, map: mapRollup(from:))
         .first
     }
 
     func listRollups() async throws -> [DailyRollup] {
-        try await database.query(selectSQL + " ORDER BY rollup_date DESC", map: mapRollup(from:))
+        try await database.query(
+            selectSQL + " ORDER BY rollup_date DESC, generated_at DESC, rowid DESC",
+            map: mapRollup(from:)
+        )
     }
 
     func sources(for rollupID: UUID) async throws -> [DailyRollupSource] {
@@ -132,13 +119,6 @@ struct DailyRollupRepository: DailyRollupPersisting {
                generated_at, updated_at
         FROM daily_rollups
         """
-    }
-
-    private func rollup(for date: String, using database: isolated Database) throws -> DailyRollup? {
-        try database.query(selectSQL + " WHERE rollup_date = ? LIMIT 1", bind: { statement in
-            try SQLiteValue.bind(date, to: statement, at: 1)
-        }, map: mapRollup(from:))
-        .first
     }
 
     private func bind(

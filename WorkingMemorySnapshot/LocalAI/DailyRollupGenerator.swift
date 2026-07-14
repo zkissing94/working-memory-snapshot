@@ -83,7 +83,7 @@ struct DailyRollupGenerator: DailyRollupGenerating {
             )
         }
 
-        return try await repository.saveOrReplace(
+        return try await repository.saveRevision(
             DailyRollupDraft(
                 rollupDate: eligibility.rollupDate,
                 timezoneIdentifier: eligibility.timezoneIdentifier,

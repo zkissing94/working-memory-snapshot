@@ -427,12 +427,12 @@ struct Snapshot: Identifiable, Equatable, Sendable {
 
 ## 13. Daily Rollup persistence
 
-Migration 8 adds:
+Migration 8 adds the base tables. Migration 9 removes the unique-day index and adds a date-and-generation-time history index so refreshes retain earlier revisions:
 
 ```sql
 daily_rollups(
   id TEXT PRIMARY KEY,
-  rollup_date TEXT UNIQUE NOT NULL,
+  rollup_date TEXT NOT NULL,
   timezone_identifier TEXT NOT NULL,
   day_summary TEXT NOT NULL,
   project_threads_json TEXT NOT NULL,
@@ -456,6 +456,6 @@ daily_rollup_sources(
 )
 ```
 
-One rollup exists per local calendar date. Refresh replaces its validated content and complete source set transactionally. Source rows snapshot only drill-down labels and identifiers; deleting a project makes its session unavailable without deleting a multi-project day artifact.
+Each successful generation appends a new rollup revision for its local calendar date. The newest revision is the default; earlier same-day revisions and their carry-forwards remain available in history. A revision and its complete source set are inserted transactionally. Source rows snapshot only drill-down labels and identifiers; deleting a project makes its session unavailable without deleting a multi-project artifact.
 
-`DailyRollupRepository` loads by date, lists history newest-first, saves or replaces atomically, and loads source availability.
+`DailyRollupRepository` loads the latest revision by date, lists every revision newest-first, saves a revision atomically, and loads source availability for an exact revision.

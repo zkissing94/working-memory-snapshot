@@ -204,7 +204,7 @@ The product passes the first evaluation when the brief is consistently useful an
 
 ## 9. Daily Rollup coverage
 
-Automated coverage includes migration 8 idempotence, unique-day replacement, source availability, local-day boundaries, snapshot/fallback evidence, fingerprint changes, strict project attribution, word limits, extra keys, 1,500-token request construction, one repair retry, failed-refresh preservation, and view-model states.
+Automated coverage includes migration 9 idempotence, append-only same-day revision retention, exact history selection, source availability, local-day boundaries, snapshot/fallback evidence, fingerprint changes, strict project attribution, word limits, extra keys, 1,500-token request construction, one repair retry, failed-refresh preservation, and view-model states.
 
 Existing snapshot generation tests remain regression coverage for the shared LM Studio request seam. Automated tests continue to use the injected transport and must not require LM Studio, a model, GPU, or network access.
 

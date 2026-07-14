@@ -463,4 +463,4 @@ DailyRollupGenerator
 DailyRollupRepository / SQLite
 ```
 
-The source fingerprint is deterministic over eligible session and snapshot update identities. Generation and refresh persist only after strict validation, so a failed refresh leaves the previous artifact readable. Source metadata is retained with the artifact; drill-down availability is resolved against current sessions.
+The source fingerprint is deterministic over eligible session and snapshot update identities. Every successful generation appends a validated revision and the latest revision remains the default for its local day. A failed refresh appends nothing, so all previous runs remain readable. Source metadata is retained per revision; drill-down availability is resolved against current sessions.

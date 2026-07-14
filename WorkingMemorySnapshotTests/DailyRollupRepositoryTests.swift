@@ -9,59 +9,78 @@ final class DailyRollupRepositoryTests: XCTestCase {
         temporaryRoot = nil
     }
 
-    func testMigrationEightIsIdempotentAndSaveReplacesUniqueDayAtomically() async throws {
+    func testMigrationNineIsIdempotentAndSameDayRevisionsArePreservedAtomically() async throws {
         let harness = try makeHarness()
         try await harness.migrator.migrate()
         try await harness.migrator.migrate()
         let versions = try await harness.migrator.appliedVersions()
-        XCTAssertEqual(versions, Array(1...8))
+        XCTAssertEqual(versions, Array(1...9))
 
         let projectID = UUID()
         let sessionID = UUID()
-        let first = try await harness.repository.saveOrReplace(
-            draft(date: "2026-07-13", projectID: projectID, sessionID: sessionID, summary: "First summary")
+        let first = try await harness.repository.saveRevision(
+            draft(
+                date: "2026-07-13",
+                projectID: projectID,
+                sessionID: sessionID,
+                summary: "First summary",
+                carryForward: "Preserve the first run's open thread."
+            )
         )
-        let refreshed = try await harness.repository.saveOrReplace(
+        let refreshed = try await harness.repository.saveRevision(
             draft(date: "2026-07-13", projectID: projectID, sessionID: sessionID, summary: "Refreshed summary")
         )
 
-        XCTAssertEqual(first.id, refreshed.id)
-        XCTAssertEqual(refreshed.daySummary, "Refreshed summary")
+        XCTAssertNotEqual(first.id, refreshed.id)
+        let latestForDay = try await harness.repository.rollup(for: "2026-07-13")
+        XCTAssertEqual(latestForDay, refreshed)
         let rollups = try await harness.repository.listRollups()
-        let sources = try await harness.repository.sources(for: refreshed.id)
-        XCTAssertEqual(rollups.count, 1)
-        XCTAssertEqual(sources.count, 1)
+        XCTAssertEqual(rollups.count, 2)
+        XCTAssertEqual(
+            rollups.first(where: { $0.id == first.id })?.carryForwards.first?.text,
+            "Preserve the first run's open thread."
+        )
+        let firstSources = try await harness.repository.sources(for: first.id)
+        let refreshedSources = try await harness.repository.sources(for: refreshed.id)
+        XCTAssertEqual(firstSources.count, 1)
+        XCTAssertEqual(refreshedSources.count, 1)
     }
 
-    func testHistoryOrdersNewestFirst() async throws {
+    func testHistoryOrdersNewestDayAndSameDayRevisionFirst() async throws {
         let harness = try makeHarness()
         try await harness.migrator.migrate()
-        _ = try await harness.repository.saveOrReplace(
+        _ = try await harness.repository.saveRevision(
             draft(date: "2026-07-12", projectID: UUID(), sessionID: UUID(), summary: "Earlier")
         )
-        _ = try await harness.repository.saveOrReplace(
-            draft(date: "2026-07-13", projectID: UUID(), sessionID: UUID(), summary: "Later")
+        _ = try await harness.repository.saveRevision(
+            draft(date: "2026-07-13", projectID: UUID(), sessionID: UUID(), summary: "First run")
+        )
+        let latest = try await harness.repository.saveRevision(
+            draft(date: "2026-07-13", projectID: UUID(), sessionID: UUID(), summary: "Latest run")
         )
 
-        let dates = try await harness.repository.listRollups().map(\.rollupDate)
-        XCTAssertEqual(dates, ["2026-07-13", "2026-07-12"])
+        let rollups = try await harness.repository.listRollups()
+        XCTAssertEqual(rollups.map(\.rollupDate), ["2026-07-13", "2026-07-13", "2026-07-12"])
+        XCTAssertEqual(rollups.first, latest)
     }
 
-    func testSourceConstraintFailureRollsBackArtifactReplacement() async throws {
+    func testSourceConstraintFailureRollsBackArtifactRevision() async throws {
         let harness = try makeHarness()
         try await harness.migrator.migrate()
         let projectID = UUID()
         let sessionID = UUID()
-        let existing = try await harness.repository.saveOrReplace(
+        let existing = try await harness.repository.saveRevision(
             draft(date: "2026-07-13", projectID: projectID, sessionID: sessionID, summary: "Keep this")
         )
         var invalid = draft(date: "2026-07-13", projectID: projectID, sessionID: sessionID, summary: "Do not persist")
         invalid.sources.append(invalid.sources[0])
 
-        await XCTAssertThrowsAsyncError({ try await harness.repository.saveOrReplace(invalid) })
+        await XCTAssertThrowsAsyncError({ try await harness.repository.saveRevision(invalid) })
 
         let preserved = try await harness.repository.rollup(for: "2026-07-13")
         XCTAssertEqual(preserved, existing)
+        let rollups = try await harness.repository.listRollups()
+        XCTAssertEqual(rollups.count, 1)
     }
 
     func testDeletedProjectPreservesArtifactAndMarksSourceUnavailable() async throws {
@@ -71,7 +90,7 @@ final class DailyRollupRepositoryTests: XCTestCase {
         let project = try await harness.projectRepository.createProject(at: projectURL)
         let active = try await harness.sessionRepository.createActiveSession(projectID: project.id, mission: "Preserve source label")
         let session = try await harness.sessionRepository.completeSession(id: active.id, brainDump: "Done")
-        let rollup = try await harness.repository.saveOrReplace(
+        let rollup = try await harness.repository.saveRevision(
             draft(date: "2026-07-13", projectID: project.id, sessionID: session.id, summary: "Preserved")
         )
 
@@ -105,14 +124,17 @@ final class DailyRollupRepositoryTests: XCTestCase {
         date: String,
         projectID: UUID,
         sessionID: UUID,
-        summary: String
+        summary: String,
+        carryForward: String? = nil
     ) -> DailyRollupDraft {
         DailyRollupDraft(
             rollupDate: date,
             timezoneIdentifier: "America/Denver",
             daySummary: summary,
             projectThreads: [DailyProjectThread(projectID: projectID, projectName: "Project", summary: "Thread")],
-            carryForwards: [],
+            carryForwards: carryForward.map {
+                [DailyCarryForward(projectID: projectID, projectName: "Project", text: $0)]
+            } ?? [],
             closureNote: "Closed",
             generatorModel: "model",
             promptVersion: "daily-rollup-v1",
