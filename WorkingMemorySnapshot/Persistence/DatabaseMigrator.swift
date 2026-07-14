@@ -219,6 +219,60 @@ struct DatabaseMigrator {
                 }
             }
         }
+
+        if !appliedVersions.contains(8) {
+            try await applyMigration(version: 8) { database in
+                try database.execute("""
+                CREATE TABLE IF NOT EXISTS daily_rollups (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    rollup_date TEXT NOT NULL,
+                    timezone_identifier TEXT NOT NULL,
+                    day_summary TEXT NOT NULL,
+                    project_threads_json TEXT NOT NULL,
+                    carry_forwards_json TEXT NOT NULL,
+                    closure_note TEXT NOT NULL,
+                    generator_model TEXT,
+                    prompt_version TEXT NOT NULL,
+                    source_fingerprint TEXT NOT NULL,
+                    generated_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """)
+
+                try database.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS daily_rollups_date_unique
+                ON daily_rollups(rollup_date)
+                """)
+
+                try database.execute("""
+                CREATE INDEX IF NOT EXISTS daily_rollups_generated_index
+                ON daily_rollups(rollup_date DESC)
+                """)
+
+                try database.execute("""
+                CREATE TABLE IF NOT EXISTS daily_rollup_sources (
+                    rollup_id TEXT NOT NULL,
+                    session_id TEXT NOT NULL,
+                    project_id TEXT NOT NULL,
+                    project_name TEXT NOT NULL,
+                    session_mission TEXT NOT NULL,
+                    session_ended_at TEXT NOT NULL,
+                    PRIMARY KEY(rollup_id, session_id),
+                    FOREIGN KEY(rollup_id) REFERENCES daily_rollups(id) ON DELETE CASCADE
+                )
+                """)
+
+                try database.execute("""
+                CREATE INDEX IF NOT EXISTS daily_rollup_sources_session_index
+                ON daily_rollup_sources(session_id)
+                """)
+
+                try database.execute("""
+                CREATE INDEX IF NOT EXISTS daily_rollup_sources_project_index
+                ON daily_rollup_sources(project_id)
+                """)
+            }
+        }
     }
 
     private func applyMigration(

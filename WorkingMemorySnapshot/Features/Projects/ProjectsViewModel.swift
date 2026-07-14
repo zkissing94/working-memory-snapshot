@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum SidebarSelection: Hashable {
+    case dailyRollup
     case project(Project.ID)
     case settings
 }
@@ -66,6 +67,9 @@ final class ProjectsViewModel: ObservableObject {
             projects = try await repository.listProjects()
             sidebarMetadata = try await loadSidebarMetadata(for: projects)
             if case .settings = selectedItem {
+                return
+            }
+            if case .dailyRollup = selectedItem {
                 return
             }
             if let selectedProject = selectedProject {
@@ -170,6 +174,10 @@ final class ProjectsViewModel: ObservableObject {
 
     func selectProject(id: Project.ID) {
         selectedItem = .project(id)
+    }
+
+    func selectDailyRollup() {
+        selectedItem = .dailyRollup
     }
 
     func selectSettings() {

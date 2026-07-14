@@ -12,6 +12,7 @@ struct ContentView: View {
     @ObservedObject var sessionViewModel: SessionViewModel
     @ObservedObject var projectDetailViewModel: ProjectDetailViewModel
     @ObservedObject var settingsViewModel: SettingsViewModel
+    @ObservedObject var dailyRollupViewModel: DailyRollupViewModel
 
     var body: some View {
         NavigationSplitView {
@@ -59,10 +60,14 @@ struct ContentView: View {
             async let summaries: Void = projectDetailViewModel.preloadSummaries(for: projectIDs)
             async let recovery: Void = sessionViewModel.loadActiveSessionForRecovery()
             async let settings: Void = settingsViewModel.loadSettings()
-            _ = await (summaries, recovery, settings)
+            async let dailyRollup: Void = dailyRollupViewModel.load()
+            _ = await (summaries, recovery, settings, dailyRollup)
         }
-        .onChange(of: projectsViewModel.projects) { _, projects in
+        .onChange(of: projectsViewModel.projects) { previousProjects, projects in
             projectDetailViewModel.retainProjects(Set(projects.map(\.id)))
+            if !previousProjects.isEmpty {
+                Task { await dailyRollupViewModel.load(date: dailyRollupViewModel.selectedDate) }
+            }
         }
         .onChange(of: sessionViewModel.activeSession) { oldSession, newSession in
             guard newSession == nil else {
@@ -74,6 +79,7 @@ struct ContentView: View {
                 if let projectID = oldSession?.projectID {
                     await projectDetailViewModel.refreshProject(projectID)
                 }
+                await dailyRollupViewModel.load()
             }
         }
         .onChange(of: sessionViewModel.generatedSnapshotContext) { _, context in
@@ -90,6 +96,7 @@ struct ContentView: View {
             sessionViewModel.clearGeneratedSnapshotContext()
             Task {
                 await projectDetailViewModel.refreshProject(context.projectID)
+                await dailyRollupViewModel.load()
             }
         }
         .onChange(of: sessionViewModel.blockCompletionPrompt) { _, prompt in
@@ -175,6 +182,20 @@ struct ContentView: View {
     @ViewBuilder
     private var detailContent: some View {
         switch projectsViewModel.selectedItem {
+        case .dailyRollup:
+            DailyRollupView(
+                viewModel: dailyRollupViewModel,
+                onOpenProject: { projectID in
+                    selectProject(id: projectID)
+                },
+                onOpenSession: { source in
+                    selectProject(id: source.projectID)
+                    Task {
+                        await projectDetailViewModel.refreshProject(source.projectID)
+                        projectDetailViewModel.selectSession(id: source.sessionID, for: source.projectID)
+                    }
+                }
+            )
         case .settings:
             SettingsView(viewModel: settingsViewModel)
         default:
@@ -197,6 +218,8 @@ struct ContentView: View {
 
     private var detailRootIdentity: String {
         switch projectsViewModel.selectedItem {
+        case .dailyRollup:
+            "daily-rollup"
         case .settings:
             "settings"
         case .project(let projectID):
@@ -275,6 +298,17 @@ struct ContentView: View {
         settingsViewModel: SettingsViewModel(
             repository: settingsRepository,
             tokenStore: PreviewTokenStore()
+        ),
+        dailyRollupViewModel: DailyRollupViewModel(
+            sourceLoader: DailyRollupSourceLoader(
+                projectRepository: repository,
+                sessionRepository: sessionRepository,
+                snapshotRepository: snapshotRepository,
+                pomodoroBlockRepository: PomodoroBlockRepository(database: database),
+                workIncrementRepository: WorkIncrementRepository(database: database)
+            ),
+            repository: DailyRollupRepository(database: database),
+            generator: PreviewDailyRollupGenerator()
         )
     )
 }
@@ -303,6 +337,12 @@ private struct PreviewSnapshotGenerator: SessionSnapshotGenerating {
             promptVersion: PromptBuilder.promptVersion
         )
         return try await snapshotRepository.saveOrReplaceSnapshot(draft, for: session.id)
+    }
+}
+
+private struct PreviewDailyRollupGenerator: DailyRollupGenerating {
+    func generate(from eligibility: DailyRollupEligibility) async throws -> DailyRollup {
+        throw DailyRollupGeneratorError.noCompletedSessions
     }
 }
 

@@ -384,6 +384,13 @@ final class ProjectDetailViewModel: ObservableObject {
         selectedSessionIDsByProjectID[projectID] = session.id
     }
 
+    func selectSession(id sessionID: WorkSession.ID, for projectID: Project.ID) {
+        guard let session = historiesByProjectID[projectID]?.sessions.first(where: { $0.id == sessionID }) else {
+            return
+        }
+        selectSession(session, for: projectID)
+    }
+
     func clearSelectedSession(for projectID: Project.ID) {
         selectedSessionIDsByProjectID[projectID] = nil
     }

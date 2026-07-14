@@ -329,3 +329,18 @@ Use an injected `URLSession` / `URLProtocol` stub to cover:
 - non-loopback URL warning logic
 
 A live LM Studio smoke test is manual and documented separately.
+
+## 15. Daily Rollup synthesis
+
+Daily Rollup uses the same base URL, optional Keychain token, and selected synthesizer model as snapshots. `LMStudioClient` shares a parameterized private structured-completion request seam while retaining artifact-specific validation and repair errors.
+
+- Schema name: `working_memory_daily_rollup`
+- Prompt version: `daily-rollup-v1`
+- Temperature: `0.1`
+- Streaming: disabled
+- Output limit: 1,500 tokens
+- Repair: one retry after invalid structured content
+
+The strict result contains `day_summary`, exactly one `project_threads` entry for every supplied project ID, zero to six attributed `carry_forwards`, and `closure_note`. Validation rejects unknown, duplicate, or missing project IDs, extra keys, empty fields, and word-limit violations.
+
+Input uses session snapshots first. When a completed session has no snapshot, its mission, brain dump, block summaries, and manual increments provide a bounded grounded fallback. Invalid output never overwrites an existing Daily Rollup.

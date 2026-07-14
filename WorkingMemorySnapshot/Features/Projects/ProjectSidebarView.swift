@@ -309,6 +309,8 @@ struct ProjectSidebarView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    dailyRollupButton
+
                     if let currentSessionSummary {
                         CurrentSessionSummaryView(summary: currentSessionSummary) {
                             selectProject(id: currentSessionSummary.projectID)
@@ -407,6 +409,32 @@ struct ProjectSidebarView: View {
                 Text("Delete this project?")
             }
         }
+    }
+
+    private var dailyRollupButton: some View {
+        Button {
+            viewModel.selectDailyRollup()
+        } label: {
+            HStack(spacing: 10) {
+                SidebarIcon(
+                    systemName: "sparkles.rectangle.stack",
+                    tint: Color.accentColor,
+                    isSelected: viewModel.selectedItem == .dailyRollup
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Daily Rollup")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Close the day across projects")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(AppClickableRowButtonStyle(isSelected: viewModel.selectedItem == .dailyRollup))
+        .accessibilityLabel("Daily Rollup")
+        .accessibilityHint("Review or generate a whole-day rollup across projects.")
     }
 
     private var addProjectButton: some View {

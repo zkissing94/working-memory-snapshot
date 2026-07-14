@@ -347,6 +347,32 @@ Add the small model if measured evidence supports it. Define an evaluation compa
 
 Do not add it because the architecture diagram looks more sophisticated.
 
+## Current feature milestone — Global Daily Rollup
+
+### Goal
+
+Provide an on-demand end-of-day close across all projects without turning Working Memory Snapshot into a productivity dashboard.
+
+### Deliverables
+
+- migration 8 and durable one-rollup-per-local-day persistence
+- snapshot-first cross-project source loading with deterministic staleness
+- strict local LM Studio rollup generation through the existing synthesizer setting
+- Carry-Forward Focus UI with history and source-session drill-down
+- ready, blocked, generating, generated, stale, empty, and failure states
+- automated request, schema, persistence, source, generator, and view-model coverage
+
+### Exit criteria
+
+- active sessions block generation
+- failed refresh preserves the existing artifact and all source sessions
+- source attribution is visible without dominating the day close
+- generated content fits comfortably in the native two-column shell
+- no new observation source, backend, dependency, analytics, or productivity scoring
+- full check passes
+
+The remaining M13 visual review follows this integration so it covers Daily Rollup states.
+
 ## Merge cadence
 
 For every milestone:

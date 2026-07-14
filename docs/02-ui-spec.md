@@ -414,3 +414,15 @@ No:
 - animated countdown rings
 - dense side panels
 - message/transcript capture
+
+## 16. Global Daily Rollup
+
+- Place a selected `Daily Rollup` row above Projects in the persistent sidebar.
+- Use the Carry-Forward Focus direction preserved at `docs/mockups/global-daily-rollup-carry-forward-focus.png`.
+- Lead with the date and a compact whole-day brief; render project threads in the main column and carry-forwards in one emphasized secondary surface.
+- End with a closure note. Keep generated content scannable at 1440 × 1024.
+- Ready, blocked, generating, generated, stale, empty, and failed are mutually exclusive states in the same hierarchy.
+- A stale artifact remains visible with a calm `Refresh Rollup` notice.
+- Project names open the project workspace. Available source sessions open historical session detail; deleted sources remain labeled but disabled.
+- Previous Rollups lists only generated days, newest first.
+- Do not introduce checkboxes, scores, charts, streaks, timelines, or task-manager language.

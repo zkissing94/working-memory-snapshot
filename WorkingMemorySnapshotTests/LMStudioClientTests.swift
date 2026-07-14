@@ -303,6 +303,66 @@ final class LMStudioClientTests: XCTestCase {
         let requests = await transport.capturedRequests()
         XCTAssertEqual(requests.count, 2)
     }
+
+    func testGenerateDailyRollupUsesDedicatedSchemaAndTokenBudget() async throws {
+        let projectID = UUID()
+        let content = """
+        {"day_summary":"A grounded day.","project_threads":[{"project_id":"\(projectID.uuidString)","summary":"The integration reached its boundary."}],"carry_forwards":[],"closure_note":"The thread is preserved."}
+        """
+        let transport = MockLMStudioHTTPTransport.success(body: chatCompletionBody(content: content))
+        let client = try LMStudioClient(
+            baseURLString: LMStudioSettings.defaultBaseURLString,
+            apiToken: "rollup-token",
+            transport: transport
+        )
+
+        let result = try await client.generateDailyRollup(
+            modelID: "model-a",
+            systemPrompt: "system",
+            userPrompt: "user",
+            expectedProjectIDs: [projectID]
+        )
+
+        XCTAssertEqual(result.projectThreads.first?.projectID, projectID)
+        let requests = await transport.capturedRequests()
+        let request = try XCTUnwrap(requests.first)
+        let body = try requestBodyDictionary(request)
+        XCTAssertEqual(body["max_tokens"] as? Int, 1_500)
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer rollup-token")
+        let responseFormat = try XCTUnwrap(body["response_format"] as? [String: Any])
+        let schema = try XCTUnwrap(responseFormat["json_schema"] as? [String: Any])
+        XCTAssertEqual(schema["name"] as? String, DailyRollupSchema.name)
+    }
+
+    func testInvalidDailyRollupRetriesOnceAndPreservesRollupErrorType() async throws {
+        let projectID = UUID()
+        let invalid = chatCompletionBody(content: #"{"day_summary":""}"#)
+        let transport = MockLMStudioHTTPTransport.sequence([
+            .success(body: invalid),
+            .success(body: invalid),
+            .success(body: invalid)
+        ])
+        let client = try LMStudioClient(
+            baseURLString: LMStudioSettings.defaultBaseURLString,
+            apiToken: nil,
+            transport: transport
+        )
+
+        await XCTAssertThrowsAsyncError({
+            try await client.generateDailyRollup(
+                modelID: "model-a",
+                systemPrompt: "system",
+                userPrompt: "user",
+                expectedProjectIDs: [projectID]
+            )
+        }) { error in
+            guard case .invalidDailyRollupJSON = error as? LMStudioGenerationError else {
+                return XCTFail("Expected invalid daily rollup JSON, got \(error)")
+            }
+        }
+        let requests = await transport.capturedRequests()
+        XCTAssertEqual(requests.count, 2)
+    }
 }
 
 actor MockLMStudioHTTPTransport: LMStudioHTTPTransport {

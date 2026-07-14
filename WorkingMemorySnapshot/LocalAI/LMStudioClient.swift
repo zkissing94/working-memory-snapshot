@@ -110,7 +110,10 @@ struct LMStudioClient: Sendable {
 
         let initialContent = try await requestChatCompletion(
             modelID: trimmedModelID,
-            messages: messages
+            messages: messages,
+            schemaName: SnapshotSchema.name,
+            schema: SnapshotSchema.schemaObject(),
+            maxTokens: 700
         )
 
         do {
@@ -124,7 +127,10 @@ struct LMStudioClient: Sendable {
             ]
             let repairedContent = try await requestChatCompletion(
                 modelID: trimmedModelID,
-                messages: repairMessages
+                messages: repairMessages,
+                schemaName: SnapshotSchema.name,
+                schema: SnapshotSchema.schemaObject(),
+                maxTokens: 700
             )
 
             do {
@@ -135,9 +141,66 @@ struct LMStudioClient: Sendable {
         }
     }
 
+    func generateDailyRollup(
+        modelID: String,
+        systemPrompt: String,
+        userPrompt: String,
+        expectedProjectIDs: Set<UUID>
+    ) async throws -> DailyRollupGenerationResult {
+        let trimmedModelID = modelID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedModelID.isEmpty else {
+            throw LMStudioGenerationError.noModelSelected
+        }
+
+        let schema = DailyRollupSchema.schemaObject(projectIDs: expectedProjectIDs)
+        let messages = [
+            ChatCompletionMessage(role: "system", content: systemPrompt),
+            ChatCompletionMessage(role: "user", content: userPrompt)
+        ]
+        let initialContent = try await requestChatCompletion(
+            modelID: trimmedModelID,
+            messages: messages,
+            schemaName: DailyRollupSchema.name,
+            schema: schema,
+            maxTokens: 1_500
+        )
+
+        do {
+            return try DailyRollupSchema.validateJSONContent(
+                initialContent,
+                expectedProjectIDs: expectedProjectIDs
+            )
+        } catch let validationError as DailyRollupValidationError {
+            let repairMessages = messages + [
+                ChatCompletionMessage(
+                    role: "user",
+                    content: repairInstruction(for: validationError)
+                )
+            ]
+            let repairedContent = try await requestChatCompletion(
+                modelID: trimmedModelID,
+                messages: repairMessages,
+                schemaName: DailyRollupSchema.name,
+                schema: schema,
+                maxTokens: 1_500
+            )
+            do {
+                return try DailyRollupSchema.validateJSONContent(
+                    repairedContent,
+                    expectedProjectIDs: expectedProjectIDs
+                )
+            } catch let repairedValidationError as DailyRollupValidationError {
+                throw LMStudioGenerationError.invalidDailyRollupJSON(repairedValidationError)
+            }
+        }
+    }
+
     private func requestChatCompletion(
         modelID: String,
-        messages: [ChatCompletionMessage]
+        messages: [ChatCompletionMessage],
+        schemaName: String,
+        schema: [String: Any],
+        maxTokens: Int
     ) async throws -> String {
         var request = URLRequest(url: baseURL.appendingPathComponent("chat/completions"))
         request.httpMethod = "POST"
@@ -153,13 +216,13 @@ struct LMStudioClient: Sendable {
             messages: messages,
             temperature: 0.1,
             stream: false,
-            maxTokens: 700,
+            maxTokens: maxTokens,
             responseFormat: ChatCompletionResponseFormat(
                 type: "json_schema",
                 jsonSchema: ChatCompletionJSONSchema(
-                    name: SnapshotSchema.name,
+                    name: schemaName,
                     strict: true,
-                    schema: SnapshotSchema.schemaObject()
+                    schema: schema
                 )
             )
         )
@@ -205,7 +268,7 @@ struct LMStudioClient: Sendable {
         return content
     }
 
-    private func repairInstruction(for error: SnapshotGenerationValidationError) -> String {
+    private func repairInstruction(for error: any Error) -> String {
         """
         Your previous response could not be accepted: \(error).
         Return only valid JSON matching the supplied schema. Do not add prose, Markdown, or extra keys.
@@ -247,17 +310,20 @@ enum LMStudioGenerationError: Error, Equatable, LocalizedError {
     case invalidRequest
     case invalidChatCompletionEnvelope
     case invalidSnapshotJSON(SnapshotGenerationValidationError)
+    case invalidDailyRollupJSON(DailyRollupValidationError)
 
     var errorDescription: String? {
         switch self {
         case .noModelSelected:
             "No model is selected."
         case .invalidRequest:
-            "The LM Studio snapshot request could not be created."
+            "The LM Studio generation request could not be created."
         case .invalidChatCompletionEnvelope:
             "LM Studio returned an invalid chat completion response."
         case .invalidSnapshotJSON:
             "LM Studio returned snapshot JSON that did not match the required schema."
+        case .invalidDailyRollupJSON:
+            "LM Studio returned daily rollup JSON that did not match the required schema."
         }
     }
 }

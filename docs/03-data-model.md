@@ -424,3 +424,38 @@ struct Snapshot: Identifiable, Equatable, Sendable {
 - Passive Git/file/app evidence remains in generic events, not in block-specific or tool-specific tables.
 - Snapshot arrays may be empty.
 - Project deletion cascades to sessions, events, blocks, increments, and snapshots after confirmation.
+
+## 13. Daily Rollup persistence
+
+Migration 8 adds:
+
+```sql
+daily_rollups(
+  id TEXT PRIMARY KEY,
+  rollup_date TEXT UNIQUE NOT NULL,
+  timezone_identifier TEXT NOT NULL,
+  day_summary TEXT NOT NULL,
+  project_threads_json TEXT NOT NULL,
+  carry_forwards_json TEXT NOT NULL,
+  closure_note TEXT NOT NULL,
+  generator_model TEXT,
+  prompt_version TEXT NOT NULL,
+  source_fingerprint TEXT NOT NULL,
+  generated_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+)
+
+daily_rollup_sources(
+  rollup_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  project_name TEXT NOT NULL,
+  session_mission TEXT NOT NULL,
+  session_ended_at TEXT NOT NULL,
+  PRIMARY KEY(rollup_id, session_id)
+)
+```
+
+One rollup exists per local calendar date. Refresh replaces its validated content and complete source set transactionally. Source rows snapshot only drill-down labels and identifiers; deleting a project makes its session unavailable without deleting a multi-project day artifact.
+
+`DailyRollupRepository` loads by date, lists history newest-first, saves or replaces atomically, and loads source availability.

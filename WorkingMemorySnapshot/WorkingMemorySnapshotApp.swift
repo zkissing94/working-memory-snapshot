@@ -13,6 +13,7 @@ struct WorkingMemorySnapshotApp: App {
     @StateObject private var sessionViewModel: SessionViewModel
     @StateObject private var projectDetailViewModel: ProjectDetailViewModel
     @StateObject private var settingsViewModel: SettingsViewModel
+    @StateObject private var dailyRollupViewModel: DailyRollupViewModel
 
     init() {
         let environment = AppEnvironment.live()
@@ -51,6 +52,13 @@ struct WorkingMemorySnapshotApp: App {
                 transport: environment.lmStudioHTTPTransport
             )
         )
+        _dailyRollupViewModel = StateObject(
+            wrappedValue: DailyRollupViewModel(
+                sourceLoader: environment.dailyRollupSourceLoader,
+                repository: environment.dailyRollupRepository,
+                generator: environment.dailyRollupGenerator
+            )
+        )
     }
 
     var body: some Scene {
@@ -59,7 +67,8 @@ struct WorkingMemorySnapshotApp: App {
                 projectsViewModel: projectsViewModel,
                 sessionViewModel: sessionViewModel,
                 projectDetailViewModel: projectDetailViewModel,
-                settingsViewModel: settingsViewModel
+                settingsViewModel: settingsViewModel,
+                dailyRollupViewModel: dailyRollupViewModel
             )
         }
         .commands {

@@ -9,6 +9,9 @@ struct AppEnvironment {
     let eventRepository: EventRepository
     let snapshotRepository: SnapshotRepository
     let settingsRepository: SettingsRepository
+    let dailyRollupRepository: DailyRollupRepository
+    let dailyRollupSourceLoader: DailyRollupSourceLoader
+    let dailyRollupGenerator: any DailyRollupGenerating
     let tokenStore: any LMStudioTokenStore
     let lmStudioHTTPTransport: any LMStudioHTTPTransport
     let observationCoordinator: ObservationCoordinator
@@ -23,18 +26,35 @@ struct AppEnvironment {
         let eventRepository = EventRepository(database: database)
         let snapshotRepository = SnapshotRepository(database: database)
         let settingsRepository = SettingsRepository(database: database)
+        let projectRepository = ProjectRepository(database: database)
+        let sessionRepository = SessionRepository(database: database)
+        let dailyRollupRepository = DailyRollupRepository(database: database)
         let tokenStore = KeychainStore()
         let transport = URLSessionLMStudioHTTPTransport()
 
         return AppEnvironment(
             databaseMigrator: DatabaseMigrator(database: database),
-            projectRepository: ProjectRepository(database: database),
-            sessionRepository: SessionRepository(database: database),
+            projectRepository: projectRepository,
+            sessionRepository: sessionRepository,
             pomodoroBlockRepository: pomodoroBlockRepository,
             workIncrementRepository: workIncrementRepository,
             eventRepository: eventRepository,
             snapshotRepository: snapshotRepository,
             settingsRepository: settingsRepository,
+            dailyRollupRepository: dailyRollupRepository,
+            dailyRollupSourceLoader: DailyRollupSourceLoader(
+                projectRepository: projectRepository,
+                sessionRepository: sessionRepository,
+                snapshotRepository: snapshotRepository,
+                pomodoroBlockRepository: pomodoroBlockRepository,
+                workIncrementRepository: workIncrementRepository
+            ),
+            dailyRollupGenerator: DailyRollupGenerator(
+                repository: dailyRollupRepository,
+                settingsRepository: settingsRepository,
+                tokenStore: tokenStore,
+                transport: transport
+            ),
             tokenStore: tokenStore,
             lmStudioHTTPTransport: transport,
             observationCoordinator: ObservationCoordinator(eventRepository: eventRepository),

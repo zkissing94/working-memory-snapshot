@@ -442,3 +442,25 @@ Do not add:
 - cross-platform abstraction
 
 These decisions may be revisited only after the core resume loop is validated.
+
+## 20. Global Daily Rollup
+
+Daily Rollup is a durable derived artifact across completed sessions, not a new observation source or backend.
+
+```text
+completed sessions for local day
+      ↓
+DailyRollupSourceLoader
+      ↓
+snapshot-first bounded evidence with capture-point fallback
+      ↓
+DailyRollupPromptBuilder
+      ↓
+LMStudioClient structured completion
+      ↓
+DailyRollupGenerator
+      ↓
+DailyRollupRepository / SQLite
+```
+
+The source fingerprint is deterministic over eligible session and snapshot update identities. Generation and refresh persist only after strict validation, so a failed refresh leaves the previous artifact readable. Source metadata is retained with the artifact; drill-down availability is resolved against current sessions.

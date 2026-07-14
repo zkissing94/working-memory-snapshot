@@ -201,3 +201,11 @@ For each next-session resume, record manually:
 - whether the user consulted another artifact before resuming
 
 The product passes the first evaluation when the brief is consistently useful and does not create a trust problem through invented memory.
+
+## 9. Daily Rollup coverage
+
+Automated coverage includes migration 8 idempotence, unique-day replacement, source availability, local-day boundaries, snapshot/fallback evidence, fingerprint changes, strict project attribution, word limits, extra keys, 1,500-token request construction, one repair retry, failed-refresh preservation, and view-model states.
+
+Existing snapshot generation tests remain regression coverage for the shared LM Studio request seam. Automated tests continue to use the injected transport and must not require LM Studio, a model, GPU, or network access.
+
+Use `docs/14-daily-rollup-lm-studio-smoke-test.md` for the manual live-model boundary.

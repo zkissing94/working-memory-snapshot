@@ -152,6 +152,17 @@ Use a small internal SwiftUI layer for visual tokens, adaptive surfaces, status 
 
 **Consequences:** Pow was evaluated but is not added. No production dependency, schema change, service boundary, or build-setting change is required. All motion must use the durations and accessibility fallbacks defined in the UI specification.
 
+## ADR-017 — Durable local Daily Rollup through the existing synthesizer
+
+**Date:** 2026-07-13
+**Status:** Accepted
+
+Create one on-demand, refreshable Daily Rollup per local calendar day from completed sessions across projects. Reuse the selected LM Studio synthesizer and persist validated results plus source metadata in SQLite.
+
+**Reasoning:** End-of-day closure is a cross-project cognitive-continuity need. A durable artifact remains useful after generation, while a shared model configuration avoids a second runtime and settings surface.
+
+**Consequences:** Migration 8 adds `daily_rollups` and `daily_rollup_sources`. Active sessions block generation. Snapshot-backed evidence is preferred, capture points provide a grounded fallback, and failed refreshes preserve the last valid artifact. This adds no observation source, cloud backend, account, analytics, or production dependency.
+
 ## Open decision template
 
 ### ADR-NNN — Title
