@@ -1,44 +1,99 @@
 # Working Memory Snapshot
 
-A local-first macOS app that helps founder/coders return to deep work in under 60 seconds.
+Working Memory Snapshot is a local-first macOS app that helps founder/coders return to deep work without rebuilding the project context they were holding.
 
-This repository is a **Codex-ready project seed**. It contains the product requirements, architecture, UI and data specifications, local-model contract, implementation roadmap, engineering workflow, task prompts, validation scripts, Git hooks, and a repository-scoped Codex skill.
-
-It now contains the first native macOS scaffold, build foundation, project persistence, LM Studio settings, and project session lifecycle.
-
-## Product loop
+The app supports the complete local workflow:
 
 ```text
-Choose project
-→ Start a session with a mission
-→ Work normally
-→ End with a short brain dump
-→ Generate a Working Memory Snapshot
-→ Resume later in under 60 seconds
+project → session → evidence → brain dump → snapshot → resume
 ```
 
-## Technical direction
+It also provides an on-demand Daily Rollup across completed project sessions, with project threads, carry-forwards, source-session drill-down, and preserved history for every generated revision.
 
-- Native macOS app
-- Swift and SwiftUI
-- Local SQLite persistence
-- User-selected project folders persisted locally during the MVP
-- LM Studio local server through its OpenAI-compatible API
-- Generic event stream for file, Git, application, and user evidence
-- No cloud backend, accounts, telemetry, screenshots, keystrokes, or clipboard capture
+## What it does
 
-## AI direction
+- Adds local project folders through the native macOS folder picker.
+- Runs one recoverable work session at a time with lightweight focus blocks.
+- Captures bounded file-path, Git, active-app, and user-entered evidence only while a session is active.
+- Generates structured Working Memory Snapshots through a local LM Studio model.
+- Keeps the latest Resume Brief and next action visible from each project.
+- Generates a whole-day rollup across projects without scores, streaks, or task-manager semantics.
+- Stores app data in local SQLite and an optional LM Studio token in Keychain.
 
-The long-term design is a two-stage local-model pipeline:
+The app has no cloud backend, account, analytics, screenshots, keystroke capture, clipboard capture, browser-history capture, or message ingestion.
 
-1. **Evidence janitor:** a small model that selects, tags, deduplicates, and compresses noisy evidence.
-2. **Snapshot synthesizer:** a stronger model that produces the Working Memory Snapshot.
+## Requirements
 
-The minimal usable increment does **not** begin with two live models. It uses deterministic evidence compaction plus the synthesizer. The small-model stage is added only after real session data proves it is necessary.
+- Runtime target: macOS 14 or later.
+- Source-build host: a macOS release supported by Xcode 26 or later.
+- Xcode 26 or later, including its Command Line Tools.
+- Git.
+- LM Studio only for snapshot and Daily Rollup generation. It is not required to compile, test, launch, or explore the rest of the app.
 
-## Start here
+There are no third-party Swift packages or production dependencies to install.
 
-Read [`CODEX_START_HERE.md`](CODEX_START_HERE.md).
+This repository provides a source build for local development; it does not currently publish a signed or notarized app release.
+
+## Quick start from a clone
+
+```bash
+git clone https://github.com/zkissing94/working-memory-snapshot.git
+cd working-memory-snapshot
+./scripts/doctor.sh
+./scripts/check.sh
+open .derivedData/Build/Products/Debug/WorkingMemorySnapshot.app
+```
+
+Quit any running copy of Working Memory Snapshot before `./scripts/check.sh`; the test host must launch the single-instance app itself.
+
+The full check builds the shared `WorkingMemorySnapshot` scheme with signing disabled and runs the complete automated test suite. LM Studio and internet access are not used by the tests.
+
+Contributors can optionally install the repository's pre-commit hook with `./scripts/install_hooks.sh`.
+
+To work in Xcode instead, open `WorkingMemorySnapshot.xcodeproj`, select the shared `WorkingMemorySnapshot` scheme, and run the macOS target.
+
+## Configure local generation
+
+1. Install LM Studio, load a local instruct model that can follow a structured JSON schema, and start its local server.
+2. The app defaults to `http://localhost:1234/v1`.
+3. Open Settings in Working Memory Snapshot.
+4. Choose **Refresh Models**, select the loaded model, then choose **Test Connection** and **Save**.
+5. Add a bearer token only when the local server is configured to require one. The token is stored in Keychain, never SQLite.
+
+The same selected model generates both project snapshots and Daily Rollups. A failed generation preserves the completed session, brain dump, and any prior generated artifact.
+
+## First run
+
+1. Add a project folder from the sidebar.
+2. Start a session and enter a concrete mission.
+3. Work normally, optionally recording notes, decisions, or blockers in a focus block.
+4. End the session with a short brain dump.
+5. Generate and review the project snapshot.
+6. Open Daily Rollup after completing sessions to synthesize the day across projects.
+
+## Local data and privacy
+
+- SQLite database: `~/Library/Application Support/WorkingMemorySnapshot/working-memory.sqlite3`
+- Optional LM Studio token: macOS Keychain
+- Runtime model endpoint: loopback by default
+- Selected project access: local path-based access with App Sandbox off for the current MVP
+- Focus-block alerts: optional local notification permission; the in-app completion prompt still works when permission is declined
+
+Local databases, journals, build output, secrets, and Xcode user state are ignored by Git. Deleting a source checkout does not delete the app database in Application Support.
+
+## Validation and troubleshooting
+
+```bash
+./scripts/check.sh --quick  # repository and script checks
+./scripts/check.sh          # build and complete test suite
+./scripts/doctor.sh         # local toolchain and optional LM Studio diagnostics
+```
+
+Build and signing constraints are documented in [`docs/07-macos-build-compile.md`](docs/07-macos-build-compile.md). The latest delivered state and known follow-ups are recorded in [`docs/10-current-status.md`](docs/10-current-status.md).
+
+## Developing with Codex
+
+Read [`CODEX_START_HERE.md`](CODEX_START_HERE.md) and the root [`AGENTS.md`](AGENTS.md). The repository already contains the Xcode project and implementation; do not recreate the project or replay the historical milestone prompts on top of the current branch.
 
 ## Canonical documents
 
@@ -55,8 +110,6 @@ Read [`CODEX_START_HERE.md`](CODEX_START_HERE.md).
 - [`docs/09-risk-register.md`](docs/09-risk-register.md)
 - [`docs/10-current-status.md`](docs/10-current-status.md)
 
-## Current milestone
+## License
 
-**M4 — Placeholder snapshot vertical slice.**
-
-Fresh chats should read [`docs/10-current-status.md`](docs/10-current-status.md) before starting implementation.
+No open-source license has been selected. Treat the source as all rights reserved unless the repository owner grants permission.

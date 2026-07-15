@@ -1,107 +1,79 @@
-# Start Here: Importing This Project into Codex
+# Continue Working Memory Snapshot with Codex
 
-All documents referenced by the prompts are already included in this repository seed.
+This repository is an implemented native macOS app, not a blank project seed. The Xcode project, shared scheme, source, migrations, tests, and validation scripts are already committed.
 
-## 1. Unpack and open the repository
+Do not initialize another Git repository, create another Xcode project, or replay the historical milestone prompts on top of the current implementation.
 
-1. Unzip this bundle into the directory where the project should live.
-2. Open that directory as a project in the Codex app, Codex CLI, or Codex IDE extension.
-3. Codex will automatically discover the root `AGENTS.md`.
-4. The repository-scoped `$milestone-execution` skill is located at:
-   `.agents/skills/milestone-execution/SKILL.md`
+## 1. Clone and validate
 
-## 2. Seed Git before application work
+Follow the prerequisites and quick start in [`README.md`](README.md). At minimum:
 
-Paste the contents of:
-
-```text
-prompts/00-bootstrap-repository.md
+```bash
+git clone https://github.com/zkissing94/working-memory-snapshot.git
+cd working-memory-snapshot
+./scripts/install_hooks.sh
+./scripts/doctor.sh
+./scripts/check.sh
 ```
 
-This initializes Git when needed, installs the local hooks, validates the bundle, and creates the documentation seed commit. It does not implement the app.
+Quit all running copies of Working Memory Snapshot before the full check. LM Studio is optional for compile and automated tests.
 
-## 3. Create the blank Xcode project once
+## 2. Open the repository in Codex
 
-Use Xcode for the initial project-file generation rather than asking an agent to hand-author a `.pbxproj`.
+Open the repository root in the Codex app, CLI, or IDE extension. Codex automatically discovers [`AGENTS.md`](AGENTS.md).
 
-Create a new project in this repository root:
-
-- Template: **macOS App**
-- Product Name: `WorkingMemorySnapshot`
-- Interface: **SwiftUI**
-- Language: **Swift**
-- Include Tests: **Yes**
-- Data storage template: **None**
-- Create Git repository: **No** if M0 already initialized Git
-- Deployment target: **macOS 14.0 or later**
-
-Do not create a second nested repository.
-
-Share the `WorkingMemorySnapshot` scheme and commit it under:
+The repository-scoped implementation skill is located at:
 
 ```text
-WorkingMemorySnapshot.xcodeproj/xcshareddata/xcschemes/
+.agents/skills/milestone-execution/SKILL.md
 ```
 
-After the scaffold exists, apply the build contract from:
-
-```text
-docs/07-macos-build-compile.md
-```
-
-Commit the generated Xcode scaffold on a focused branch, or let the M1 prompt incorporate it after inspecting the diff.
-
-## 4. Implement serially through the vertical slice
-
-Before starting a new Codex chat or milestone, read:
-
-```text
-docs/10-current-status.md
-```
-
-Run these prompts in order:
-
-```text
-prompts/01-m1-app-shell-and-projects.md
-prompts/02-m2-lm-studio-settings.md
-prompts/03-m3-session-lifecycle.md
-prompts/04-m4-placeholder-snapshot.md
-```
-
-After M4, this end-to-end path must work:
-
-```text
-project → session → brain dump → placeholder snapshot → resume
-```
-
-## 5. Parallelize only the isolated leaf services
-
-After M4 is merged into `main`, the following tasks may run in separate Codex worktrees:
-
-```text
-prompts/05a-m5-git-service.md
-prompts/05b-m5-file-observation.md
-prompts/05c-m5-active-app-observation.md
-prompts/05d-m5-lm-studio-generation-client.md
-```
-
-Base every worktree on the same clean `main` commit. Do not let two threads modify the same files.
-
-## 6. Integrate serially again
-
-After the M5 leaf branches are reviewed and merged:
-
-```text
-prompts/06-m6-real-snapshot-integration.md
-prompts/07-m7-resume-and-recovery-polish.md
-```
-
-## Operating rule
-
-Use the repository skill explicitly for implementation work:
+Invoke it for implementation work:
 
 ```text
 $milestone-execution
 ```
 
-Codex may create local branches and commits. It must not push, merge, delete branches, rewrite history, or open a pull request unless explicitly instructed.
+## 3. Load the current context
+
+Before making changes, read:
+
+- `AGENTS.md`
+- `docs/10-current-status.md`
+- `docs/00-product-prd.md`
+- `docs/01-system-architecture.md`
+- `docs/05-mvp-roadmap.md`
+- `docs/06-codex-workflow.md`
+- `docs/07-macos-build-compile.md`
+
+Then read only the task-relevant UI, data, local-AI, testing, decision, or risk documents named by `AGENTS.md`.
+
+If `docs/10-current-status.md` conflicts with Git history, inspect Git and reconcile the status document before implementing.
+
+## 4. Work on a focused branch
+
+```bash
+git status --short
+git branch --show-current
+git switch -c codex/<focused-task>
+```
+
+Keep one coherent task per branch. Preserve unrelated user changes, run targeted tests plus `./scripts/check.sh`, review the complete diff, and commit only validated work.
+
+Codex may create local branches and commits. It must not push, merge, delete branches, rewrite history, or open a pull request unless the user explicitly requests that action.
+
+## 5. Understand the historical prompts
+
+The files in `prompts/` document how earlier milestones were built. They are useful implementation history and reference material, but they are not a setup sequence for a current clone.
+
+Use [`prompts/99-task-template.md`](prompts/99-task-template.md) for a new scoped task, and use [`docs/10-current-status.md`](docs/10-current-status.md) for the current handoff.
+
+## Current product boundary
+
+The app is a local cognitive-continuity tool. Preserve these constraints when extending it:
+
+- Native Swift and SwiftUI for macOS.
+- Local SQLite and local LM Studio generation.
+- Observation only while a session is active.
+- No cloud backend, accounts, telemetry, screenshots, keystrokes, clipboard, browser history, or message ingestion.
+- No task scoring, streaks, employee monitoring, or generic AI chat behavior.

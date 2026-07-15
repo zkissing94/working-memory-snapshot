@@ -1,11 +1,19 @@
-# Bundle Manifest
+# Repository Map
 
-## Root guidance
+## Start here
 
-- `README.md` — project summary
-- `CODEX_START_HERE.md` — import and execution sequence
-- `AGENTS.md` — durable Codex instructions
-- `.gitignore` — Xcode, Swift, local data, and secret exclusions
+- `README.md` — clone, build, run, LM Studio, privacy, and troubleshooting guide
+- `CODEX_START_HERE.md` — current Codex handoff workflow
+- `AGENTS.md` — durable repository implementation rules
+- `docs/10-current-status.md` — delivered state, current task, and next milestone
+
+## Application
+
+- `WorkingMemorySnapshot.xcodeproj/` — shared Xcode project and scheme
+- `WorkingMemorySnapshot/` — app source, resources, UI, persistence, observation, and local-AI boundaries
+- `WorkingMemorySnapshotTests/` — automated unit, repository, model-contract, and feature tests
+- `WorkingMemorySnapshotUITests/` — native UI test target
+- `Config/` — shared Debug and Release build configuration
 
 ## Product and engineering documents
 
@@ -21,29 +29,34 @@
 - `docs/08-decision-log.md`
 - `docs/09-risk-register.md`
 - `docs/10-current-status.md`
+- `docs/11-m7-dogfood-checklist.md`
+- `docs/12-app-state-dependency-map.md`
+- `docs/13-m13-ui-polish-checklist.md`
+- `docs/14-daily-rollup-lm-studio-smoke-test.md`
 - `docs/99-external-references.md`
 
-## Codex task prompts
+## Design references
 
-- `prompts/00-bootstrap-repository.md`
-- `prompts/01-m1-app-shell-and-projects.md`
-- `prompts/02-m2-lm-studio-settings.md`
-- `prompts/03-m3-session-lifecycle.md`
-- `prompts/04-m4-placeholder-snapshot.md`
-- `prompts/05a-m5-git-service.md`
-- `prompts/05b-m5-file-observation.md`
-- `prompts/05c-m5-active-app-observation.md`
-- `prompts/05d-m5-lm-studio-generation-client.md`
-- `prompts/06-m6-real-snapshot-integration.md`
-- `prompts/07-m7-resume-and-recovery-polish.md`
-- `prompts/99-task-template.md`
+- `docs/mockups/` — selected product-state references and mockup catalog
+- `Design/WorkingMemoryIcon/` — maintained app-icon source
+- `design-qa.md` — latest Daily Rollup visual acceptance record
+- `outputs/logos/working-memory-icon/` — archived logo exploration and review provenance; not required to build or run the app
 
-## Automation and review
+## Automation
 
 - `.agents/skills/milestone-execution/SKILL.md`
 - `.githooks/pre-commit`
-- `scripts/bootstrap_repo.sh`
 - `scripts/install_hooks.sh`
 - `scripts/check.sh`
 - `scripts/doctor.sh`
 - `.github/pull_request_template.md`
+
+`scripts/bootstrap_repo.sh` and `prompts/00-bootstrap-repository.md` are retained as seed-history tooling. They are not part of setup for a normal clone.
+
+## Historical implementation prompts
+
+The numbered files under `prompts/` record the completed milestone sequence. Do not replay them on the current implementation. Use `prompts/99-task-template.md` for a new focused task.
+
+## Local-only files
+
+Build output, Xcode user state, local SQLite databases and journals, tokens, environment files, logs, and temporary files are intentionally excluded by `.gitignore`.

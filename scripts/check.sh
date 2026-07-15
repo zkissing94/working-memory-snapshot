@@ -95,7 +95,11 @@ else
 fi
 
 scheme="${SCHEME:-}"
-if [[ -z "$scheme" ]]; then
+if [[ -z "$scheme" && -f "WorkingMemorySnapshot.xcodeproj/xcshareddata/xcschemes/WorkingMemorySnapshot.xcscheme" ]]; then
+  scheme="WorkingMemorySnapshot"
+fi
+
+if [[ -z "$scheme" ]] && command -v python3 >/dev/null 2>&1; then
   scheme="$(
     xcodebuild "${container_args[@]}" -list -json 2>/dev/null |
     python3 -c '
@@ -113,7 +117,7 @@ elif schemes:
 fi
 
 if [[ -z "$scheme" ]]; then
-  echo "Could not determine a shared Xcode scheme. Set SCHEME=<name>." >&2
+  echo "Could not determine a shared Xcode scheme. Set SCHEME=<name> or install python3 for scheme discovery." >&2
   exit 1
 fi
 

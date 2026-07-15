@@ -1,9 +1,8 @@
 # Daily Rollup Design QA
 
 - Source visual truth: `docs/mockups/global-daily-rollup-carry-forward-focus.png`
-- Implementation screenshot: `/tmp/wms-daily-rollup-qa/daily-rollup-generated-1298x768.jpeg`
-- Full comparison: `/tmp/wms-daily-rollup-qa/daily-rollup-full-comparison.png`
-- Focused comparison: `/tmp/wms-daily-rollup-qa/daily-rollup-content-comparison.png`
+- Implementation evidence: locally captured at 1298 × 768 during the unlocked acceptance pass
+- Comparison artifacts: ephemeral QA files were intentionally not committed; the durable findings are recorded below
 - Source viewport: 1487 × 1058 (the supplied 1440 × 1024 direction rendered with its surrounding frame)
 - Implementation viewport: 1298 × 768 (largest unlocked desktop capture available)
 - State: generated historical Daily Rollup with five completed sessions, three projects, carry-forwards, history, and source-session links

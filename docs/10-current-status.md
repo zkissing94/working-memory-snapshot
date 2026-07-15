@@ -2,16 +2,16 @@
 
 ## Where the project is
 
-Current implementation branch:
+Current validated delivery branch:
 
 ```text
-codex/daily-rollup
+main
 ```
 
 Current focus:
 
 ```text
-Global Daily Rollup - on-demand end-of-day synthesis across completed project sessions
+Global Daily Rollup delivered, manually validated, and documented for a fresh clone
 ```
 
 Baseline:
@@ -110,33 +110,28 @@ Current implementation state:
 - The selected visual direction is preserved in `docs/mockups/global-daily-rollup-carry-forward-focus.png`.
 - The unlocked seeded-app comparison passed at 1298 × 768 against the selected direction, including a focused content-region review; `design-qa.md` records the evidence and remaining P3-only polish.
 - Manual QA also reports the feature behaving as expected.
+- Final manual QA passed generation, refresh, same-day revision history, restored carry-forwards, project opening, and source-session drill-down.
 
 ## Current milestone
 
 Current task:
 
 ```text
-Preserve Daily Rollup carry-forwards from earlier same-day generation runs.
+Complete the remaining M13 visual polish checklist against the delivered app shell.
 ```
 
 Delivery target:
 
 ```text
-Append every validated generation as a revision, keep the latest run as the day default, and allow exact earlier runs to be reopened from history.
+Review the remaining P3-only polish in light, dark, reduced-motion, increased-contrast, and long-content states without expanding product scope.
 ```
 
-The remaining M13 visual review checklist is deferred until the Daily Rollup states are integrated so the review covers the complete shell.
+Daily Rollup visual acceptance and fresh-clone onboarding are complete. The remaining M13 checklist items are the next UI follow-up.
 
 Optional post-MVP milestone:
 
 ```text
 M9 - Optional evidence-janitor model
-```
-
-Expected Daily Rollup retention commit message:
-
-```text
-fix: preserve daily rollup revisions
 ```
 
 ## Fresh chat startup
@@ -147,7 +142,8 @@ In a fresh Codex chat, start by opening this repository root and reading:
 - `docs/10-current-status.md`
 - `docs/05-mvp-roadmap.md`
 - `docs/07-macos-build-compile.md`
-- the specific milestone prompt being implemented
+- the task-relevant canonical documents named by `AGENTS.md`
+- `prompts/99-task-template.md` when drafting a new scoped task
 
 Then run:
 
