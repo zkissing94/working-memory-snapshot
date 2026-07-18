@@ -2,6 +2,8 @@
 
 Working Memory Snapshot is a local-first macOS app that helps founder/coders return to deep work without rebuilding the project context they were holding.
 
+> **Download status:** The app is currently available as source code. There is no signed `.dmg` or notarized GitHub release yet, so the local setup below builds the app on your Mac with Xcode.
+
 The app supports the complete local workflow:
 
 ```text
@@ -22,35 +24,54 @@ It also provides an on-demand Daily Rollup across completed project sessions, wi
 
 The app has no cloud backend, account, analytics, screenshots, keystroke capture, clipboard capture, browser-history capture, or message ingestion.
 
-## Requirements
+## Download and run locally
+
+### What you need
 
 - Runtime target: macOS 14 or later.
 - Source-build host: a macOS release supported by Xcode 26 or later.
 - Xcode 26 or later, including its Command Line Tools.
-- Git.
+- Git, if you use the recommended clone workflow.
 - LM Studio only for snapshot and Daily Rollup generation. It is not required to compile, test, launch, or explore the rest of the app.
 
 There are no third-party Swift packages or production dependencies to install.
 
-This repository provides a source build for local development; it does not currently publish a signed or notarized app release.
+Before building for the first time, open Xcode once so it can install required components and finish its license/setup prompts.
 
-## Quick start from a clone
+### 1. Get the source
+
+The recommended option is to clone the repository in Terminal:
 
 ```bash
 git clone https://github.com/zkissing94/working-memory-snapshot.git
 cd working-memory-snapshot
+```
+
+If you do not use Git, choose **Code → Download ZIP** on GitHub, unzip the download, and open Terminal in the extracted `working-memory-snapshot` folder.
+
+### 2. Check, build, and launch
+
+From the repository folder, run:
+
+```bash
 ./scripts/doctor.sh
-./scripts/check.sh
+RUN_TESTS=0 ./scripts/check.sh
 open .derivedData/Build/Products/Debug/WorkingMemorySnapshot.app
 ```
 
-Quit any running copy of Working Memory Snapshot before `./scripts/check.sh`; the test host must launch the single-instance app itself.
+`doctor.sh` checks the local toolchain and explains any missing requirement. The build command compiles the shared `WorkingMemorySnapshot` scheme with signing disabled; it does not need LM Studio or internet access. The first build may take several minutes.
 
-The full check builds the shared `WorkingMemorySnapshot` scheme with signing disabled and runs the complete automated test suite. LM Studio and internet access are not used by the tests.
+The built app remains at `.derivedData/Build/Products/Debug/WorkingMemorySnapshot.app` inside the checkout. To keep it somewhere more convenient, open that folder and drag the app to `Applications`:
 
-Contributors can optionally install the repository's pre-commit hook with `./scripts/install_hooks.sh`.
+```bash
+open .derivedData/Build/Products/Debug
+```
 
-To work in Xcode instead, open `WorkingMemorySnapshot.xcodeproj`, select the shared `WorkingMemorySnapshot` scheme, and run the macOS target.
+Rebuild from the latest source before replacing that copy; the repository does not currently provide automatic updates.
+
+### Xcode option
+
+To build interactively, open `WorkingMemorySnapshot.xcodeproj`, select the shared `WorkingMemorySnapshot` scheme and **My Mac** destination, then press **Run**.
 
 ## Configure local generation
 
@@ -88,6 +109,16 @@ Local databases, journals, build output, secrets, and Xcode user state are ignor
 ./scripts/check.sh          # build and complete test suite
 ./scripts/doctor.sh         # local toolchain and optional LM Studio diagnostics
 ```
+
+Quit every running copy of Working Memory Snapshot before the full check; the test host must launch the single-instance app itself. The automated suite does not use LM Studio or internet access.
+
+Common setup issues:
+
+- If `doctor.sh` cannot run Xcode tools, finish Xcode's first-launch setup and confirm the active developer directory in **Xcode → Settings → Locations**.
+- If the full check says the app is already running, quit Working Memory Snapshot and run the command again.
+- If local generation is unavailable, the app itself can still launch. Start LM Studio's local server, load a compatible instruct model, and complete the Settings steps above when you are ready to generate snapshots.
+
+Contributors can optionally install the repository's pre-commit hook with `./scripts/install_hooks.sh`.
 
 Build and signing constraints are documented in [`docs/07-macos-build-compile.md`](docs/07-macos-build-compile.md). The latest delivered state and known follow-ups are recorded in [`docs/10-current-status.md`](docs/10-current-status.md).
 
