@@ -178,7 +178,7 @@ stateDiagram-v2
 | Active app evidence | `ActiveAppObservationService` | `NSWorkspace` activation notifications | Active session only |
 | Focus block alerts | `FocusBlockDeadlineAlertService` | `UserNotifications`, AppKit activation | Active block deadline only |
 | Evidence compaction | `EvidenceCompactor` | Bounded deterministic digest | Snapshot generation |
-| Prompt construction | `PromptBuilder` | Prompt version `v1`, JSON schema boundary | Snapshot generation |
+| Prompt construction | `PromptBuilder` | Prompt version `v2`, block-aware evidence windows, JSON schema boundary | Snapshot generation |
 | Local model API | `LMStudioClient` | `GET {baseURL}/models`, `POST {baseURL}/chat/completions` | Settings, snapshot generation |
 | Token storage | `KeychainStore` | macOS Keychain | Settings, local model calls |
 

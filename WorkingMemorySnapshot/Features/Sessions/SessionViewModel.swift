@@ -170,7 +170,11 @@ final class SessionViewModel: ObservableObject {
             activeBlockIncrements = []
             mission = ""
             flow = .idle
-            await observationCoordinator.startObserving(session: session, project: project)
+            await observationCoordinator.startObserving(
+                session: session,
+                project: project,
+                activeBlockID: block.id
+            )
             scheduleDeadlineIfNeeded(for: block)
         }
     }
@@ -295,7 +299,8 @@ final class SessionViewModel: ObservableObject {
             }
             await observationCoordinator.startObserving(
                 session: recoveryContext.session,
-                project: recoveryContext.project
+                project: recoveryContext.project,
+                activeBlockID: activeBlock?.status == .active ? activeBlock?.id : nil
             )
         }
     }
@@ -363,6 +368,7 @@ final class SessionViewModel: ObservableObject {
 
         await performSessionUpdate {
             focusBlockDeadlineAlertService.cancelDeadline(for: activeBlock.id)
+            await observationCoordinator.checkpointObservation(activeBlockID: nil)
             let paused = try await pomodoroBlockRepository.pauseBlock(id: activeBlock.id)
             clearBlockCompletionPrompt(for: activeBlock.id)
             self.activeBlock = paused
@@ -376,6 +382,7 @@ final class SessionViewModel: ObservableObject {
         }
 
         await performSessionUpdate {
+            await observationCoordinator.checkpointObservation(activeBlockID: activeBlock.id)
             let resumed = try await pomodoroBlockRepository.resumeBlock(id: activeBlock.id)
             self.activeBlock = resumed
             try await loadBlocksAndIncrements(for: resumed.sessionID)
@@ -390,6 +397,7 @@ final class SessionViewModel: ObservableObject {
 
         await performSessionUpdate {
             focusBlockDeadlineAlertService.cancelDeadline(for: activeBlock.id)
+            await observationCoordinator.checkpointObservation(activeBlockID: nil)
             _ = try await pomodoroBlockRepository.completeBlock(id: activeBlock.id, summary: summary)
             clearBlockCompletionPrompt(for: activeBlock.id)
             self.activeBlock = nil
@@ -408,6 +416,7 @@ final class SessionViewModel: ObservableObject {
                 sessionID: activeSession.id,
                 intention: intention
             )
+            await observationCoordinator.checkpointObservation(activeBlockID: block.id)
             self.activeBlock = block
             self.activeBlockIncrements = []
             try await loadBlocksAndIncrements(for: activeSession.id)

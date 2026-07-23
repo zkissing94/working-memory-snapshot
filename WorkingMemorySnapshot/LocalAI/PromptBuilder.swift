@@ -7,7 +7,7 @@ struct SnapshotPrompt: Equatable, Sendable {
 }
 
 struct PromptBuilder: Sendable {
-    static let promptVersion = "v1"
+    static let promptVersion = "v2"
 
     func makePrompt(from digest: SnapshotEvidenceDigest) -> SnapshotPrompt {
         SnapshotPrompt(
@@ -55,17 +55,17 @@ struct PromptBuilder: Sendable {
         BRAIN DUMP
         \(digest.brainDump.isEmpty ? "(none provided)" : digest.brainDump)
 
-        POMODORO BLOCK CAPTURE POINTS
+        FOCUS BLOCKS AND OBSERVED CONTEXT
         \(pomodoroBlocksSection(from: digest.pomodoroBlocks))
 
-        CHANGED PATHS
-        \(changedPathsSection(from: digest.changedPaths))
+        BETWEEN-BLOCK OBSERVED CONTEXT
+        \(observationContextSection(from: digest.betweenBlocksObservation))
+
+        SESSION-WIDE UNATTRIBUTED OBSERVED CONTEXT
+        \(observationContextSection(from: digest.unattributedObservation))
 
         GIT EVIDENCE
         \(gitEvidenceSection(from: digest.gitEvidenceLines))
-
-        ACTIVE APPLICATIONS
-        \(activeApplicationsSection(from: digest.activeApplications))
 
         COMPACTOR NOTES
         \(notesSection(from: digest.compactorNotes))
@@ -96,27 +96,44 @@ struct PromptBuilder: Sendable {
                     return "  - \(increment.kind.rawValue): \(increment.title)\(detail)"
                 })
             }
+            lines.append("  Observed context:")
+            lines.append(
+                contentsOf: observationContextLines(
+                    from: block.observedContext,
+                    indentation: "  "
+                )
+            )
             return lines.joined(separator: "\n")
         }
         .joined(separator: "\n")
     }
 
-    private func changedPathsSection(from paths: [CompactedChangedPath]) -> String {
-        guard !paths.isEmpty else {
-            return "(none observed)"
+    private func observationContextSection(from context: CompactedObservationContext) -> String {
+        observationContextLines(from: context).joined(separator: "\n")
+    }
+
+    private func observationContextLines(
+        from context: CompactedObservationContext,
+        indentation: String = ""
+    ) -> [String] {
+        guard !context.isEmpty else {
+            return ["\(indentation)(none observed)"]
         }
 
-        return paths.map { path in
-            var parts = ["- \(path.relativePath)", "\(path.changeCount) change(s)"]
-            if let firstObservedAt = path.firstObservedAt {
-                parts.append("first \(DateCoding.string(from: firstObservedAt))")
-            }
-            if let lastObservedAt = path.lastObservedAt {
-                parts.append("last \(DateCoding.string(from: lastObservedAt))")
-            }
-            return parts.joined(separator: " | ")
+        var lines: [String] = []
+        if !context.changedPaths.isEmpty {
+            lines.append("\(indentation)Changed paths:")
+            lines.append(contentsOf: context.changedPaths.map { path in
+                "\(indentation)- \(changedPathDescription(path))"
+            })
         }
-        .joined(separator: "\n")
+        if !context.activeApplications.isEmpty {
+            lines.append("\(indentation)Active applications, first observed order:")
+            lines.append(contentsOf: context.activeApplications.map { application in
+                "\(indentation)- \(activeApplicationDescription(application))"
+            })
+        }
+        return lines
     }
 
     private func gitEvidenceSection(from lines: [String]) -> String {
@@ -127,18 +144,22 @@ struct PromptBuilder: Sendable {
         return lines.joined(separator: "\n")
     }
 
-    private func activeApplicationsSection(from applications: [CompactedActiveApplication]) -> String {
-        guard !applications.isEmpty else {
-            return "(none observed)"
+    private func changedPathDescription(_ path: CompactedChangedPath) -> String {
+        var parts = [path.relativePath, "\(path.changeCount) change(s)"]
+        if let firstObservedAt = path.firstObservedAt {
+            parts.append("first \(DateCoding.string(from: firstObservedAt))")
         }
+        if let lastObservedAt = path.lastObservedAt {
+            parts.append("last \(DateCoding.string(from: lastObservedAt))")
+        }
+        return parts.joined(separator: " | ")
+    }
 
-        return applications.map { application in
-            if let bundleIdentifier = application.bundleIdentifier {
-                return "- \(application.displayName) (\(bundleIdentifier))"
-            }
-            return "- \(application.displayName)"
+    private func activeApplicationDescription(_ application: CompactedActiveApplication) -> String {
+        if let bundleIdentifier = application.bundleIdentifier {
+            return "\(application.displayName) (\(bundleIdentifier))"
         }
-        .joined(separator: "\n")
+        return application.displayName
     }
 
     private func notesSection(from notes: [String]) -> String {

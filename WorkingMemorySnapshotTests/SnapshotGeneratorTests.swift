@@ -121,7 +121,7 @@ final class SnapshotGeneratorTests: XCTestCase {
         let body = try requestBodyDictionary(request)
         let messages = try XCTUnwrap(body["messages"] as? [[String: String]])
         let userPrompt = try XCTUnwrap(messages.last?["content"])
-        XCTAssertTrue(userPrompt.contains("POMODORO BLOCK CAPTURE POINTS"))
+        XCTAssertTrue(userPrompt.contains("FOCUS BLOCKS AND OBSERVED CONTEXT"))
         XCTAssertTrue(userPrompt.contains("Wire Pomodoro capture"))
         XCTAssertTrue(userPrompt.contains("decision: Blocks live inside sessions"))
         XCTAssertFalse(userPrompt.localizedCaseInsensitiveContains("messages observed"))

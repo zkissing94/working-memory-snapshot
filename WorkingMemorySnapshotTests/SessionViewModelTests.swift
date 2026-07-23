@@ -65,6 +65,7 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.activeBlock?.plannedDurationSeconds, 1_200)
         XCTAssertEqual(viewModel.flow, .idle)
         XCTAssertEqual(observationCoordinator.startCallCount, 1)
+        XCTAssertEqual(observationCoordinator.startedActiveBlockIDs, [viewModel.activeBlock?.id])
 
         viewModel.beginEndingActiveSession()
         viewModel.brainDump = "Next: wire grounded snapshots."
@@ -135,13 +136,14 @@ final class SessionViewModelTests: XCTestCase {
         let project = try await harness.projectRepository.createProject(
             at: makeTemporaryDirectory(named: "BlockFlowProject")
         )
+        let observationCoordinator = RecordingSessionObservationCoordinator()
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
             projectRepository: harness.projectRepository,
             pomodoroBlockRepository: harness.pomodoroBlockRepository,
             workIncrementRepository: harness.workIncrementRepository,
             snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
-            observationCoordinator: RecordingSessionObservationCoordinator()
+            observationCoordinator: observationCoordinator
         )
 
         viewModel.beginStartSession(for: project)
@@ -162,6 +164,9 @@ final class SessionViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.activeBlock?.blockIndex, 2)
         XCTAssertEqual(viewModel.activeBlock?.intention, "Implement next step")
         XCTAssertEqual(viewModel.sessionBlocks.count, 2)
+        XCTAssertEqual(observationCoordinator.checkpointBlockIDs.count, 2)
+        XCTAssertNil(observationCoordinator.checkpointBlockIDs[0])
+        XCTAssertEqual(observationCoordinator.checkpointBlockIDs[1], viewModel.activeBlock?.id)
     }
 
     func testTakeBreakLeavesSessionActiveWithNoOpenBlock() async throws {
@@ -254,13 +259,14 @@ final class SessionViewModelTests: XCTestCase {
             at: makeTemporaryDirectory(named: "DeadlineLifecycleProject")
         )
         let deadlineAlertService = RecordingFocusBlockDeadlineAlertService()
+        let observationCoordinator = RecordingSessionObservationCoordinator()
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
             projectRepository: harness.projectRepository,
             pomodoroBlockRepository: harness.pomodoroBlockRepository,
             workIncrementRepository: harness.workIncrementRepository,
             snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
-            observationCoordinator: RecordingSessionObservationCoordinator(),
+            observationCoordinator: observationCoordinator,
             focusBlockDeadlineAlertService: deadlineAlertService
         )
 
@@ -282,6 +288,10 @@ final class SessionViewModelTests: XCTestCase {
 
         XCTAssertEqual(deadlineAlertService.cancelledBlockIDs, [blockID, blockID])
         XCTAssertNil(viewModel.activeBlock)
+        XCTAssertEqual(observationCoordinator.checkpointBlockIDs.count, 3)
+        XCTAssertNil(observationCoordinator.checkpointBlockIDs[0])
+        XCTAssertEqual(observationCoordinator.checkpointBlockIDs[1], blockID)
+        XCTAssertNil(observationCoordinator.checkpointBlockIDs[2])
     }
 
     func testExpiredDeadlinePromptsWithoutCompletingBlockUntilConfirmed() async throws {
@@ -370,6 +380,7 @@ final class SessionViewModelTests: XCTestCase {
             in: harness.database
         )
         let deadlineAlertService = RecordingFocusBlockDeadlineAlertService()
+        let observationCoordinator = RecordingSessionObservationCoordinator()
         deadlineAlertService.triggersExpiredBlocksOnSchedule = true
         let viewModel = SessionViewModel(
             sessionRepository: harness.sessionRepository,
@@ -377,7 +388,7 @@ final class SessionViewModelTests: XCTestCase {
             pomodoroBlockRepository: harness.pomodoroBlockRepository,
             workIncrementRepository: harness.workIncrementRepository,
             snapshotGenerator: FakeSessionSnapshotGenerator(snapshotRepository: harness.snapshotRepository),
-            observationCoordinator: RecordingSessionObservationCoordinator(),
+            observationCoordinator: observationCoordinator,
             focusBlockDeadlineAlertService: deadlineAlertService
         )
 
@@ -388,6 +399,7 @@ final class SessionViewModelTests: XCTestCase {
         await waitForBlockCompletionPrompt(in: viewModel)
 
         XCTAssertEqual(viewModel.blockCompletionPrompt?.block.id, expiredBlock.id)
+        XCTAssertEqual(observationCoordinator.startedActiveBlockIDs, [expiredBlock.id])
         let storedBlock = try await harness.pomodoroBlockRepository.block(for: expiredBlock.id)
         XCTAssertEqual(storedBlock?.status, .active)
     }
@@ -624,9 +636,16 @@ private final class RecordingSessionObservationCoordinator: SessionObservationCo
     private(set) var completionStopCallCount = 0
     private(set) var cancellationStopCallCount = 0
     private(set) var completedBrainDump: String?
+    private(set) var startedActiveBlockIDs: [PomodoroBlock.ID?] = []
+    private(set) var checkpointBlockIDs: [PomodoroBlock.ID?] = []
 
-    func startObserving(session: WorkSession, project: Project) async {
+    func startObserving(
+        session: WorkSession,
+        project: Project,
+        activeBlockID: PomodoroBlock.ID?
+    ) async {
         startCallCount += 1
+        startedActiveBlockIDs.append(activeBlockID)
         onSummaryChange?(
             ObservationSessionSummary(
                 changedFileCount: 1,
@@ -636,6 +655,10 @@ private final class RecordingSessionObservationCoordinator: SessionObservationCo
                 notes: []
             )
         )
+    }
+
+    func checkpointObservation(activeBlockID: PomodoroBlock.ID?) async {
+        checkpointBlockIDs.append(activeBlockID)
     }
 
     func stopObservingForCompletion(session: WorkSession, brainDump: String) async {

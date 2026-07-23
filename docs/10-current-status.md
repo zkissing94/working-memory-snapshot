@@ -2,22 +2,22 @@
 
 ## Where the project is
 
-Current validated delivery branch:
+Current validated implementation branch:
 
 ```text
-main
+codex/improve-observation
 ```
 
 Current focus:
 
 ```text
-Global Daily Rollup delivered, manually validated, and documented for a fresh clone
+Block-aware observation context implemented and automated checks passing; five-session dogfood remains
 ```
 
 Baseline:
 
 ```text
-Daily Rollup implementation began from `3345af3`, which consolidates the project-scoped detail-state fix and UI/icon polish. The working tree was clean at the start of the milestone.
+Block-aware observation context began from `491c897` on a clean `codex/improve-observation` worktree.
 ```
 
 Completed milestones:
@@ -59,7 +59,7 @@ Current implementation state:
 - Git evidence captures initial state and final bounded summaries when the project is in a Git repository.
 - Active-app observation records application transitions only, not window content.
 - Evidence compaction deterministically bounds passive evidence while preserving the brain dump verbatim.
-- `PromptBuilder` creates prompt version `v1` with the local AI prompt-injection boundary.
+- `PromptBuilder` creates prompt version `v2`, keeps the local AI prompt-injection boundary, and groups passive context by focus block, between-block period, or legacy session-wide fallback.
 - `SnapshotGenerator` calls LM Studio structured chat completions and persists only valid snapshots.
 - Generation failure preserves the completed session and brain dump and exposes retry.
 - Non-Git projects remain valid and produce non-Git evidence notes.
@@ -88,6 +88,9 @@ Current implementation state:
 - The workspace route maps empty library, project dashboard, start session, active/paused/between-block session states, end-session brain dump, snapshot generation failure, snapshot detail, historical session detail, recovery sheets, project access loss, and settings into the right-hand column.
 - The project dashboard shows project metrics, latest memory, start-session action, and previous sessions grouped by date.
 - Historical session detail shows mission, timing, snapshot sections, block timeline, and observed context from existing Git/file/app events.
+- Historical session detail attributes changed paths and ordered app transitions to focus blocks or between-block periods, while older events remain visible as session-wide evidence.
+- Git evidence remains session-level and exposes branch/HEAD transitions, pre-existing changes, session-observed changes, other final changes, bounded diff stats, and commit subjects instead of an event count.
+- File observation checkpoints at block boundaries without stopping the project-folder stream; no observation sources or database columns were added.
 - Snapshot evidence includes user-entered block summaries and manual increments below the brain dump and above passive evidence.
 - Message, transcript, clipboard, browser-history, screenshot, and keystroke observation remain excluded.
 - Automated M8 tests cover migration v6, block/increment repositories, session view-model block flow, snapshot prompt inclusion, compaction, and project-deletion cascades.
@@ -106,7 +109,7 @@ Current implementation state:
 - The existing LM Studio structured-completion seam now supports artifact-specific schema names, schema objects, and token limits; snapshots remain at 700 tokens and Daily Rollup uses 1,500 tokens.
 - Daily Rollup validation requires one thread per participating project, known project attribution, bounded carry-forwards, strict keys, and one repair retry.
 - The global sidebar destination and Carry-Forward Focus workspace implement empty, ready, blocked, generating, generated, stale, and failure behavior plus history, project opening, and source-session drill-down.
-- Automated coverage includes persistence, local-day boundaries, fallback evidence, fingerprints, schema rejection, model request construction, refresh safety, same-day revision retention, exact history selection, and view-model states. `./scripts/check.sh` passes 146 tests.
+- Automated coverage includes persistence, local-day boundaries, fallback evidence, fingerprints, schema rejection, model request construction, refresh safety, same-day revision retention, exact history selection, view-model states, checkpoint draining, block/break attribution, recovery, deduplication, and global evidence bounds. `./scripts/check.sh` passes 150 tests.
 - The selected visual direction is preserved in `docs/mockups/global-daily-rollup-carry-forward-focus.png`.
 - The unlocked seeded-app comparison passed at 1298 × 768 against the selected direction, including a focused content-region review; `design-qa.md` records the evidence and remaining P3-only polish.
 - Manual QA also reports the feature behaving as expected.
@@ -117,16 +120,16 @@ Current implementation state:
 Current task:
 
 ```text
-Complete the remaining M13 visual polish checklist against the delivered app shell.
+Dogfood five representative sessions with block-aware observation context.
 ```
 
 Delivery target:
 
 ```text
-Review the remaining P3-only polish in light, dark, reduced-motion, increased-contrast, and long-content states without expanding product scope.
+Compare missing evidence, next-action correctness, snapshot trust, and time-to-resume before considering any semantic janitor model.
 ```
 
-Daily Rollup visual acceptance and fresh-clone onboarding are complete. The remaining M13 checklist items are the next UI follow-up.
+The deterministic block-aware increment is implemented and automated checks pass. M13's remaining P3-only visual polish stays available as a separate UI follow-up.
 
 Optional post-MVP milestone:
 

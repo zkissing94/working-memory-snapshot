@@ -1284,7 +1284,7 @@ struct HistoricalSessionDetailView: View {
     let snapshot: Snapshot?
     let blocks: [PomodoroBlock]
     let incrementsForBlock: (PomodoroBlock) -> [WorkIncrement]
-    let events: [SessionEvent]
+    let evidenceDigest: SnapshotEvidenceDigest
     let onBackToProject: () -> Void
     let onViewSnapshot: () -> Void
 
@@ -1385,7 +1385,10 @@ struct HistoricalSessionDetailView: View {
                         ForEach(blocks) { block in
                             HistoricalBlockRow(
                                 block: block,
-                                increments: incrementsForBlock(block)
+                                increments: incrementsForBlock(block),
+                                observedContext: evidenceDigest.pomodoroBlocks.first {
+                                    $0.blockIndex == block.blockIndex
+                                }?.observedContext ?? .empty
                             )
                         }
                     }
@@ -1401,52 +1404,65 @@ struct HistoricalSessionDetailView: View {
                     .font(.headline)
                 ObservedContextFact(
                     title: "Git Repository",
-                    value: gitSummary,
+                    value: gitOverview,
                     systemImage: "point.3.connected.trianglepath.dotted"
                 )
                 ObservedContextFact(
                     title: "Files Touched",
-                    value: "\(changedFiles.count) file\(changedFiles.count == 1 ? "" : "s")",
+                    value: "\(evidenceDigest.changedPaths.count) file\(evidenceDigest.changedPaths.count == 1 ? "" : "s")",
                     systemImage: "doc.on.doc"
                 )
                 ObservedContextFact(
                     title: "Apps Observed",
-                    value: activeApps.isEmpty ? "None observed" : activeApps.prefix(4).joined(separator: ", "),
+                    value: evidenceDigest.activeApplications.isEmpty
+                        ? "None observed"
+                        : evidenceDigest.activeApplications
+                            .prefix(4)
+                            .map(\.displayName)
+                            .joined(separator: ", "),
                     systemImage: "macwindow"
                 )
+
+                HistoricalGitEvidenceView(summary: evidenceDigest.gitSummary)
+
+                if !evidenceDigest.betweenBlocksObservation.isEmpty {
+                    ObservedWindowDisclosure(
+                        title: "Between blocks",
+                        context: evidenceDigest.betweenBlocksObservation
+                    )
+                }
+
+                if !evidenceDigest.unattributedObservation.isEmpty {
+                    ObservedWindowDisclosure(
+                        title: blocks.isEmpty ? "Session-wide evidence" : "Legacy session-wide evidence",
+                        context: evidenceDigest.unattributedObservation
+                    )
+                }
             }
         }
     }
 
-    private var changedFiles: [String] {
-        events
-            .filter { $0.source == .file && $0.kind == SessionEventKind.fileChanged }
-            .map(\.title)
-            .orderedUnique()
-    }
-
-    private var activeApps: [String] {
-        events
-            .filter { $0.source == .activeApp && $0.kind == SessionEventKind.appActivated }
-            .map(\.title)
-            .orderedUnique()
-    }
-
-    private var gitSummary: String {
-        let gitEvents = events.filter { $0.source == .git }
-        if gitEvents.isEmpty {
+    private var gitOverview: String {
+        guard let isRepository = evidenceDigest.gitSummary.isRepository else {
             return "No Git evidence"
         }
-        if gitEvents.contains(where: { $0.title.localizedCaseInsensitiveContains("not a git") }) {
+        if !isRepository {
             return "Not a Git repository"
         }
-        return "\(gitEvents.count) event\(gitEvents.count == 1 ? "" : "s")"
+        let branch = evidenceDigest.gitSummary.finalBranchName
+            ?? evidenceDigest.gitSummary.initialBranchName
+            ?? "Detached HEAD"
+        let commitCount = evidenceDigest.gitSummary.commitsAfterStart.count
+        return commitCount == 0
+            ? branch
+            : "\(branch) · \(commitCount) commit\(commitCount == 1 ? "" : "s")"
     }
 }
 
 private struct HistoricalBlockRow: View {
     let block: PomodoroBlock
     let increments: [WorkIncrement]
+    let observedContext: CompactedObservationContext
     @State private var isIncrementsExpanded = true
 
     var body: some View {
@@ -1492,8 +1508,197 @@ private struct HistoricalBlockRow: View {
                             .font(.headline)
                     }
                 }
+
+                if !observedContext.isEmpty {
+                    ObservedWindowDisclosure(
+                        title: "Observed during this block",
+                        context: observedContext
+                    )
+                }
             }
         }
+    }
+}
+
+private struct ObservedWindowDisclosure: View {
+    let title: String
+    let context: CompactedObservationContext
+    @State private var isExpanded = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            VStack(alignment: .leading, spacing: 10) {
+                if !context.changedPaths.isEmpty {
+                    Text("Changed paths")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+
+                    ForEach(Array(context.changedPaths.enumerated()), id: \.offset) { _, path in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: "doc")
+                                .foregroundStyle(.secondary)
+                            Text(path.relativePath)
+                                .font(.caption)
+                                .textSelection(.enabled)
+                            Spacer(minLength: 8)
+                            Text("\(path.changeCount)×")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                if !context.activeApplications.isEmpty {
+                    Text("Applications observed")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.secondary)
+
+                    Text(context.activeApplications.map(\.displayName).joined(separator: " → "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            }
+            .padding(.top, 8)
+        } label: {
+            HStack(spacing: 8) {
+                Text(title)
+                    .font(.callout)
+                    .fontWeight(.semibold)
+                Text(contextSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var contextSummary: String {
+        var parts: [String] = []
+        if !context.changedPaths.isEmpty {
+            parts.append("\(context.changedPaths.count) file\(context.changedPaths.count == 1 ? "" : "s")")
+        }
+        if !context.activeApplications.isEmpty {
+            parts.append("\(context.activeApplications.count) app\(context.activeApplications.count == 1 ? "" : "s")")
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
+private struct HistoricalGitEvidenceView: View {
+    let summary: CompactedGitSummary
+    @State private var isExpanded = false
+
+    var body: some View {
+        if summary.isRepository == true, hasDetails {
+            DisclosureGroup(isExpanded: $isExpanded) {
+                VStack(alignment: .leading, spacing: 10) {
+                    gitIdentity
+                    pathList(title: "Changed before the session", paths: summary.initialChangedPaths)
+                    pathList(
+                        title: "Session-observed final changes",
+                        paths: summary.sessionObservedChangedPaths
+                    )
+                    pathList(
+                        title: "Other final changes not observed during the session",
+                        paths: summary.unobservedFinalChangedPaths
+                    )
+
+                    if !summary.commitsAfterStart.isEmpty {
+                        gitSectionTitle("Commits created after session start")
+                        ForEach(Array(summary.commitsAfterStart.enumerated()), id: \.offset) { _, commit in
+                            Text("\(shortSHA(commit.hash))  \(commit.subject)")
+                                .font(.caption.monospaced())
+                                .textSelection(.enabled)
+                        }
+                    }
+
+                    if !summary.diffStatLines.isEmpty {
+                        gitSectionTitle("Bounded diff stat")
+                        Text(summary.diffStatLines.joined(separator: "\n"))
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+
+                    if summary.isTruncated {
+                        Label("Some Git evidence was truncated to stay within local bounds.", systemImage: "ellipsis")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.top, 8)
+            } label: {
+                Text("Git evidence")
+                    .font(.callout)
+                    .fontWeight(.semibold)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var gitIdentity: some View {
+        if summary.initialBranchName != nil || summary.finalBranchName != nil {
+            gitSectionTitle("Branch")
+            Text(branchDescription)
+                .font(.caption.monospaced())
+                .textSelection(.enabled)
+        }
+        if summary.initialHeadSHA != nil || summary.finalHeadSHA != nil {
+            gitSectionTitle("HEAD")
+            Text(headDescription)
+                .font(.caption.monospaced())
+                .textSelection(.enabled)
+        }
+    }
+
+    @ViewBuilder
+    private func pathList(title: String, paths: [String]) -> some View {
+        if !paths.isEmpty {
+            gitSectionTitle(title)
+            ForEach(Array(paths.enumerated()), id: \.offset) { _, path in
+                Text(path)
+                    .font(.caption.monospaced())
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
+    private func gitSectionTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.caption)
+            .fontWeight(.semibold)
+            .foregroundStyle(.secondary)
+    }
+
+    private var hasDetails: Bool {
+        summary.initialBranchName != nil
+            || summary.finalBranchName != nil
+            || summary.initialHeadSHA != nil
+            || summary.finalHeadSHA != nil
+            || !summary.initialChangedPaths.isEmpty
+            || !summary.sessionObservedChangedPaths.isEmpty
+            || !summary.unobservedFinalChangedPaths.isEmpty
+            || !summary.commitsAfterStart.isEmpty
+            || !summary.diffStatLines.isEmpty
+            || summary.isTruncated
+    }
+
+    private var branchDescription: String {
+        let initial = summary.initialBranchName ?? "(unknown)"
+        let final = summary.finalBranchName ?? "(unknown)"
+        return initial == final ? final : "\(initial) → \(final)"
+    }
+
+    private var headDescription: String {
+        let initial = summary.initialHeadSHA.map(shortSHA) ?? "(unknown)"
+        let final = summary.finalHeadSHA.map(shortSHA) ?? "(unknown)"
+        return initial == final ? final : "\(initial) → \(final)"
+    }
+
+    private func shortSHA(_ value: String) -> String {
+        String(value.prefix(12))
     }
 }
 

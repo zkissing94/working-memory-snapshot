@@ -344,6 +344,9 @@ The MUI uses deterministic rules:
 - preserve first and last observed timestamps
 - count repeated changes
 - list unique active apps in order of first appearance
+- checkpoint file activity at focus-block state boundaries without stopping FSEvents
+- group checkpointed file and app evidence by focus block or between-block window
+- keep older events without window metadata in an explicit session-wide fallback
 - collapse Git evidence into a bounded summary
 - remove duplicate system events
 - hard-limit event count and text size sent to the model

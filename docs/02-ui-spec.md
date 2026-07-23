@@ -176,6 +176,8 @@ Manual work increments can be added inside the current block with these kinds:
 
 Observed context remains read-only and generic: Git, changed files, and active applications from existing events. Do not add message, transcript, clipboard, browser-history, screenshot, or keystroke observation.
 
+Historical session detail groups checkpointed file and application evidence under the focus block where it was observed. Evidence captured while a block is paused or no block is open appears under `Between blocks`. Older events without window metadata remain visible as session-wide evidence. Git stays session-level and exposes bounded branch, HEAD, changed-path, diff-stat, and commit facts through a disclosure rather than a raw event count.
+
 ### Post-MVP block completion alert
 
 When an active focus block reaches zero, the app may post a local macOS notification, bring Working Memory Snapshot to the front, select the active project, and show an in-app completion prompt:

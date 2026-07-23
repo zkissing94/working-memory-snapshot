@@ -18,6 +18,9 @@ struct SnapshotEvidenceDigest: Equatable, Sendable {
     let changedPaths: [CompactedChangedPath]
     let gitEvidenceLines: [String]
     let activeApplications: [CompactedActiveApplication]
+    let betweenBlocksObservation: CompactedObservationContext
+    let unattributedObservation: CompactedObservationContext
+    let gitSummary: CompactedGitSummary
     let compactorNotes: [String]
 }
 
@@ -31,6 +34,7 @@ struct CompactedPomodoroBlock: Equatable, Sendable {
     let plannedDurationSeconds: Int
     let elapsedSeconds: Int
     let increments: [CompactedWorkIncrement]
+    let observedContext: CompactedObservationContext
 }
 
 struct CompactedWorkIncrement: Equatable, Sendable {
@@ -52,7 +56,87 @@ struct CompactedActiveApplication: Equatable, Sendable {
     let bundleIdentifier: String?
 }
 
+struct CompactedObservationContext: Equatable, Sendable {
+    let changedPaths: [CompactedChangedPath]
+    let activeApplications: [CompactedActiveApplication]
+
+    static let empty = CompactedObservationContext(changedPaths: [], activeApplications: [])
+
+    var isEmpty: Bool {
+        changedPaths.isEmpty && activeApplications.isEmpty
+    }
+}
+
+struct CompactedGitCommit: Equatable, Sendable {
+    let hash: String
+    let subject: String
+}
+
+struct CompactedGitSummary: Equatable, Sendable {
+    let isRepository: Bool?
+    let initialBranchName: String?
+    let finalBranchName: String?
+    let initialHeadSHA: String?
+    let finalHeadSHA: String?
+    let initialChangedPaths: [String]
+    let sessionObservedChangedPaths: [String]
+    let unobservedFinalChangedPaths: [String]
+    let diffStatLines: [String]
+    let commitsAfterStart: [CompactedGitCommit]
+    let isTruncated: Bool
+
+    static let empty = CompactedGitSummary(
+        isRepository: nil,
+        initialBranchName: nil,
+        finalBranchName: nil,
+        initialHeadSHA: nil,
+        finalHeadSHA: nil,
+        initialChangedPaths: [],
+        sessionObservedChangedPaths: [],
+        unobservedFinalChangedPaths: [],
+        diffStatLines: [],
+        commitsAfterStart: [],
+        isTruncated: false
+    )
+}
+
 struct EvidenceCompactor: Sendable {
+    private enum ObservationContextKey: Hashable {
+        case block(PomodoroBlock.ID)
+        case betweenBlocks
+        case unattributed
+    }
+
+    private struct MutableObservationContext {
+        struct MutablePath {
+            var changeCount: Int
+            var firstObservedAt: Date?
+            var lastObservedAt: Date?
+        }
+
+        var orderedPaths: [String] = []
+        var pathsByName: [String: MutablePath] = [:]
+        var applications: [CompactedActiveApplication] = []
+        var applicationKeys = Set<String>()
+
+        var compacted: CompactedObservationContext {
+            CompactedObservationContext(
+                changedPaths: orderedPaths.compactMap { path in
+                    guard let value = pathsByName[path] else {
+                        return nil
+                    }
+                    return CompactedChangedPath(
+                        relativePath: path,
+                        changeCount: value.changeCount,
+                        firstObservedAt: value.firstObservedAt,
+                        lastObservedAt: value.lastObservedAt
+                    )
+                },
+                activeApplications: applications
+            )
+        }
+    }
+
     private let configuration: EvidenceCompactionConfiguration
 
     init(configuration: EvidenceCompactionConfiguration = EvidenceCompactionConfiguration()) {
@@ -74,13 +158,21 @@ struct EvidenceCompactor: Sendable {
             return first.occurredAt < second.occurredAt
         }
 
-        let changedPaths = compactChangedPaths(from: sortedEvents, notes: &notes)
-        let activeApplications = compactActiveApplications(from: sortedEvents, notes: &notes)
+        let changedPaths = compactChangedPaths(from: sortedEvents)
+        let activeApplications = compactActiveApplications(from: sortedEvents)
         let gitEvidenceLines = compactGitEvidence(from: sortedEvents, notes: &notes)
+        let validBlockIDs = Set(pomodoroBlocks.map(\.id))
+        let observationContexts = compactObservationContexts(
+            from: sortedEvents,
+            validBlockIDs: validBlockIDs,
+            notes: &notes
+        )
         let compactedBlocks = compactPomodoroBlocks(
             pomodoroBlocks,
-            workIncrementsByBlockID: workIncrementsByBlockID
+            workIncrementsByBlockID: workIncrementsByBlockID,
+            observationContexts: observationContexts
         )
+        let gitSummary = compactGitSummary(from: sortedEvents)
         appendObservationIssues(from: sortedEvents, notes: &notes)
 
         let endedAt = session.endedAt
@@ -97,13 +189,17 @@ struct EvidenceCompactor: Sendable {
             changedPaths: changedPaths,
             gitEvidenceLines: gitEvidenceLines,
             activeApplications: activeApplications,
+            betweenBlocksObservation: observationContexts[.betweenBlocks] ?? .empty,
+            unattributedObservation: observationContexts[.unattributed] ?? .empty,
+            gitSummary: gitSummary,
             compactorNotes: Array(notes.prefix(configuration.maxNotes))
         )
     }
 
     private func compactPomodoroBlocks(
         _ blocks: [PomodoroBlock],
-        workIncrementsByBlockID: [PomodoroBlock.ID: [WorkIncrement]]
+        workIncrementsByBlockID: [PomodoroBlock.ID: [WorkIncrement]],
+        observationContexts: [ObservationContextKey: CompactedObservationContext]
     ) -> [CompactedPomodoroBlock] {
         blocks
             .sorted { $0.blockIndex < $1.blockIndex }
@@ -133,15 +229,133 @@ struct EvidenceCompactor: Sendable {
                     endedAt: block.endedAt,
                     plannedDurationSeconds: block.plannedDurationSeconds,
                     elapsedSeconds: block.elapsedSeconds(at: block.endedAt ?? Date()),
-                    increments: increments
+                    increments: increments,
+                    observedContext: observationContexts[.block(block.id)] ?? .empty
                 )
             }
     }
 
-    private func compactChangedPaths(
+    private func compactObservationContexts(
         from events: [SessionEvent],
+        validBlockIDs: Set<PomodoroBlock.ID>,
         notes: inout [String]
-    ) -> [CompactedChangedPath] {
+    ) -> [ObservationContextKey: CompactedObservationContext] {
+        var mutableContexts: [ObservationContextKey: MutableObservationContext] = [:]
+        var acceptedChangedPathCount = 0
+        var acceptedApplicationCount = 0
+        var omittedChangedPathCount = 0
+        var omittedApplicationCount = 0
+
+        for event in events {
+            if event.source == .file, event.kind == SessionEventKind.fileChanged {
+                let payload = decodePayload(FileChangedEventPayload.self, from: event.payloadJSON)
+                let path = (payload?.relativePath ?? event.title)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !path.isEmpty else {
+                    continue
+                }
+
+                let contextKey = observationContextKey(
+                    for: payload?.observationWindow,
+                    validBlockIDs: validBlockIDs
+                )
+                var context = mutableContexts[contextKey] ?? MutableObservationContext()
+                let firstObservedAt = payload.flatMap {
+                    try? DateCoding.date(from: $0.firstObservedAt)
+                } ?? event.occurredAt
+                let lastObservedAt = payload.flatMap {
+                    try? DateCoding.date(from: $0.lastObservedAt)
+                } ?? event.occurredAt
+                let changeCount = max(1, payload?.changeCount ?? 1)
+
+                if var existing = context.pathsByName[path] {
+                    existing.changeCount += changeCount
+                    existing.firstObservedAt = minDate(existing.firstObservedAt, firstObservedAt)
+                    existing.lastObservedAt = maxDate(existing.lastObservedAt, lastObservedAt)
+                    context.pathsByName[path] = existing
+                } else if acceptedChangedPathCount < configuration.maxChangedPaths {
+                    acceptedChangedPathCount += 1
+                    context.orderedPaths.append(path)
+                    context.pathsByName[path] = MutableObservationContext.MutablePath(
+                        changeCount: changeCount,
+                        firstObservedAt: firstObservedAt,
+                        lastObservedAt: lastObservedAt
+                    )
+                } else {
+                    omittedChangedPathCount += 1
+                }
+
+                mutableContexts[contextKey] = context
+            } else if event.source == .activeApp, event.kind == SessionEventKind.appActivated {
+                let payload = decodePayload(ActiveAppEventPayload.self, from: event.payloadJSON)
+                let displayName = (payload?.displayName ?? event.title)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !displayName.isEmpty else {
+                    continue
+                }
+
+                let contextKey = observationContextKey(
+                    for: payload?.observationWindow,
+                    validBlockIDs: validBlockIDs
+                )
+                var context = mutableContexts[contextKey] ?? MutableObservationContext()
+                let applicationKey = "\(displayName)\u{0}\(payload?.bundleIdentifier ?? "")"
+
+                if context.applicationKeys.contains(applicationKey) {
+                    continue
+                }
+
+                if acceptedApplicationCount < configuration.maxActiveApplications {
+                    acceptedApplicationCount += 1
+                    context.applicationKeys.insert(applicationKey)
+                    context.applications.append(
+                        CompactedActiveApplication(
+                            displayName: displayName,
+                            bundleIdentifier: payload?.bundleIdentifier
+                        )
+                    )
+                } else {
+                    omittedApplicationCount += 1
+                }
+
+                mutableContexts[contextKey] = context
+            }
+        }
+
+        if omittedChangedPathCount > 0 {
+            notes.append(
+                "\(omittedChangedPathCount) block-aware changed path(s) were omitted because of evidence bounds."
+            )
+        }
+        if omittedApplicationCount > 0 {
+            notes.append(
+                "\(omittedApplicationCount) block-aware active application(s) were omitted because of evidence bounds."
+            )
+        }
+
+        return mutableContexts.mapValues(\.compacted)
+    }
+
+    private func observationContextKey(
+        for window: ObservationWindowPayload?,
+        validBlockIDs: Set<PomodoroBlock.ID>
+    ) -> ObservationContextKey {
+        guard let window else {
+            return .unattributed
+        }
+
+        switch window.kind {
+        case .betweenBlocks:
+            return .betweenBlocks
+        case .block:
+            guard let blockID = window.blockID, validBlockIDs.contains(blockID) else {
+                return .unattributed
+            }
+            return .block(blockID)
+        }
+    }
+
+    private func compactChangedPaths(from events: [SessionEvent]) -> [CompactedChangedPath] {
         struct MutablePath {
             var changeCount: Int
             var firstObservedAt: Date?
@@ -178,12 +392,6 @@ struct EvidenceCompactor: Sendable {
             }
         }
 
-        if orderedPaths.count > configuration.maxChangedPaths {
-            notes.append(
-                "\(orderedPaths.count - configuration.maxChangedPaths) changed path(s) were omitted from the prompt because of evidence bounds."
-            )
-        }
-
         return orderedPaths
             .prefix(configuration.maxChangedPaths)
             .compactMap { path in
@@ -199,10 +407,7 @@ struct EvidenceCompactor: Sendable {
             }
     }
 
-    private func compactActiveApplications(
-        from events: [SessionEvent],
-        notes: inout [String]
-    ) -> [CompactedActiveApplication] {
+    private func compactActiveApplications(from events: [SessionEvent]) -> [CompactedActiveApplication] {
         var seen = Set<String>()
         var applications: [CompactedActiveApplication] = []
 
@@ -228,13 +433,42 @@ struct EvidenceCompactor: Sendable {
             )
         }
 
-        if applications.count > configuration.maxActiveApplications {
-            notes.append(
-                "\(applications.count - configuration.maxActiveApplications) active application(s) were omitted from the prompt because of evidence bounds."
-            )
+        return Array(applications.prefix(configuration.maxActiveApplications))
+    }
+
+    private func compactGitSummary(from events: [SessionEvent]) -> CompactedGitSummary {
+        let initialPayload = events
+            .first(where: {
+                $0.source == .git && $0.kind == SessionEventKind.gitInitialState
+            })
+            .flatMap { decodePayload(GitInitialStateEventPayload.self, from: $0.payloadJSON) }
+        let finalPayload = events
+            .last(where: {
+                $0.source == .git && $0.kind == SessionEventKind.gitFinalSummary
+            })
+            .flatMap { decodePayload(GitFinalSummaryEventPayload.self, from: $0.payloadJSON) }
+
+        guard initialPayload != nil || finalPayload != nil else {
+            return .empty
         }
 
-        return Array(applications.prefix(configuration.maxActiveApplications))
+        return CompactedGitSummary(
+            isRepository: finalPayload?.isRepository ?? initialPayload?.isRepository,
+            initialBranchName: initialPayload?.branchName,
+            finalBranchName: finalPayload?.branchName,
+            initialHeadSHA: initialPayload?.headSHA,
+            finalHeadSHA: finalPayload?.headSHA,
+            initialChangedPaths: initialPayload?.changedPaths ?? [],
+            sessionObservedChangedPaths: finalPayload?.sessionObservedChangedPaths ?? [],
+            unobservedFinalChangedPaths: finalPayload?.unobservedChangedPaths ?? [],
+            diffStatLines: finalPayload?.diffStatLines ?? [],
+            commitsAfterStart: (finalPayload?.commitsAfterStart ?? []).map {
+                CompactedGitCommit(hash: $0.hash, subject: $0.subject)
+            },
+            isTruncated: (initialPayload?.isStatusTruncated ?? false)
+                || (finalPayload?.isStatusTruncated ?? false)
+                || (finalPayload?.isDiffStatTruncated ?? false)
+        )
     }
 
     private func compactGitEvidence(

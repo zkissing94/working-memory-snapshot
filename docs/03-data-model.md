@@ -114,6 +114,15 @@ app_activated
 
 Adding a kind does not require a schema migration.
 
+File-change and active-app payload JSON may include an optional generic observation-window reference:
+
+```text
+kind = block, block_id = <pomodoro block UUID>
+kind = between_blocks, block_id = null
+```
+
+This does not add a column or block-specific event table. Payloads without the optional reference remain valid legacy session-wide evidence.
+
 ## 7. Pomodoro blocks and work increments
 
 Pomodoro blocks are lightweight capture points inside a session. They do not replace sessions, and they do not duplicate passive evidence.

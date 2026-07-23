@@ -94,6 +94,175 @@ final class EvidenceCompactorTests: XCTestCase {
         XCTAssertEqual(digest.pomodoroBlocks.first?.increments.first?.title, "Blocks live inside sessions")
     }
 
+    func testCompactorGroupsCheckpointedEvidenceByBlockAndPreservesLegacyFallback() throws {
+        let session = makeCompletedSession(brainDump: "")
+        let firstBlock = makeBlock(sessionID: session.id, index: 1, start: 100, end: 150)
+        let secondBlock = makeBlock(sessionID: session.id, index: 2, start: 170, end: 210)
+        let firstBlockWindow = ObservationWindowPayload(kind: .block, blockID: firstBlock.id)
+        let betweenBlocksWindow = ObservationWindowPayload(kind: .betweenBlocks, blockID: nil)
+        let events = try [
+            fileEvent(path: "Sources/First.swift", count: 2, at: 120, window: firstBlockWindow),
+            activeAppEvent(
+                name: "Xcode",
+                bundleIdentifier: "com.apple.dt.Xcode",
+                at: 125,
+                window: firstBlockWindow
+            ),
+            fileEvent(path: "Notes/Between.md", count: 1, at: 160, window: betweenBlocksWindow),
+            activeAppEvent(
+                name: "Safari",
+                bundleIdentifier: "com.apple.Safari",
+                at: 165,
+                window: betweenBlocksWindow
+            ),
+            fileEvent(path: "Sources/Legacy.swift", count: 1, at: 180)
+        ]
+
+        let digest = EvidenceCompactor().compact(
+            project: makeProject(),
+            session: session,
+            events: events,
+            pomodoroBlocks: [firstBlock, secondBlock]
+        )
+
+        XCTAssertEqual(
+            digest.pomodoroBlocks[0].observedContext.changedPaths.map(\.relativePath),
+            ["Sources/First.swift"]
+        )
+        XCTAssertEqual(
+            digest.pomodoroBlocks[0].observedContext.activeApplications.map(\.displayName),
+            ["Xcode"]
+        )
+        XCTAssertTrue(digest.pomodoroBlocks[1].observedContext.isEmpty)
+        XCTAssertEqual(
+            digest.betweenBlocksObservation.changedPaths.map(\.relativePath),
+            ["Notes/Between.md"]
+        )
+        XCTAssertEqual(
+            digest.betweenBlocksObservation.activeApplications.map(\.displayName),
+            ["Safari"]
+        )
+        XCTAssertEqual(
+            digest.unattributedObservation.changedPaths.map(\.relativePath),
+            ["Sources/Legacy.swift"]
+        )
+    }
+
+    func testCompactorBuildsStructuredGitSummary() throws {
+        let initial = SessionEvent(
+            sessionID: UUID(),
+            source: .git,
+            kind: SessionEventKind.gitInitialState,
+            title: "Git initial state",
+            payloadJSON: try EventPayloadCoding.encode(
+                GitInitialStateEventPayload(
+                    isRepository: true,
+                    branchName: "main",
+                    headSHA: "1111111111111111",
+                    changedPaths: ["Preexisting.swift"],
+                    isStatusTruncated: false
+                )
+            )
+        )
+        let final = SessionEvent(
+            sessionID: UUID(),
+            source: .git,
+            kind: SessionEventKind.gitFinalSummary,
+            title: "Git final summary",
+            payloadJSON: try EventPayloadCoding.encode(
+                GitFinalSummaryEventPayload(
+                    isRepository: true,
+                    branchName: "feature/context",
+                    headSHA: "2222222222222222",
+                    sessionObservedChangedPaths: ["Observed.swift"],
+                    unobservedChangedPaths: ["Other.swift"],
+                    diffStatLines: ["Observed.swift | 2 ++"],
+                    commitsAfterStart: [
+                        GitCommitEventPayload(hash: "2222222222222222", subject: "add context")
+                    ],
+                    hasSessionObservedChanges: true,
+                    isStatusTruncated: false,
+                    isDiffStatTruncated: true
+                )
+            )
+        )
+
+        let summary = EvidenceCompactor().compact(
+            project: makeProject(),
+            session: makeCompletedSession(brainDump: ""),
+            events: [initial, final]
+        ).gitSummary
+
+        XCTAssertEqual(summary.initialBranchName, "main")
+        XCTAssertEqual(summary.finalBranchName, "feature/context")
+        XCTAssertEqual(summary.initialChangedPaths, ["Preexisting.swift"])
+        XCTAssertEqual(summary.sessionObservedChangedPaths, ["Observed.swift"])
+        XCTAssertEqual(summary.unobservedFinalChangedPaths, ["Other.swift"])
+        XCTAssertEqual(summary.commitsAfterStart.map(\.subject), ["add context"])
+        XCTAssertTrue(summary.isTruncated)
+    }
+
+    func testBlockAwareContextDeduplicatesWithinWindowsAndAppliesGlobalBounds() throws {
+        let session = makeCompletedSession(brainDump: "")
+        let block = makeBlock(sessionID: session.id, index: 1, start: 100, end: 150)
+        let blockWindow = ObservationWindowPayload(kind: .block, blockID: block.id)
+        let betweenBlocksWindow = ObservationWindowPayload(kind: .betweenBlocks, blockID: nil)
+        let compactor = EvidenceCompactor(
+            configuration: EvidenceCompactionConfiguration(
+                maxChangedPaths: 2,
+                maxActiveApplications: 1,
+                maxGitEvidenceLines: 10,
+                maxNotes: 10
+            )
+        )
+        let events = try [
+            fileEvent(path: "Sources/Block.swift", count: 1, at: 110, window: blockWindow),
+            fileEvent(path: "Sources/Block.swift", count: 2, at: 120, window: blockWindow),
+            fileEvent(path: "Sources/Between.swift", count: 1, at: 160, window: betweenBlocksWindow),
+            fileEvent(path: "Sources/Omitted.swift", count: 1, at: 170),
+            activeAppEvent(
+                name: "Xcode",
+                bundleIdentifier: "com.apple.dt.Xcode",
+                at: 115,
+                window: blockWindow
+            ),
+            activeAppEvent(
+                name: "Xcode",
+                bundleIdentifier: "com.apple.dt.Xcode",
+                at: 125,
+                window: blockWindow
+            ),
+            activeAppEvent(
+                name: "Terminal",
+                bundleIdentifier: "com.apple.Terminal",
+                at: 165,
+                window: betweenBlocksWindow
+            )
+        ]
+
+        let digest = compactor.compact(
+            project: makeProject(),
+            session: session,
+            events: events,
+            pomodoroBlocks: [block]
+        )
+
+        XCTAssertEqual(digest.pomodoroBlocks[0].observedContext.changedPaths.count, 1)
+        XCTAssertEqual(digest.pomodoroBlocks[0].observedContext.changedPaths[0].changeCount, 3)
+        XCTAssertEqual(
+            digest.pomodoroBlocks[0].observedContext.activeApplications.map(\.displayName),
+            ["Xcode"]
+        )
+        XCTAssertEqual(
+            digest.betweenBlocksObservation.changedPaths.map(\.relativePath),
+            ["Sources/Between.swift"]
+        )
+        XCTAssertTrue(digest.betweenBlocksObservation.activeApplications.isEmpty)
+        XCTAssertTrue(digest.unattributedObservation.isEmpty)
+        XCTAssertTrue(digest.compactorNotes.contains { $0.contains("block-aware changed path") })
+        XCTAssertTrue(digest.compactorNotes.contains { $0.contains("block-aware active application") })
+    }
+
     private func makeProject() -> Project {
         Project(
             id: UUID(),
@@ -118,7 +287,35 @@ final class EvidenceCompactorTests: XCTestCase {
         )
     }
 
-    private func fileEvent(path: String, count: Int, at timestamp: TimeInterval) throws -> SessionEvent {
+    private func makeBlock(
+        sessionID: WorkSession.ID,
+        index: Int,
+        start: TimeInterval,
+        end: TimeInterval
+    ) -> PomodoroBlock {
+        PomodoroBlock(
+            id: UUID(),
+            sessionID: sessionID,
+            blockIndex: index,
+            plannedDurationSeconds: 1_200,
+            intention: nil,
+            summary: nil,
+            status: .completed,
+            startedAt: Date(timeIntervalSince1970: start),
+            pausedAt: nil,
+            accumulatedPauseSeconds: 0,
+            endedAt: Date(timeIntervalSince1970: end),
+            createdAt: Date(timeIntervalSince1970: start),
+            updatedAt: Date(timeIntervalSince1970: end)
+        )
+    }
+
+    private func fileEvent(
+        path: String,
+        count: Int,
+        at timestamp: TimeInterval,
+        window: ObservationWindowPayload? = nil
+    ) throws -> SessionEvent {
         let date = Date(timeIntervalSince1970: timestamp)
         return SessionEvent(
             sessionID: UUID(),
@@ -131,7 +328,8 @@ final class EvidenceCompactorTests: XCTestCase {
                     relativePath: path,
                     firstObservedAt: DateCoding.string(from: date),
                     lastObservedAt: DateCoding.string(from: date),
-                    changeCount: count
+                    changeCount: count,
+                    observationWindow: window
                 )
             ),
             createdAt: date
@@ -141,7 +339,8 @@ final class EvidenceCompactorTests: XCTestCase {
     private func activeAppEvent(
         name: String,
         bundleIdentifier: String?,
-        at timestamp: TimeInterval
+        at timestamp: TimeInterval,
+        window: ObservationWindowPayload? = nil
     ) throws -> SessionEvent {
         let date = Date(timeIntervalSince1970: timestamp)
         return SessionEvent(
@@ -151,7 +350,11 @@ final class EvidenceCompactorTests: XCTestCase {
             kind: SessionEventKind.appActivated,
             title: name,
             payloadJSON: try EventPayloadCoding.encode(
-                ActiveAppEventPayload(displayName: name, bundleIdentifier: bundleIdentifier)
+                ActiveAppEventPayload(
+                    displayName: name,
+                    bundleIdentifier: bundleIdentifier,
+                    observationWindow: window
+                )
             ),
             createdAt: date
         )

@@ -43,8 +43,13 @@ final class ObservationCoordinatorTests: XCTestCase {
         )
         var summaries: [ObservationSessionSummary] = []
         coordinator.onSummaryChange = { summaries.append($0) }
+        let blockID = UUID()
 
-        await coordinator.startObserving(session: session, project: project)
+        await coordinator.startObserving(
+            session: session,
+            project: project,
+            activeBlockID: blockID
+        )
         let stream = try XCTUnwrap(fileStreamBox.stream())
         XCTAssertEqual(stream.startCallCount, 1)
         XCTAssertEqual(activeAppSource.addedObserverCount, 1)
@@ -52,6 +57,15 @@ final class ObservationCoordinatorTests: XCTestCase {
         stream.emit(paths: [projectURL.appendingPathComponent("Sources/App.swift").path], at: Date(timeIntervalSince1970: 20))
         activeAppSource.emit(xcode)
         try await waitForEventCount(2, source: .activeApp, sessionID: session.id, repository: harness.eventRepository)
+        try await waitForObservedFileCount(1, service: fileObservationService)
+
+        await coordinator.checkpointObservation(activeBlockID: nil)
+        stream.emit(
+            paths: [projectURL.appendingPathComponent("Sources/Between.swift").path],
+            at: Date(timeIntervalSince1970: 25)
+        )
+        activeAppSource.emit(terminal)
+        try await waitForObservedFileCount(2, service: fileObservationService)
 
         await coordinator.stopObservingForCompletion(session: session, brainDump: "Next: generate the snapshot.")
         XCTAssertEqual(stream.stopCallCount, 1)
@@ -65,9 +79,24 @@ final class ObservationCoordinatorTests: XCTestCase {
         let finalCount = try await harness.eventRepository.countEvents(for: session.id)
         let changedPaths = try await harness.eventRepository.listChangedFilePaths(for: session.id)
         XCTAssertEqual(finalCount, countAfterStop)
-        XCTAssertEqual(changedPaths, ["Sources/App.swift"])
-        XCTAssertTrue(summaries.contains { $0.changedFileCount == 1 })
+        XCTAssertEqual(changedPaths, ["Sources/App.swift", "Sources/Between.swift"])
+        XCTAssertTrue(summaries.contains { $0.changedFileCount == 2 })
         XCTAssertEqual(summaries.last, ObservationSessionSummary())
+
+        let events = try await harness.eventRepository.listEvents(for: session.id)
+        let filePayloads = try events
+            .filter { $0.source == .file }
+            .compactMap(\.payloadJSON)
+            .map { try EventPayloadCoding.decode(FileChangedEventPayload.self, from: $0) }
+        XCTAssertEqual(filePayloads[0].observationWindow, .current(blockID: blockID))
+        XCTAssertEqual(filePayloads[1].observationWindow, .current(blockID: nil))
+
+        let appPayloads = try events
+            .filter { $0.source == .activeApp }
+            .compactMap(\.payloadJSON)
+            .map { try EventPayloadCoding.decode(ActiveAppEventPayload.self, from: $0) }
+        XCTAssertTrue(appPayloads.contains { $0.displayName == "Xcode" && $0.observationWindow == .current(blockID: blockID) })
+        XCTAssertTrue(appPayloads.contains { $0.displayName == "Terminal" && $0.observationWindow == .current(blockID: nil) })
     }
 
     func testStartIsIgnoredForCompletedSession() async throws {
@@ -97,7 +126,11 @@ final class ObservationCoordinatorTests: XCTestCase {
             gitService: GitService()
         )
 
-        await coordinator.startObserving(session: completedSession, project: project)
+        await coordinator.startObserving(
+            session: completedSession,
+            project: project,
+            activeBlockID: nil
+        )
 
         XCTAssertNil(fileStreamBox.stream())
         let eventCount = try await harness.eventRepository.countEvents(for: completedSession.id)
@@ -124,6 +157,26 @@ final class ObservationCoordinatorTests: XCTestCase {
         }
 
         let count = try await repository.countEvents(for: sessionID, source: source)
+        XCTAssertEqual(count, expectedCount)
+    }
+
+    private func waitForObservedFileCount(
+        _ expectedCount: Int,
+        service: FileObservationService,
+        timeoutNanoseconds: UInt64 = 1_000_000_000
+    ) async throws {
+        let intervalNanoseconds: UInt64 = 10_000_000
+        var waitedNanoseconds: UInt64 = 0
+
+        while waitedNanoseconds < timeoutNanoseconds {
+            if await service.observedChanges().changes.count >= expectedCount {
+                return
+            }
+            try await Task.sleep(nanoseconds: intervalNanoseconds)
+            waitedNanoseconds += intervalNanoseconds
+        }
+
+        let count = await service.observedChanges().changes.count
         XCTAssertEqual(count, expectedCount)
     }
 

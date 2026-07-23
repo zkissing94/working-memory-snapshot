@@ -40,7 +40,12 @@ struct ObservationSessionSummary: Equatable, Sendable {
 protocol SessionObservationCoordinating: AnyObject {
     var onSummaryChange: (@MainActor (ObservationSessionSummary) -> Void)? { get set }
 
-    func startObserving(session: WorkSession, project: Project) async
+    func startObserving(
+        session: WorkSession,
+        project: Project,
+        activeBlockID: PomodoroBlock.ID?
+    ) async
+    func checkpointObservation(activeBlockID: PomodoroBlock.ID?) async
     func stopObservingForCompletion(session: WorkSession, brainDump: String) async
     func stopObservingForCancellation(session: WorkSession) async
 }
@@ -67,7 +72,11 @@ final class ObservationCoordinator: SessionObservationCoordinating {
         self.gitService = gitService
     }
 
-    func startObserving(session: WorkSession, project: Project) async {
+    func startObserving(
+        session: WorkSession,
+        project: Project,
+        activeBlockID: PomodoroBlock.ID?
+    ) async {
         guard session.status == .active else {
             return
         }
@@ -78,7 +87,11 @@ final class ObservationCoordinator: SessionObservationCoordinating {
 
         await stopCurrentObservers()
 
-        state = ObservationState(session: session, project: project)
+        state = ObservationState(
+            session: session,
+            project: project,
+            activeBlockID: activeBlockID
+        )
         publishSummary()
 
         await insertBestEffort(
@@ -97,17 +110,35 @@ final class ObservationCoordinator: SessionObservationCoordinating {
         await captureInitialGitEvidence(project: project)
     }
 
+    func checkpointObservation(activeBlockID: PomodoroBlock.ID?) async {
+        guard let currentState = state else {
+            return
+        }
+
+        state?.activeBlockID = activeBlockID
+        let fileSummary = await fileObservationService.checkpoint()
+        await persistFileCheckpoint(
+            fileSummary,
+            sessionID: currentState.session.id,
+            blockID: currentState.activeBlockID
+        )
+    }
+
     func stopObservingForCompletion(session: WorkSession, brainDump: String) async {
         guard let currentState = state, currentState.session.id == session.id else {
             return
         }
 
-        let fileSummary = await fileObservationService.stop()
+        let stoppedFileObservation = await fileObservationService.stopAndCheckpoint()
         activeAppObservationService.stop()
-        apply(fileSummary: fileSummary)
+        apply(fileSummary: stoppedFileObservation.sessionSummary)
 
-        let observedPaths = Set(fileSummary.changes.map(\.relativePath))
-        await insertBestEffort(fileEvents(from: fileSummary, sessionID: session.id))
+        await persistFileCheckpoint(
+            stoppedFileObservation.finalCheckpoint,
+            sessionID: session.id,
+            blockID: currentState.activeBlockID
+        )
+        let observedPaths = Set(stoppedFileObservation.sessionSummary.changes.map(\.relativePath))
         await captureFinalGitEvidence(
             sessionID: session.id,
             projectURL: URL(fileURLWithPath: currentState.project.rootPath),
@@ -287,7 +318,8 @@ final class ObservationCoordinator: SessionObservationCoordinating {
                 payloadJSON: try? EventPayloadCoding.encode(
                     ActiveAppEventPayload(
                         displayName: event.application.displayName,
-                        bundleIdentifier: event.application.bundleIdentifier
+                        bundleIdentifier: event.application.bundleIdentifier,
+                        observationWindow: .current(blockID: currentState.activeBlockID)
                     )
                 )
             )
@@ -346,6 +378,29 @@ final class ObservationCoordinator: SessionObservationCoordinating {
         }
     }
 
+    private func persistFileCheckpoint(
+        _ summary: FileChangeSummary,
+        sessionID: WorkSession.ID,
+        blockID: PomodoroBlock.ID?
+    ) async {
+        guard !summary.changes.isEmpty || summary.droppedChangeCount > 0 else {
+            return
+        }
+
+        await insertBestEffort(
+            fileEvents(
+                from: summary,
+                sessionID: sessionID,
+                observationWindow: .current(blockID: blockID)
+            )
+        )
+        if summary.droppedChangeCount > 0 {
+            recordObservationIssue(
+                "\(summary.droppedChangeCount) file change(s) were omitted from an observation checkpoint."
+            )
+        }
+    }
+
     private func initialGitEvent(
         from snapshot: GitRepositorySnapshot,
         sessionID: WorkSession.ID
@@ -397,7 +452,11 @@ final class ObservationCoordinator: SessionObservationCoordinating {
         )
     }
 
-    private func fileEvents(from summary: FileChangeSummary, sessionID: WorkSession.ID) -> [SessionEvent] {
+    private func fileEvents(
+        from summary: FileChangeSummary,
+        sessionID: WorkSession.ID,
+        observationWindow: ObservationWindowPayload
+    ) -> [SessionEvent] {
         summary.changes.map { change in
             SessionEvent(
                 sessionID: sessionID,
@@ -411,7 +470,8 @@ final class ObservationCoordinator: SessionObservationCoordinating {
                         relativePath: change.relativePath,
                         firstObservedAt: DateCoding.string(from: change.firstObservedAt),
                         lastObservedAt: DateCoding.string(from: change.lastObservedAt),
-                        changeCount: change.changeCount
+                        changeCount: change.changeCount,
+                        observationWindow: observationWindow
                     )
                 )
             )
@@ -479,6 +539,7 @@ final class ObservationCoordinator: SessionObservationCoordinating {
 private struct ObservationState {
     let session: WorkSession
     let project: Project
+    var activeBlockID: PomodoroBlock.ID?
     var initialGitHead: String?
     var summary = ObservationSessionSummary()
 }

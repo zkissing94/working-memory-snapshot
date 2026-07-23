@@ -21,16 +21,59 @@ enum EventPayloadCodingError: Error, Equatable {
     case invalidUTF8
 }
 
+enum ObservationWindowKind: String, Codable, Equatable, Sendable {
+    case block
+    case betweenBlocks = "between_blocks"
+}
+
+struct ObservationWindowPayload: Codable, Equatable, Sendable {
+    let kind: ObservationWindowKind
+    let blockID: UUID?
+
+    static func current(blockID: PomodoroBlock.ID?) -> ObservationWindowPayload {
+        if let blockID {
+            return ObservationWindowPayload(kind: .block, blockID: blockID)
+        }
+        return ObservationWindowPayload(kind: .betweenBlocks, blockID: nil)
+    }
+}
+
 struct FileChangedEventPayload: Codable, Equatable, Sendable {
     let relativePath: String
     let firstObservedAt: String
     let lastObservedAt: String
     let changeCount: Int
+    let observationWindow: ObservationWindowPayload?
+
+    init(
+        relativePath: String,
+        firstObservedAt: String,
+        lastObservedAt: String,
+        changeCount: Int,
+        observationWindow: ObservationWindowPayload? = nil
+    ) {
+        self.relativePath = relativePath
+        self.firstObservedAt = firstObservedAt
+        self.lastObservedAt = lastObservedAt
+        self.changeCount = changeCount
+        self.observationWindow = observationWindow
+    }
 }
 
 struct ActiveAppEventPayload: Codable, Equatable, Sendable {
     let displayName: String
     let bundleIdentifier: String?
+    let observationWindow: ObservationWindowPayload?
+
+    init(
+        displayName: String,
+        bundleIdentifier: String?,
+        observationWindow: ObservationWindowPayload? = nil
+    ) {
+        self.displayName = displayName
+        self.bundleIdentifier = bundleIdentifier
+        self.observationWindow = observationWindow
+    }
 }
 
 struct GitInitialStateEventPayload: Codable, Equatable, Sendable {

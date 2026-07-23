@@ -140,6 +140,46 @@ final class FileObservationServiceTests: XCTestCase {
         XCTAssertEqual(stoppedSummary.changes.map(\.relativePath), ["Sources/App.swift"])
     }
 
+    func testCheckpointDrainsOnlyCurrentWindowWithoutStoppingObservation() async throws {
+        let projectRoot = try makeTemporaryDirectory(named: "Project")
+        let streamBox = FakeFileEventStreamBox()
+        let recorder = SummaryRecorder()
+        let service = FileObservationService { _, _, handler in
+            let stream = FakeFileEventStream(handler: handler)
+            streamBox.store(stream)
+            return stream
+        }
+
+        try await service.start(
+            configuration: FileObservationConfiguration(projectRootURL: projectRoot),
+            onChange: { recorder.append($0) }
+        )
+        let stream = try XCTUnwrap(streamBox.stream())
+        stream.emit(
+            paths: [projectRoot.appendingPathComponent("Sources/First.swift").path],
+            at: Date(timeIntervalSince1970: 10)
+        )
+        try await waitForRecorderCount(1, recorder: recorder)
+
+        let firstCheckpoint = await service.checkpoint()
+        XCTAssertEqual(firstCheckpoint.changes.map(\.relativePath), ["Sources/First.swift"])
+        XCTAssertEqual(stream.stopCallCount, 0)
+
+        stream.emit(
+            paths: [projectRoot.appendingPathComponent("Sources/Second.swift").path],
+            at: Date(timeIntervalSince1970: 20)
+        )
+        try await waitForRecorderCount(2, recorder: recorder)
+
+        let stopped = await service.stopAndCheckpoint()
+        XCTAssertEqual(stopped.finalCheckpoint.changes.map(\.relativePath), ["Sources/Second.swift"])
+        XCTAssertEqual(
+            stopped.sessionSummary.changes.map(\.relativePath),
+            ["Sources/First.swift", "Sources/Second.swift"]
+        )
+        XCTAssertEqual(stream.stopCallCount, 1)
+    }
+
     private func makeTemporaryDirectory(named name: String) throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("WorkingMemorySnapshotTests-\(UUID().uuidString)", isDirectory: true)

@@ -148,7 +148,11 @@ private struct ProjectSessionRouteView: View {
 
     @ViewBuilder
     private var historicalSessionDetail: some View {
-        if let selectedSession = projectDetailViewModel.selectedSession(for: project.id) {
+        if let selectedSession = projectDetailViewModel.selectedSession(for: project.id),
+           let evidenceDigest = projectDetailViewModel.evidenceDigest(
+               for: selectedSession,
+               project: project
+           ) {
             HistoricalSessionDetailView(
                 project: project,
                 session: selectedSession,
@@ -163,10 +167,7 @@ private struct ProjectSessionRouteView: View {
                 incrementsForBlock: { block in
                     projectDetailViewModel.increments(for: block, projectID: project.id)
                 },
-                events: projectDetailViewModel.events(
-                    for: selectedSession,
-                    projectID: project.id
-                ),
+                evidenceDigest: evidenceDigest,
                 onBackToProject: {
                     projectDetailViewModel.clearSelectedSession(for: project.id)
                 },

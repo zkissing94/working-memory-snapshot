@@ -91,6 +91,11 @@ struct FileChangeSummary: Equatable, Sendable {
     }
 }
 
+struct FileObservationStopSummary: Equatable, Sendable {
+    let finalCheckpoint: FileChangeSummary
+    let sessionSummary: FileChangeSummary
+}
+
 struct FileChangeAggregator: Equatable, Sendable {
     private struct MutableChange: Equatable, Sendable {
         var firstObservedAt: Date
@@ -140,6 +145,14 @@ struct FileChangeAggregator: Equatable, Sendable {
         droppedChangeCount = 0
     }
 
+    func contains(relativePath: String) -> Bool {
+        changesByRelativePath[relativePath] != nil
+    }
+
+    mutating func recordDroppedChange() {
+        droppedChangeCount += 1
+    }
+
     func summary() -> FileChangeSummary {
         let changes = relativePathsInObservationOrder.compactMap { relativePath -> ObservedFileChange? in
             guard let change = changesByRelativePath[relativePath] else {
@@ -187,7 +200,8 @@ actor FileObservationService {
     private let streamBuilder: StreamBuilder
     private var stream: FileEventStreaming?
     private var pathFilter: ProjectPathFilter?
-    private var aggregator = FileChangeAggregator()
+    private var sessionAggregator = FileChangeAggregator()
+    private var checkpointAggregator = FileChangeAggregator()
     private var onChange: (@Sendable (FileChangeSummary) -> Void)?
     private var isObserving = false
 
@@ -213,7 +227,8 @@ actor FileObservationService {
         }
 
         self.pathFilter = pathFilter
-        self.aggregator = FileChangeAggregator(maximumUniquePaths: configuration.maximumChangedPathCount)
+        self.sessionAggregator = FileChangeAggregator(maximumUniquePaths: configuration.maximumChangedPathCount)
+        self.checkpointAggregator = FileChangeAggregator(maximumUniquePaths: configuration.maximumChangedPathCount)
         self.onChange = onChange
         self.stream = stream
         self.isObserving = true
@@ -227,12 +242,29 @@ actor FileObservationService {
     }
 
     func stop() -> FileChangeSummary {
+        stopAndCheckpoint().sessionSummary
+    }
+
+    func stopAndCheckpoint() -> FileObservationStopSummary {
         stopCurrentStream()
-        return aggregator.summary()
+        return FileObservationStopSummary(
+            finalCheckpoint: checkpointAggregator.summary(),
+            sessionSummary: sessionAggregator.summary()
+        )
+    }
+
+    func checkpoint() -> FileChangeSummary {
+        guard isObserving else {
+            return FileChangeSummary(changes: [], droppedChangeCount: 0)
+        }
+
+        let summary = checkpointAggregator.summary()
+        checkpointAggregator.reset()
+        return summary
     }
 
     func observedChanges() -> FileChangeSummary {
-        aggregator.summary()
+        sessionAggregator.summary()
     }
 
     private func record(paths: [String], occurredAt: Date) {
@@ -246,11 +278,19 @@ actor FileObservationService {
                 continue
             }
 
-            didChange = aggregator.record(relativePath: relativePath, at: occurredAt) || didChange
+            let sessionDidChange = sessionAggregator.record(relativePath: relativePath, at: occurredAt)
+            let checkpointDidChange: Bool
+            if sessionAggregator.contains(relativePath: relativePath) {
+                checkpointDidChange = checkpointAggregator.record(relativePath: relativePath, at: occurredAt)
+            } else {
+                checkpointAggregator.recordDroppedChange()
+                checkpointDidChange = true
+            }
+            didChange = sessionDidChange || checkpointDidChange || didChange
         }
 
         if didChange, let onChange {
-            onChange(aggregator.summary())
+            onChange(sessionAggregator.summary())
         }
     }
 

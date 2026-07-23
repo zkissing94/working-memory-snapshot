@@ -350,7 +350,11 @@ private struct PreviewDailyRollupGenerator: DailyRollupGenerating {
 private final class PreviewObservationCoordinator: SessionObservationCoordinating {
     var onSummaryChange: (@MainActor (ObservationSessionSummary) -> Void)?
 
-    func startObserving(session: WorkSession, project: Project) async {
+    func startObserving(
+        session: WorkSession,
+        project: Project,
+        activeBlockID: PomodoroBlock.ID?
+    ) async {
         onSummaryChange?(
             ObservationSessionSummary(
                 changedFileCount: 0,
@@ -361,6 +365,8 @@ private final class PreviewObservationCoordinator: SessionObservationCoordinatin
             )
         )
     }
+
+    func checkpointObservation(activeBlockID: PomodoroBlock.ID?) async {}
 
     func stopObservingForCompletion(session: WorkSession, brainDump: String) async {}
 

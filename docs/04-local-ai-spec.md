@@ -118,8 +118,9 @@ The model receives a typed, bounded evidence digest containing:
 - start and end times
 - session duration
 - brain dump, verbatim
-- Pomodoro block capture points, including user-entered block summaries and manual note/decision/blocker increments
-- changed relative paths with change counts
+- Pomodoro block capture points, including user-entered block summaries, manual note/decision/blocker increments, and attributed file/app evidence
+- between-block and legacy session-wide observed context when present
+- changed relative paths with change counts, bounded across observation windows
 - compact Git start/final summary
 - unique active applications
 - explicit uncertainty notes from the compactor
@@ -217,7 +218,9 @@ Populate `schema` with the output schema above.
 
 Set a finite request timeout and a bounded output token limit appropriate to the selected API contract.
 
-## 10. System prompt v1
+## 10. Snapshot prompt v2
+
+Prompt version `v2` retains the v1 system instruction and reorganizes passive file and application evidence into focus-block, between-block, and legacy session-wide windows.
 
 ```text
 You create Working Memory Snapshots for founder/coders.
@@ -256,17 +259,17 @@ Duration: <duration>
 BRAIN DUMP
 <brain dump or "(none provided)">
 
-POMODORO BLOCK CAPTURE POINTS
-<bounded list of blocks, summaries, and manual increments or "(none recorded)">
+FOCUS BLOCKS AND OBSERVED CONTEXT
+<bounded list of blocks, summaries, manual increments, changed paths, and active applications or "(none recorded)">
 
-CHANGED PATHS
-<bounded list>
+BETWEEN-BLOCK OBSERVED CONTEXT
+<bounded changed paths and active applications or "(none observed)">
+
+SESSION-WIDE UNATTRIBUTED OBSERVED CONTEXT
+<legacy bounded evidence without window metadata or "(none observed)">
 
 GIT EVIDENCE
 <bounded summary or "(not a Git repository)">
-
-ACTIVE APPLICATIONS
-<ordered unique list>
 
 COMPACTOR NOTES
 <any explicit limitations>

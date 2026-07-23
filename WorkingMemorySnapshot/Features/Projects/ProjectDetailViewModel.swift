@@ -460,6 +460,32 @@ final class ProjectDetailViewModel: ObservableObject {
         return historiesByProjectID[projectID]?.eventsBySessionID[session.id] ?? []
     }
 
+    func evidenceDigest(
+        for session: WorkSession,
+        project: Project
+    ) -> SnapshotEvidenceDigest? {
+        guard session.projectID == project.id,
+              let history = historiesByProjectID[project.id],
+              history.sessions.contains(where: { $0.id == session.id })
+        else {
+            return nil
+        }
+
+        let blocks = history.blocksBySessionID[session.id] ?? []
+        let incrementsByBlockID = Dictionary(
+            uniqueKeysWithValues: blocks.map {
+                ($0.id, history.incrementsByBlockID[$0.id] ?? [])
+            }
+        )
+        return EvidenceCompactor().compact(
+            project: project,
+            session: session,
+            events: history.eventsBySessionID[session.id] ?? [],
+            pomodoroBlocks: blocks,
+            workIncrementsByBlockID: incrementsByBlockID
+        )
+    }
+
     func clearError() {
         errorMessage = nil
     }
