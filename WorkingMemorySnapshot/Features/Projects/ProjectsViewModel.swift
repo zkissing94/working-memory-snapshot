@@ -45,6 +45,14 @@ final class ProjectsViewModel: ObservableObject {
         return projects.first { $0.id == selectedProjectID }
     }
 
+    var pinnedProjects: [Project] {
+        projects.filter(\.isPinned)
+    }
+
+    var unpinnedProjects: [Project] {
+        projects.filter { !$0.isPinned }
+    }
+
     var isShowingError: Binding<Bool> {
         Binding(
             get: { self.errorMessage != nil },
@@ -142,6 +150,63 @@ final class ProjectsViewModel: ObservableObject {
             errorMessage = error.localizedDescription
             projects = (try? await repository.listProjects()) ?? projects
             sidebarMetadata = (try? await loadSidebarMetadata(for: projects)) ?? sidebarMetadata
+        }
+    }
+
+    func setProjectPinned(_ project: Project, isPinned: Bool) async {
+        guard project.isPinned != isPinned else {
+            return
+        }
+
+        do {
+            _ = try await repository.setProjectPinned(id: project.id, isPinned: isPinned)
+            projects = try await repository.listProjects()
+        } catch {
+            errorMessage = error.localizedDescription
+            projects = (try? await repository.listProjects()) ?? projects
+        }
+    }
+
+    func moveProject(_ projectID: Project.ID, to targetProjectID: Project.ID) async {
+        guard projectID != targetProjectID,
+              let project = projects.first(where: { $0.id == projectID }),
+              let targetProject = projects.first(where: { $0.id == targetProjectID }),
+              project.isPinned == targetProject.isPinned
+        else {
+            return
+        }
+
+        let previousProjects = projects
+        var group = projects.filter { $0.isPinned == project.isPinned }
+        guard let sourceIndex = group.firstIndex(where: { $0.id == projectID }),
+              let originalTargetIndex = group.firstIndex(where: { $0.id == targetProjectID })
+        else {
+            return
+        }
+
+        let movedProject = group.remove(at: sourceIndex)
+        guard let targetIndex = group.firstIndex(where: { $0.id == targetProjectID }) else {
+            return
+        }
+        let insertionIndex = sourceIndex < originalTargetIndex ? targetIndex + 1 : targetIndex
+        group.insert(movedProject, at: insertionIndex)
+
+        let normalizedGroup = group.enumerated().map { position, project in
+            var reorderedProject = project
+            reorderedProject.sortOrder = position
+            return reorderedProject
+        }
+        let otherGroup = projects.filter { $0.isPinned != project.isPinned }
+        projects = project.isPinned
+            ? normalizedGroup + otherGroup
+            : otherGroup + normalizedGroup
+
+        do {
+            try await repository.reorderProjects(normalizedGroup.map(\.id), pinned: project.isPinned)
+            projects = try await repository.listProjects()
+        } catch {
+            errorMessage = error.localizedDescription
+            projects = (try? await repository.listProjects()) ?? previousProjects
         }
     }
 

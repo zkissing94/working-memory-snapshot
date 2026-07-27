@@ -36,15 +36,21 @@ CREATE TABLE projects (
     id TEXT PRIMARY KEY NOT NULL,
     name TEXT NOT NULL,
     root_path TEXT NOT NULL,
+    is_pinned INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
 
 CREATE UNIQUE INDEX projects_root_path_unique
 ON projects(root_path);
+
+CREATE INDEX projects_sidebar_order_index
+ON projects(is_pinned DESC, sort_order ASC);
 ```
 
 `root_path` is the MVP project boundary. Security-scoped bookmark data is deferred until the App Sandbox migration milestone.
+Migration 10 adds `is_pinned` and `sort_order`, preserving the prior `updated_at DESC, name ASC` list order for existing projects. Pinned and unpinned projects each have an independently reorderable sidebar group.
 
 ## 5. Sessions
 
@@ -244,6 +250,8 @@ struct Project: Identifiable, Equatable, Sendable {
     let id: UUID
     var name: String
     var rootPath: String
+    var isPinned: Bool
+    var sortOrder: Int
     var createdAt: Date
     var updatedAt: Date
 }
@@ -358,6 +366,8 @@ struct Snapshot: Identifiable, Equatable, Sendable {
 - create project
 - list projects
 - get project
+- pin or unpin project
+- reorder projects within a pin group
 - delete project
 
 ### SessionRepository
@@ -417,6 +427,8 @@ struct Snapshot: Identifiable, Equatable, Sendable {
 ## 12. Invariants
 
 - A project can exist without sessions.
+- Project pin state and manual sidebar order persist locally.
+- Pinned projects appear before unpinned projects; reordering stays within either group.
 - A session can exist without a snapshot.
 - A completed session may be retried for snapshot generation.
 - A cancelled session does not generate a snapshot.

@@ -317,19 +317,22 @@ struct ProjectSidebarView: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        projectsHeader
-
-                        if listedProjects.isEmpty {
+                    if listedProjects.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            projectsHeader
                             EmptyProjectsRow()
-                        } else {
-                            ForEach(listedProjects) { project in
-                                projectRowButton(
-                                    for: project,
-                                    activity: activity?.projectID == project.id ? activity : nil,
-                                    isSelected: viewModel.selectedItem == .project(project.id)
-                                )
+                        }
+                    } else {
+                        if !viewModel.pinnedProjects.isEmpty {
+                            VStack(alignment: .leading, spacing: 10) {
+                                sidebarSection("Pinned")
+                                projectRows(viewModel.pinnedProjects)
                             }
+                        }
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            projectsHeader
+                            projectRows(viewModel.unpinnedProjects)
                         }
                     }
                 }
@@ -497,6 +500,16 @@ struct ProjectSidebarView: View {
         AppSectionLabel(title)
     }
 
+    private func projectRows(_ projects: [Project]) -> some View {
+        ForEach(projects) { project in
+            projectRowButton(
+                for: project,
+                activity: activity?.projectID == project.id ? activity : nil,
+                isSelected: viewModel.selectedItem == .project(project.id)
+            )
+        }
+    }
+
     @ViewBuilder
     private func projectRowButton(
         for project: Project,
@@ -568,6 +581,18 @@ struct ProjectSidebarView: View {
             .buttonStyle(AppClickableRowButtonStyle(isSelected: isSelected))
             .contextMenu {
                 Button {
+                    Task {
+                        await viewModel.setProjectPinned(project, isPinned: !project.isPinned)
+                    }
+                } label: {
+                    Label(
+                        project.isPinned ? "Unpin" : "Pin",
+                        systemImage: project.isPinned ? "pin.slash" : "pin"
+                    )
+                }
+                .disabled(viewModel.isLoading || isRenameLocked)
+
+                Button {
                     selectProject(project)
                     beginRename(project)
                 } label: {
@@ -599,6 +624,22 @@ struct ProjectSidebarView: View {
                     Label("Pause Session", systemImage: "pause.fill")
                 }
                 .disabled(viewModel.isLoading || isRenameLocked || !canPauseSessionForProject(project.id))
+            }
+            .draggable(project.id.uuidString)
+            .dropDestination(for: String.self) { draggedProjectIDs, _ in
+                guard let draggedProjectIDString = draggedProjectIDs.first,
+                      let draggedProjectID = UUID(uuidString: draggedProjectIDString),
+                      draggedProjectID != project.id,
+                      let draggedProject = viewModel.projects.first(where: { $0.id == draggedProjectID }),
+                      draggedProject.isPinned == project.isPinned
+                else {
+                    return false
+                }
+
+                Task {
+                    await viewModel.moveProject(draggedProjectID, to: project.id)
+                }
+                return true
             }
         }
     }

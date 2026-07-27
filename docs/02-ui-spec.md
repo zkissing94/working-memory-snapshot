@@ -40,6 +40,8 @@ Each row shows:
 - a subtle indicator when a Resume Brief exists
 - an active-session indicator when applicable
 
+Pinned projects appear in a separate `Pinned` group above the remaining projects. A row context menu supports Pin/Unpin, and drag and drop reorders projects within either group. Pin state and manual order persist across launches.
+
 Empty state:
 
 ```text

@@ -105,6 +105,34 @@ final class ProjectsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.errorMessage, "Project name cannot be empty.")
     }
 
+    func testPinningAndReorderingProjectsUpdatesSidebarGroups() async throws {
+        let harness = try makeHarness()
+        let viewModel = ProjectsViewModel(
+            repository: harness.repository,
+            sessionRepository: harness.sessionRepository,
+            snapshotRepository: harness.snapshotRepository,
+            migrator: harness.migrator
+        )
+        let firstFolder = try makeTemporaryDirectory(named: "FirstProject")
+        let secondFolder = try makeTemporaryDirectory(named: "SecondProject")
+        let thirdFolder = try makeTemporaryDirectory(named: "ThirdProject")
+
+        await viewModel.loadProjects()
+        await viewModel.addProject(at: firstFolder)
+        await viewModel.addProject(at: secondFolder)
+        await viewModel.addProject(at: thirdFolder)
+        let first = try XCTUnwrap(viewModel.projects.first(where: { $0.name == "FirstProject" }))
+        let second = try XCTUnwrap(viewModel.projects.first(where: { $0.name == "SecondProject" }))
+        let third = try XCTUnwrap(viewModel.projects.first(where: { $0.name == "ThirdProject" }))
+
+        await viewModel.setProjectPinned(second, isPinned: true)
+        await viewModel.moveProject(third.id, to: first.id)
+
+        XCTAssertEqual(viewModel.pinnedProjects.map(\.id), [second.id])
+        XCTAssertEqual(viewModel.unpinnedProjects.map(\.id), [third.id, first.id])
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
     func testProjectSidebarActivityDescribesSessionStates() {
         let projectID = UUID()
         let session = makeWorkSession(projectID: projectID)

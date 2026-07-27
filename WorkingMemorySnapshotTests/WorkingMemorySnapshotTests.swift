@@ -29,7 +29,7 @@ final class WorkingMemorySnapshotTests: XCTestCase {
         try await harness.migrator.migrate()
 
         let versions = try await harness.migrator.appliedVersions()
-        XCTAssertEqual(versions, [1, 2, 3, 4, 5, 6, 7, 8, 9])
+        XCTAssertEqual(versions, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     }
 
     func testTransactionRollsBackPartialWritesOnFailure() async throws {
@@ -146,6 +146,58 @@ final class WorkingMemorySnapshotTests: XCTestCase {
         let loadedProjects = try await secondRepository.listProjects()
 
         XCTAssertEqual(loadedProjects, [createdProject])
+    }
+
+    func testPinnedProjectsSortBeforeUnpinnedProjectsAndPersist() async throws {
+        let rootDirectory = try makeTemporaryDirectory(named: "DatabaseRoot")
+        let databaseURL = rootDirectory.appendingPathComponent("working-memory.sqlite3")
+        let firstDatabase = Database(url: databaseURL)
+        let firstMigrator = DatabaseMigrator(database: firstDatabase)
+        let firstRepository = ProjectRepository(database: firstDatabase)
+        try await firstMigrator.migrate()
+        let first = try await firstRepository.createProject(
+            at: try makeTemporaryDirectory(named: "FirstProject")
+        )
+        let second = try await firstRepository.createProject(
+            at: try makeTemporaryDirectory(named: "SecondProject")
+        )
+
+        let pinnedProject = try await firstRepository.setProjectPinned(id: second.id, isPinned: true)
+
+        XCTAssertTrue(pinnedProject.isPinned)
+        let pinnedProjects = try await firstRepository.listProjects()
+        XCTAssertEqual(pinnedProjects.map(\.id), [second.id, first.id])
+
+        let secondDatabase = Database(url: databaseURL)
+        let secondMigrator = DatabaseMigrator(database: secondDatabase)
+        let secondRepository = ProjectRepository(database: secondDatabase)
+        try await secondMigrator.migrate()
+
+        let reloadedProjects = try await secondRepository.listProjects()
+        XCTAssertEqual(reloadedProjects.map(\.id), [second.id, first.id])
+        XCTAssertTrue(reloadedProjects[0].isPinned)
+        XCTAssertFalse(reloadedProjects[1].isPinned)
+    }
+
+    func testProjectOrderPersistsWithinSidebarGroup() async throws {
+        let rootDirectory = try makeTemporaryDirectory(named: "DatabaseRoot")
+        let databaseURL = rootDirectory.appendingPathComponent("working-memory.sqlite3")
+        let database = Database(url: databaseURL)
+        let migrator = DatabaseMigrator(database: database)
+        let repository = ProjectRepository(database: database)
+        try await migrator.migrate()
+        let first = try await repository.createProject(at: try makeTemporaryDirectory(named: "FirstProject"))
+        let second = try await repository.createProject(at: try makeTemporaryDirectory(named: "SecondProject"))
+        let third = try await repository.createProject(at: try makeTemporaryDirectory(named: "ThirdProject"))
+
+        try await repository.reorderProjects([third.id, first.id, second.id], pinned: false)
+
+        let reorderedProjects = try await repository.listProjects()
+        XCTAssertEqual(reorderedProjects.map(\.id), [third.id, first.id, second.id])
+
+        let reloadedRepository = ProjectRepository(database: Database(url: databaseURL))
+        let reloadedProjects = try await reloadedRepository.listProjects()
+        XCTAssertEqual(reloadedProjects.map(\.id), [third.id, first.id, second.id])
     }
 
     private func makeHarness() throws -> (database: Database, migrator: DatabaseMigrator, repository: ProjectRepository) {

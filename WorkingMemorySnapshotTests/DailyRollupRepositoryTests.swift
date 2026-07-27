@@ -14,7 +14,7 @@ final class DailyRollupRepositoryTests: XCTestCase {
         try await harness.migrator.migrate()
         try await harness.migrator.migrate()
         let versions = try await harness.migrator.appliedVersions()
-        XCTAssertEqual(versions, Array(1...9))
+        XCTAssertEqual(versions, Array(1...10))
 
         let projectID = UUID()
         let sessionID = UUID()

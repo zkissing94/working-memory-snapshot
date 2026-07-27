@@ -17,8 +17,14 @@ struct ProjectRepository {
 
         do {
             try await database.execute("""
-            INSERT INTO projects(id, name, root_path, created_at, updated_at)
-            VALUES(?, ?, ?, ?, ?)
+            INSERT INTO projects(
+                id, name, root_path, is_pinned, sort_order, created_at, updated_at
+            )
+            VALUES(
+                ?, ?, ?, 0,
+                (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM projects WHERE is_pinned = 0),
+                ?, ?
+            )
             """) { statement in
                 try bind(project, to: statement)
             }
@@ -26,14 +32,18 @@ struct ProjectRepository {
             throw ProjectRepositoryError.duplicateProject(rootPath: rootPath)
         }
 
-        return project
+        guard let storedProject = try await self.project(for: project.id) else {
+            throw ProjectRepositoryError.projectNotFound(project.id)
+        }
+
+        return storedProject
     }
 
     func listProjects() async throws -> [Project] {
         try await database.query("""
-        SELECT id, name, root_path, created_at, updated_at
+        SELECT id, name, root_path, is_pinned, sort_order, created_at, updated_at
         FROM projects
-        ORDER BY updated_at DESC, name ASC
+        ORDER BY is_pinned DESC, sort_order ASC, name ASC, id ASC
         """) { statement in
             try mapProject(from: statement)
         }
@@ -41,7 +51,7 @@ struct ProjectRepository {
 
     func project(for id: UUID) async throws -> Project? {
         try await database.query("""
-        SELECT id, name, root_path, created_at, updated_at
+        SELECT id, name, root_path, is_pinned, sort_order, created_at, updated_at
         FROM projects
         WHERE id = ?
         LIMIT 1
@@ -80,6 +90,69 @@ struct ProjectRepository {
         }
 
         return project
+    }
+
+    func setProjectPinned(id: UUID, isPinned: Bool) async throws -> Project {
+        let pinnedValue = isPinned ? 1 : 0
+        let changedRows = try await database.executeReturningChanges("""
+        UPDATE projects
+        SET
+            is_pinned = ?,
+            sort_order = (
+                SELECT COALESCE(MAX(sort_order), -1) + 1
+                FROM projects
+                WHERE is_pinned = ?
+            )
+        WHERE id = ?
+        """) { statement in
+            try SQLiteValue.bind(pinnedValue, to: statement, at: 1)
+            try SQLiteValue.bind(pinnedValue, to: statement, at: 2)
+            try SQLiteValue.bind(id.uuidString, to: statement, at: 3)
+        }
+
+        guard changedRows > 0 else {
+            throw ProjectRepositoryError.projectNotFound(id)
+        }
+
+        guard let project = try await project(for: id) else {
+            throw ProjectRepositoryError.projectNotFound(id)
+        }
+
+        return project
+    }
+
+    func reorderProjects(_ orderedProjectIDs: [UUID], pinned: Bool) async throws {
+        try await database.withTransaction { database in
+            let storedProjectIDs = try database.query("""
+            SELECT id
+            FROM projects
+            WHERE is_pinned = ?
+            ORDER BY sort_order ASC, name ASC, id ASC
+            """, bind: { statement in
+                try SQLiteValue.bind(pinned ? 1 : 0, to: statement, at: 1)
+            }, map: { statement in
+                SQLiteValue.text(statement, at: 0)
+            })
+
+            let requestedProjectIDs = orderedProjectIDs.map(\.uuidString)
+            guard storedProjectIDs.count == requestedProjectIDs.count,
+                  Set(storedProjectIDs) == Set(requestedProjectIDs)
+            else {
+                throw ProjectRepositoryError.invalidProjectOrder
+            }
+
+            for (position, projectID) in orderedProjectIDs.enumerated() {
+                try database.execute("""
+                UPDATE projects
+                SET sort_order = ?
+                WHERE id = ? AND is_pinned = ?
+                """) { statement in
+                    try SQLiteValue.bind(position, to: statement, at: 1)
+                    try SQLiteValue.bind(projectID.uuidString, to: statement, at: 2)
+                    try SQLiteValue.bind(pinned ? 1 : 0, to: statement, at: 3)
+                }
+            }
+        }
     }
 
     func updateProjectName(id: UUID, to name: String) async throws -> Project {
@@ -137,8 +210,10 @@ struct ProjectRepository {
             id: id,
             name: SQLiteValue.text(statement, at: 1),
             rootPath: SQLiteValue.text(statement, at: 2),
-            createdAt: try DateCoding.date(from: SQLiteValue.text(statement, at: 3)),
-            updatedAt: try DateCoding.date(from: SQLiteValue.text(statement, at: 4))
+            isPinned: SQLiteValue.integer(statement, at: 3) != 0,
+            sortOrder: SQLiteValue.integer(statement, at: 4),
+            createdAt: try DateCoding.date(from: SQLiteValue.text(statement, at: 5)),
+            updatedAt: try DateCoding.date(from: SQLiteValue.text(statement, at: 6))
         )
     }
 
@@ -155,6 +230,7 @@ struct ProjectRepository {
 enum ProjectRepositoryError: Error, Equatable, LocalizedError {
     case duplicateProject(rootPath: String)
     case invalidStoredProject(String)
+    case invalidProjectOrder
     case projectNotFound(UUID)
 
     var errorDescription: String? {
@@ -163,6 +239,8 @@ enum ProjectRepositoryError: Error, Equatable, LocalizedError {
             "That project is already in the list."
         case .invalidStoredProject(let message):
             message
+        case .invalidProjectOrder:
+            "The project order could not be saved."
         case .projectNotFound:
             "The project could not be found."
         }

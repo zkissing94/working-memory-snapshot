@@ -284,6 +284,42 @@ struct DatabaseMigrator {
                 """)
             }
         }
+
+        if !appliedVersions.contains(10) {
+            try await applyMigration(version: 10) { database in
+                try database.execute("""
+                ALTER TABLE projects
+                ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0
+                """)
+
+                try database.execute("""
+                ALTER TABLE projects
+                ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0
+                """)
+
+                try database.execute("""
+                WITH ordered_projects AS (
+                    SELECT
+                        id,
+                        ROW_NUMBER() OVER (
+                            ORDER BY updated_at DESC, name ASC, id ASC
+                        ) - 1 AS position
+                    FROM projects
+                )
+                UPDATE projects
+                SET sort_order = (
+                    SELECT position
+                    FROM ordered_projects
+                    WHERE ordered_projects.id = projects.id
+                )
+                """)
+
+                try database.execute("""
+                CREATE INDEX IF NOT EXISTS projects_sidebar_order_index
+                ON projects(is_pinned DESC, sort_order ASC)
+                """)
+            }
+        }
     }
 
     private func applyMigration(
